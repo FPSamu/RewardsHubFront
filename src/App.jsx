@@ -7,6 +7,11 @@ import ClientLayout from './components/ClientLayout'
 import ClientHome from './pages/ClientHome'
 import ClientPoints from './pages/ClientPoints'
 import ClientMap from './pages/ClientMap'
+import BusinessLayout from './components/BusinessLayout'
+import BusinessHome from './pages/BusinessHome'
+import BusinessClients from './pages/BusinessClients'
+import BusinessRewards from './pages/BusinessRewards'
+import BusinessScan from './pages/BusinessScan'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -34,6 +39,22 @@ function App() {
                         <Route index element={<ClientHome />} />
                         <Route path="points" element={<ClientPoints />} />
                         <Route path="map" element={<ClientMap />} />
+                    </Route>
+
+                    {/* Business Dashboard Routes */}
+                    <Route path="/business" element={<Navigate to="/business/dashboard" replace />} />
+                    <Route
+                        path="/business/dashboard"
+                        element={
+                            <ProtectedRoute>
+                                <BusinessLayout />
+                            </ProtectedRoute>
+                        }
+                    >
+                        <Route index element={<BusinessHome />} />
+                        <Route path="clients" element={<BusinessClients />} />
+                        <Route path="rewards" element={<BusinessRewards />} />
+                        <Route path="scan" element={<BusinessScan />} />
                     </Route>
                 </Routes>
             </div>

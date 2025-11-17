@@ -4,7 +4,7 @@ export const rewardService = {
   // Get all rewards for a business
   getBusinessRewards: async (businessId) => {
     try {
-      const response = await api.get(`/reward/business/${businessId}`);
+      const response = await api.get(`/rewards/business/${businessId}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -14,7 +14,7 @@ export const rewardService = {
   // Get reward by ID
   getRewardById: async (rewardId) => {
     try {
-      const response = await api.get(`/reward/${rewardId}`);
+      const response = await api.get(`/user/${rewardId}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -24,7 +24,7 @@ export const rewardService = {
   // Get available rewards for user
   getAvailableRewards: async () => {
     try {
-      const response = await api.get("/reward/available");
+      const response = await api.get("/rewards/available");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

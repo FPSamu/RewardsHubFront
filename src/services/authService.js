@@ -1,6 +1,17 @@
 import api from "./api";
 
 export const authService = {
+  // Get user by ID
+  getUserById: async (userId) => {
+    try {
+      const response = await api.get(`/auth/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error getting user:", error);
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Login - Cliente (usa /auth/login)
   loginClient: async (email, password) => {
     try {

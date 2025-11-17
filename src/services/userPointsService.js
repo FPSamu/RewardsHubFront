@@ -30,6 +30,26 @@ export const userPointsService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Add points/stamps to a user (business action)
+  addPoints: async (data) => {
+    try {
+      const response = await api.post("/user-points/add", data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get all users with points at the authenticated business
+  getBusinessUsers: async () => {
+    try {
+      const response = await api.get("/user-points/business-users");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default userPointsService;
