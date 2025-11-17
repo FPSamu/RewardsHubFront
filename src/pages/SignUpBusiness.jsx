@@ -79,165 +79,168 @@ function SignUpBusiness() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-500 to-indigo-700 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-2xl">
-                <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        RewardsHub
-                    </h2>
-                    <p className="mt-2 text-center text-sm text-gray-600">
-                        Registro de Negocio
-                    </p>
-                    <div className="mt-4 flex items-center justify-center">
-                        <div className="bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-medium">
-                            🏢 Cuenta de Negocio
-                        </div>
-                    </div>
-                </div>
-
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                            {error}
-                        </div>
-                    )}
-
-                    <div className="space-y-4">
-                        {/* Nombre del Negocio */}
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                                Nombre del Negocio <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="businessName"
-                                name="name"
-                                type="text"
-                                required
-                                value={formData.name}
-                                onChange={handleChange}
-                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="Mi Negocio S.A."
-                            />
-                        </div>
-
-                        {/* Email */}
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                                Correo Electrónico <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
-                                required
-                                value={formData.email}
-                                onChange={handleChange}
-                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="negocio@ejemplo.com"
-                            />
-                        </div>
-
-                        {/* Dirección */}
-                        <div>
-                            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                                Dirección <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="address"
-                                name="address"
-                                type="text"
-                                value={formData.address}
-                                onChange={handleChange}
-                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="Calle Principal #123, Ciudad"
-                                required
-                            />
-                        </div>
-
-                        {/* Descripción */}
-                        <div>
-                            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                                Descripción del Negocio (Opcional)
-                            </label>
-                            <textarea
-                                id="description"
-                                name="description"
-                                rows="3"
-                                value={formData.description}
-                                onChange={handleChange}
-                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                                placeholder="Breve descripción de tu negocio..."
-                            />
-                        </div>
-
-                        {/* Contraseña */}
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                                Contraseña <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                autoComplete="new-password"
-                                required
-                                value={formData.password}
-                                onChange={handleChange}
-                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="••••••••"
-                            />
-                            <p className="mt-1 text-xs text-gray-500">Mínimo 6 caracteres</p>
-                        </div>
-
-                        {/* Confirmar Contraseña */}
-                        <div>
-                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                                Confirmar Contraseña <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="confirmPassword"
-                                name="confirmPassword"
-                                type="password"
-                                autoComplete="new-password"
-                                required
-                                value={formData.confirmPassword}
-                                onChange={handleChange}
-                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="••••••••"
-                            />
-                        </div>
-                    </div>
-
+        <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA] py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full">
+                {/* Card principal */}
+                <div className="bg-white rounded-3xl p-8 shadow-[0_10px_24px_-10px_rgba(2,6,23,0.15)] border border-[#E9ECEF]">
                     <div>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                        >
-                            {loading ? 'Creando cuenta...' : 'Crear Cuenta de Negocio'}
-                        </button>
+                        <h2 className="text-center text-[32px] leading-[40px] font-extrabold text-[#0F172A] tracking-tight">
+                            RewardsHub
+                        </h2>
+                        <p className="mt-3 text-center text-[14px] leading-5 font-medium text-[#6C757D]">
+                            Registro de Negocio
+                        </p>
+                        <div className="mt-5 flex items-center justify-center">
+                            <div className="bg-[#F0FDF4] text-[#12391C] h-[28px] px-3 rounded-full text-[12px] leading-4 font-semibold inline-flex items-center">
+                                🏢 Cuenta de Negocio
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <div className="text-center">
-                            <p className="text-sm text-gray-600">
-                                ¿Eres un cliente?{' '}
-                                <Link to="/signup/client" className="font-medium text-purple-600 hover:text-purple-500">
-                                    Regístrate como cliente
-                                </Link>
-                            </p>
+                    <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-[14px] text-[14px] leading-5 font-medium">
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="space-y-5">
+                            {/* Nombre del Negocio */}
+                            <div>
+                                <label htmlFor="name" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
+                                    Nombre del Negocio <span className="text-[#F87171]">*</span>
+                                </label>
+                                <input
+                                    id="businessName"
+                                    name="name"
+                                    type="text"
+                                    required
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    className="appearance-none relative block w-full h-11 px-4 border border-[#DEE2E6] placeholder-[#ADB5BD] text-[#0F172A] text-[16px] leading-6 font-medium rounded-[14px] focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] focus:border-[#74D680] transition-all duration-180"
+                                    placeholder="Mi Negocio S.A."
+                                />
+                            </div>
+
+                            {/* Email */}
+                            <div>
+                                <label htmlFor="email" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
+                                    Correo Electrónico <span className="text-[#F87171]">*</span>
+                                </label>
+                                <input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    autoComplete="email"
+                                    required
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    className="appearance-none relative block w-full h-11 px-4 border border-[#DEE2E6] placeholder-[#ADB5BD] text-[#0F172A] text-[16px] leading-6 font-medium rounded-[14px] focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] focus:border-[#74D680] transition-all duration-180"
+                                    placeholder="negocio@ejemplo.com"
+                                />
+                            </div>
+
+                            {/* Dirección */}
+                            <div>
+                                <label htmlFor="address" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
+                                    Dirección <span className="text-[#F87171]">*</span>
+                                </label>
+                                <input
+                                    id="address"
+                                    name="address"
+                                    type="text"
+                                    value={formData.address}
+                                    onChange={handleChange}
+                                    className="appearance-none relative block w-full h-11 px-4 border border-[#DEE2E6] placeholder-[#ADB5BD] text-[#0F172A] text-[16px] leading-6 font-medium rounded-[14px] focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] focus:border-[#74D680] transition-all duration-180"
+                                    placeholder="Calle Principal #123, Ciudad"
+                                    required
+                                />
+                            </div>
+
+                            {/* Descripción */}
+                            <div>
+                                <label htmlFor="description" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
+                                    Descripción del Negocio (Opcional)
+                                </label>
+                                <textarea
+                                    id="description"
+                                    name="description"
+                                    rows="3"
+                                    value={formData.description}
+                                    onChange={handleChange}
+                                    className="appearance-none relative block w-full px-4 py-3 border border-[#DEE2E6] placeholder-[#ADB5BD] text-[#0F172A] text-[16px] leading-6 font-medium rounded-[14px] focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] focus:border-[#74D680] transition-all duration-180 resize-none"
+                                    placeholder="Breve descripción de tu negocio..."
+                                />
+                            </div>
+
+                            {/* Contraseña */}
+                            <div>
+                                <label htmlFor="password" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
+                                    Contraseña <span className="text-[#F87171]">*</span>
+                                </label>
+                                <input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    autoComplete="new-password"
+                                    required
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    className="appearance-none relative block w-full h-11 px-4 border border-[#DEE2E6] placeholder-[#ADB5BD] text-[#0F172A] text-[16px] leading-6 font-medium rounded-[14px] focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] focus:border-[#74D680] transition-all duration-180"
+                                    placeholder="••••••••"
+                                />
+                                <p className="mt-2 text-[12px] leading-4 font-medium text-[#6C757D]">Mínimo 6 caracteres</p>
+                            </div>
+
+                            {/* Confirmar Contraseña */}
+                            <div>
+                                <label htmlFor="confirmPassword" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
+                                    Confirmar Contraseña <span className="text-[#F87171]">*</span>
+                                </label>
+                                <input
+                                    id="confirmPassword"
+                                    name="confirmPassword"
+                                    type="password"
+                                    autoComplete="new-password"
+                                    required
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                    className="appearance-none relative block w-full h-11 px-4 border border-[#DEE2E6] placeholder-[#ADB5BD] text-[#0F172A] text-[16px] leading-6 font-medium rounded-[14px] focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] focus:border-[#74D680] transition-all duration-180"
+                                    placeholder="••••••••"
+                                />
+                            </div>
                         </div>
-                        <div className="text-center">
-                            <p className="text-sm text-gray-600">
-                                ¿Ya tienes una cuenta?{' '}
-                                <Link to="/login" className="font-medium text-purple-600 hover:text-purple-500">
-                                    Inicia sesión
-                                </Link>
-                            </p>
+
+                        <div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="group relative w-full flex justify-center h-11 px-4 border border-transparent text-[16px] leading-6 font-semibold rounded-full text-white bg-[#74D680] hover:opacity-95 focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-180 shadow-[0_10px_24px_-10px_rgba(2,6,23,0.15)]"
+                            >
+                                {loading ? 'Creando cuenta...' : 'Crear Cuenta de Negocio'}
+                            </button>
                         </div>
-                    </div>
-                </form>
+
+                        <div className="space-y-2">
+                            <div className="text-center">
+                                <p className="text-[14px] leading-5 font-medium text-[#6C757D]">
+                                    ¿Eres un cliente?{' '}
+                                    <Link to="/signup/client" className="font-semibold text-[#74D680] hover:text-[#5AB866] transition-colors duration-180">
+                                        Regístrate como cliente
+                                    </Link>
+                                </p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-[14px] leading-5 font-medium text-[#6C757D]">
+                                    ¿Ya tienes una cuenta?{' '}
+                                    <Link to="/login" className="font-semibold text-[#74D680] hover:text-[#5AB866] transition-colors duration-180">
+                                        Inicia sesión
+                                    </Link>
+                                </p>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );

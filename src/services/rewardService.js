@@ -1,0 +1,35 @@
+import api from "./api";
+
+export const rewardService = {
+  // Get all rewards for a business
+  getBusinessRewards: async (businessId) => {
+    try {
+      const response = await api.get(`/reward/business/${businessId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get reward by ID
+  getRewardById: async (rewardId) => {
+    try {
+      const response = await api.get(`/reward/${rewardId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get available rewards for user
+  getAvailableRewards: async () => {
+    try {
+      const response = await api.get("/reward/available");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+};
+
+export default rewardService;

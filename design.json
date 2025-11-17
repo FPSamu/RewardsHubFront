@@ -1,0 +1,264 @@
+{
+  "meta": {
+    "name": "RewardsHub Design System",
+    "version": "1.0.0",
+    "created": "2025-11-15",
+    "source": "High-fidelity image analysis",
+    "purpose": "Guidelines for AI to generate consistent UI matching the attached design.",
+    "authoringAgent": "GitHub Copilot (GPT-5)",
+    "notes": "Color values are perceptual approximations from the mockup. Treat as semantic tokens first; tweak hex as you refine brand."
+  },
+  "principles": [
+    "Clarity first: high contrast text on clean white surfaces.",
+    "Soft, friendly look: generous rounding, smooth shadows, pill elements.",
+    "Focus via whitespace: sparse chrome, spaced modules, breathing room.",
+    "Semantic color: orange-gold for primary actions/progress, green for positive/confirm, gray for secondary.",
+    "Consistency: cards as primary surface; chips/avatars unify metadata.",
+    "Composable UI: small, reusable primitives compose larger panels.",
+    "Accessibility: minimum 4.5:1 for body text on surfaces; visible focus rings."
+  ],
+  "themes": {
+    "light": {
+      "palette": {
+        "background": {
+          "app": "#FFFFFF",
+          "surface": "#FFFFFF",
+          "subtle": "#F8F9FA"
+        },
+        "text": {
+          "primary": "#0F172A",
+          "secondary": "#495057",
+          "tertiary": "#6C757D",
+          "inverse": "#FFFFFF"
+        },
+        "border": {
+          "soft": "#E9ECEF",
+          "strong": "#DEE2E6"
+        },
+        "brand": {
+          "primary": "#FFB733",
+          "primaryMuted": "#FFF4E0",
+          "primaryOnColor": "#8B5A00"
+        },
+        "accent": {
+          "success": "#74D680",
+          "successOnColor": "#12391C",
+          "warning": "#FFB733",
+          "danger": "#F87171",
+          "info": "#60A5FA",
+          "gold": "#EAB000",
+          "goldOnColor": "#4D3A00"
+        },
+        "gray": {
+          "50": "#F8F9FA",
+          "100": "#E9ECEF",
+          "200": "#DEE2E6",
+          "300": "#CED4DA",
+          "400": "#ADB5BD",
+          "500": "#6C757D",
+          "600": "#495057",
+          "700": "#343A40",
+          "800": "#212529",
+          "900": "#0D0F12"
+        }
+      },
+      "typography": {
+        "fontFamily": {
+          "sans": ["Inter", "Manrope", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans", "sans-serif"],
+          "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "monospace"]
+        },
+        "scale": {
+          "xs": { "size": 12, "lineHeight": 16, "weight": 500 },
+          "sm": { "size": 14, "lineHeight": 20, "weight": 500 },
+          "md": { "size": 16, "lineHeight": 24, "weight": 500 },
+          "lg": { "size": 18, "lineHeight": 28, "weight": 600 },
+          "xl": { "size": 20, "lineHeight": 28, "weight": 600 },
+          "display-sm": { "size": 24, "lineHeight": 32, "weight": 700 },
+          "display-md": { "size": 28, "lineHeight": 36, "weight": 700 },
+          "display-lg": { "size": 32, "lineHeight": 40, "weight": 800 }
+        },
+        "letterSpacing": {
+          "tight": -0.2,
+          "normal": 0,
+          "wide": 0.2
+        }
+      },
+      "radii": {
+        "xs": 6,
+        "sm": 10,
+        "md": 14,
+        "lg": 18,
+        "xl": 24,
+        "pill": 999
+      },
+      "spacing": {
+        "unit": 4,
+        "scale": [0, 2, 4, 6, 8, 12, 16, 20, 24, 28, 32, 40]
+      },
+      "elevation": {
+        "card": "0 10px 24px -10px rgba(2, 6, 23, 0.15)",
+        "popover": "0 16px 32px -12px rgba(2, 6, 23, 0.2)",
+        "focusRing": { "color": "#FFE8C6", "width": 3, "style": "outline" }
+      },
+      "iconography": {
+        "style": "rounded-soft",
+        "sizes": { "sm": 16, "md": 20, "lg": 24 },
+        "strokeWidth": 1.75
+      },
+      "motion": {
+        "duration": { "fast": 120, "normal": 180, "slow": 240 },
+        "easing": {
+          "in": "cubic-bezier(0.4, 0, 1, 1)",
+          "out": "cubic-bezier(0, 0, 0.2, 1)",
+          "inOut": "cubic-bezier(0.4, 0, 0.2, 1)"
+        }
+      }
+    }
+  },
+  
+  "components": {
+    "Card": {
+      "purpose": "Primary surface for all modules.",
+      "anatomy": ["container", "optional header", "body", "optional footer"],
+      "tokens": { "bg": "background.surface", "radius": "xl", "shadow": "elevation.card", "border": "border.soft" },
+      "padding": { "x": 20, "y": 20 },
+      "variants": { "default": {}, "subtle": { "bg": "background.subtle" } },
+      "states": { "hover": { "shadow": "elevation.popover" } }
+    },
+    "Avatar": {
+      "purpose": "Represents a person.",
+      "sizes": { "xs": 24, "sm": 32, "md": 40, "lg": 48 },
+      "shape": "circular",
+      "fallback": { "bg": "gray.200", "text": "gray.700" }
+    },
+    "AvatarGroup": {
+      "overlap": -10,
+      "maxVisible": 5,
+      "counterStyle": { "bg": "gray.100", "text": "text.secondary", "border": "#FFFFFF" }
+    },
+    "Chip": {
+      "purpose": "Keyword/category tokens used under the profile card.",
+      "shape": "pill",
+      "sizes": { "sm": { "h": 28, "px": 12, "text": "xs" } },
+      "variants": {
+        "neutral": { "bg": "gray.100", "text": "text.secondary" },
+        "primary": { "bg": "brand.primaryMuted", "text": "brand.primaryOnColor" }
+      }
+    },
+    "Button": {
+      "sizes": {
+        "sm": { "h": 36, "px": 14, "radius": "pill", "text": "sm" },
+        "md": { "h": 40, "px": 16, "radius": "pill", "text": "md" }
+      },
+      "variants": {
+        "primary": { "bg": "brand.primary", "text": "text.inverse" },
+        "success": { "bg": "accent.success", "text": "accent.successOnColor" },
+        "secondary": { "bg": "gray.100", "text": "text.primary" },
+        "ghost": { "bg": "transparent", "text": "text.secondary" }
+      },
+      "states": {
+        "hover": { "opacity": 0.96 },
+        "focus": { "ring": "elevation.focusRing" },
+        "disabled": { "opacity": 0.5, "cursor": "not-allowed" }
+      },
+      "iconPlacement": ["start", "end", "only"]
+    },
+    "IconButton": {
+      "size": 36,
+      "radius": "pill",
+      "bg": "gray.100",
+      "icon": { "color": "text.secondary", "size": 18 }
+    },
+    "Switch": {
+      "purpose": "Settings toggles in Integrations.",
+      "track": { "width": 46, "height": 26, "radius": "pill" },
+      "thumb": { "size": 20 },
+      "colors": { "offTrack": "gray.200", "offThumb": "#FFFFFF", "onTrack": "brand.primary", "onThumb": "#FFFFFF" }
+    },
+    "ProgressDonut": {
+      "diameter": 46,
+      "thickness": 6,
+      "bgTrack": "brand.primaryMuted",
+      "fgTrack": "brand.primary",
+      "label": { "font": "xs", "position": "top-left or inside" }
+    },
+    "Calendar": {
+      "header": { "monthSize": "md", "weight": 600 },
+      "cell": { "size": 40, "radius": 12 },
+      "today": { "outline": { "color": "brand.primary", "width": 2 } },
+      "selected": { "bg": "brand.primary", "text": "text.inverse" },
+      "navButtons": "IconButton"
+    },
+    "NotificationItem": {
+      "layout": ["avatar", "title+meta", "actions"],
+      "spacing": 12,
+      "primaryAction": { "variant": "success", "label": "Accept" },
+      "secondaryAction": { "variant": "secondary", "label": "Deny" },
+      "unreadDot": { "size": 8, "color": "brand.primary" }
+    },
+    "ProjectSummaryCard": {
+      "title": { "style": "lg" },
+      "description": { "style": "sm", "color": "text.tertiary" },
+      "assignees": "AvatarGroup",
+      "progress": "ProgressDonut",
+      "menu": "IconButton"
+    },
+    "MilestoneCard": {
+      "fields": ["title", "dueDate", "assignees", "progress", "viewButton"],
+      "progress": { "donut": "ProgressDonut", "valuePlacement": "inside" },
+      "cta": { "variant": "secondary", "label": "View details" }
+    },
+    "IntegrationsRow": {
+      "anatomy": ["logo", "name", "description", "switch"],
+      "rowHeight": 64,
+      "logoSize": 28,
+      "switch": "Switch"
+    },
+    "BrandBadge": {
+      "purpose": "Payment brand chips at the bottom.",
+      "height": 36,
+      "radius": 12,
+      "bg": "background.surface",
+      "shadow": "elevation.card",
+      "paddingX": 12
+    },
+    "Badge": {
+      "purpose": "Numeric counter such as unread count.",
+      "radius": 10,
+      "colors": { "bg": "brand.primary", "text": "text.inverse" },
+      "sizes": { "sm": { "h": 20, "px": 8, "text": "xs" } }
+    }
+  },
+  "contentGuidelines": {
+    "titles": { "case": "Sentence case", "maxChars": 48 },
+    "descriptions": { "tone": "crisp, active voice", "maxLines": 2 },
+    "buttons": { "verbs": ["View", "Accept", "Deny", "Edit", "Add"] }
+  },
+  "a11y": {
+    "minTouchTarget": 40,
+    "focus": "Always display focus ring using elevation.focusRing.",
+    "colorContrast": "Body text >= 4.5:1 on surface; icons >= 3:1.",
+    "motion": "Respect reduced motion; disable non-essential transitions."
+  },
+  "integration": {
+    "tailwindMapping": {
+      "theme.extend.colors": {
+        "brand": { "primary": "#FFB733", "muted": "#FFF4E0" },
+        "accent": { "gold": "#EAB000" },
+        "surface": "#FFFFFF"
+      },
+      "theme.extend.borderRadius": { "xl": 24, "lg": 18, "md": 14, "pill": 999 },
+      "theme.extend.boxShadow": {
+        "card": "0 10px 24px -10px rgba(2,6,23,0.15)",
+        "popover": "0 16px 32px -12px rgba(2,6,23,0.20)"
+      }
+    },
+    "semanticExample": {
+      "buttonPrimary": "bg-brand-primary text-white rounded-full px-4 h-10 shadow-card focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-muted",
+      "card": "bg-white rounded-2xl p-5 shadow-card border border-slate-200",
+      "switchOn": "bg-brand-primary",
+      "progressDonut": { "diameter": 46, "stroke": 6, "colors": ["#FFF4E0", "#FFB733"] }
+    }
+  },
+  "compositionExamples": []
+}
