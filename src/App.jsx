@@ -12,6 +12,7 @@ import BusinessHome from './pages/BusinessHome'
 import BusinessClients from './pages/BusinessClients'
 import BusinessRewards from './pages/BusinessRewards'
 import BusinessScan from './pages/BusinessScan'
+import BusinessLocationSetup from './pages/BusinessLocationSetup'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -44,6 +45,14 @@ function App() {
                     {/* Business Dashboard Routes */}
                     <Route path="/business" element={<Navigate to="/business/dashboard" replace />} />
                     <Route
+                        path="/business/location-setup"
+                        element={
+                            <ProtectedRoute>
+                                <BusinessLocationSetup />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
                         path="/business/dashboard"
                         element={
                             <ProtectedRoute>
@@ -51,7 +60,8 @@ function App() {
                             </ProtectedRoute>
                         }
                     >
-                        <Route index element={<BusinessHome />} />
+                        <Route index element={<Navigate to="/business/dashboard/home" replace />} />
+                        <Route path="home" element={<BusinessHome />} />
                         <Route path="clients" element={<BusinessClients />} />
                         <Route path="rewards" element={<BusinessRewards />} />
                         <Route path="scan" element={<BusinessScan />} />

@@ -30,6 +30,26 @@ export const businessService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Update business location
+  updateBusinessLocation: async (address) => {
+    try {
+      const response = await api.put("/business/location", { address });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Update business coordinates
+  updateCoordinates: async ({ latitude, longitude }) => {
+    try {
+      const response = await api.put("/business/coordinates", { latitude, longitude });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default businessService;

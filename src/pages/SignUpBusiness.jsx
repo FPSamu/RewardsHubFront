@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
+import businessService from '../services/businessService';
 
 function SignUpBusiness() {
     const navigate = useNavigate();
@@ -11,7 +12,10 @@ function SignUpBusiness() {
         password: '',
         confirmPassword: '',
         phone: '',
-        address: '',
+        street: '',
+        neighborhood: '',
+        city: '',
+        state: '',
         description: '',
     });
     const [error, setError] = useState('');
@@ -28,6 +32,10 @@ function SignUpBusiness() {
     const validateForm = () => {
         if (!formData.name.trim()) {
             setError('El nombre del negocio es requerido');
+            return false;
+        }
+        if (!formData.street.trim() || !formData.city.trim() || !formData.state.trim()) {
+            setError('Todos los campos de dirección son requeridos');
             return false;
         }
         if (formData.password !== formData.confirmPassword) {
@@ -52,12 +60,19 @@ function SignUpBusiness() {
         setError('');
 
         try {
+            // Construir la dirección en el formato requerido
+            // Reemplazar espacios en street con guiones
+            const formattedStreet = formData.street.replace(/\s+/g, '-');
+            const formattedCity = formData.city.replace(/\s+/g, '-');
+            // const formattedNeighborhood = formData.neighborhood.replace(/\s+/g, '-');
+            const formattedState = formData.state.replace(/\s+/g, '-');
+            const address = `${formattedStreet}-${formattedCity}-${formattedState}`;
+
             const userData = {
                 name: formData.name, // Nombre del negocio (campo principal)
                 email: formData.email,
                 password: formData.password,
                 phone: formData.phone,
-                address: formData.address,
                 description: formData.description,
             };
 
@@ -66,10 +81,21 @@ function SignUpBusiness() {
                 userData.contactName = formData.contactName;
             }
 
-            // Usa la ruta /business/register
+            // Paso 1: Registrar el negocio
             const response = await authService.signUpBusiness(userData);
             console.log('Registro exitoso:', response);
-            navigate('/business/dashboard');
+
+            // Paso 2: Actualizar la ubicación del negocio
+            try {
+                await businessService.updateBusinessLocation(address);
+                console.log('Ubicación actualizada exitosamente');
+            } catch (locationErr) {
+                console.error('Error al actualizar ubicación:', locationErr);
+                // Continuar aunque falle la actualización de ubicación
+            }
+
+            // Redirigir a la página de configuración de ubicación
+            navigate('/business/location-setup');
         } catch (err) {
             setError(err.message || 'Error al crear la cuenta. Intenta nuevamente.');
             console.error('Error en registro:', err);
@@ -140,19 +166,53 @@ function SignUpBusiness() {
                                 />
                             </div>
 
-                            {/* Dirección */}
+                            {/* Calle y Número */}
                             <div>
-                                <label htmlFor="address" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
-                                    Dirección <span className="text-[#F87171]">*</span>
+                                <label htmlFor="street" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
+                                    Calle y Número <span className="text-[#F87171]">*</span>
                                 </label>
                                 <input
-                                    id="address"
-                                    name="address"
+                                    id="street"
+                                    name="street"
                                     type="text"
-                                    value={formData.address}
+                                    value={formData.street}
                                     onChange={handleChange}
                                     className="appearance-none relative block w-full h-11 px-4 border border-[#DEE2E6] placeholder-[#ADB5BD] text-[#0F172A] text-[16px] leading-6 font-medium rounded-[14px] focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] focus:border-[#74D680] transition-all duration-180"
-                                    placeholder="Calle Principal #123, Ciudad"
+                                    placeholder="Calle Principal #123"
+                                    required
+                                />
+                            </div>
+
+                            {/* Ciudad */}
+                            <div>
+                                <label htmlFor="city" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
+                                    Ciudad <span className="text-[#F87171]">*</span>
+                                </label>
+                                <input
+                                    id="city"
+                                    name="city"
+                                    type="text"
+                                    value={formData.city}
+                                    onChange={handleChange}
+                                    className="appearance-none relative block w-full h-11 px-4 border border-[#DEE2E6] placeholder-[#ADB5BD] text-[#0F172A] text-[16px] leading-6 font-medium rounded-[14px] focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] focus:border-[#74D680] transition-all duration-180"
+                                    placeholder="Guadalajara"
+                                    required
+                                />
+                            </div>
+
+                            {/* Estado */}
+                            <div>
+                                <label htmlFor="state" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
+                                    Estado <span className="text-[#F87171]">*</span>
+                                </label>
+                                <input
+                                    id="state"
+                                    name="state"
+                                    type="text"
+                                    value={formData.state}
+                                    onChange={handleChange}
+                                    className="appearance-none relative block w-full h-11 px-4 border border-[#DEE2E6] placeholder-[#ADB5BD] text-[#0F172A] text-[16px] leading-6 font-medium rounded-[14px] focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] focus:border-[#74D680] transition-all duration-180"
+                                    placeholder="Jalisco"
                                     required
                                 />
                             </div>
