@@ -30,6 +30,26 @@ export const rewardService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Create a points-based reward
+  createPointsReward: async (rewardData) => {
+    try {
+      const response = await api.post("/rewards", rewardData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Create a stamps-based reward
+  createStampsReward: async (rewardData) => {
+    try {
+      const response = await api.post("/rewards", rewardData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default rewardService;
