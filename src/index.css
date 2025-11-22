@@ -20,3 +20,127 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Estilos personalizados para el escáner QR */
+#qr-reader {
+  border: none !important;
+}
+
+#qr-reader__dashboard_section {
+  border-radius: 0.75rem;
+}
+
+#qr-reader__camera_selection {
+  margin-top: 1rem;
+}
+
+#qr-reader__camera_selection select {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  background-color: white;
+}
+
+#qr-reader__camera_selection button {
+  padding: 0.5rem 1rem;
+  margin-left: 0.5rem;
+  background-color: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.18s;
+}
+
+#qr-reader__camera_selection button:hover {
+  opacity: 0.9;
+}
+
+#qr-reader video {
+  border-radius: 0.75rem;
+  width: 100% !important;
+}
+
+#qr-reader__scan_region {
+  border-radius: 0.75rem !important;
+}
+
+#qr-reader__dashboard_section_csr {
+  border-radius: 0.75rem;
+  background-color: #f9fafb;
+  padding: 1rem;
+  text-align: center;
+}
+
+#qr-reader__dashboard_section_csr button {
+  margin: 0.25rem;
+  padding: 0.5rem 1rem;
+  background-color: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.18s;
+}
+
+#qr-reader__dashboard_section_csr button:hover {
+  opacity: 0.9;
+}
+
+/* Animaciones para la Landing Page */
+@keyframes blob {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1); 
+  }
+  33% { 
+    transform: translate(30px, -50px) scale(1.1); 
+  }
+  66% { 
+    transform: translate(-20px, 20px) scale(0.9); 
+  }
+}
+
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0px); 
+  }
+  50% { 
+    transform: translateY(-20px); 
+  }
+}
+
+@keyframes spin-slow {
+  from { 
+    transform: rotate(0deg); 
+  }
+  to { 
+    transform: rotate(360deg); 
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 10s linear infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce 2s infinite;
+}

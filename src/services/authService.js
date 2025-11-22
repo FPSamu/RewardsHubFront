@@ -224,6 +224,11 @@ export const authService = {
     return userType;
   },
 
+  // Get token
+  getToken: () => {
+    return localStorage.getItem("token");
+  },
+
   // Check if user is authenticated
   isAuthenticated: () => {
     return !!localStorage.getItem("token");

@@ -1,4 +1,4 @@
-n# RewardsHub - Backend
+# RewardsHub - Frontend
 
 > RewardsHub is a univeral platform for rewards and fidelization programs between businesses and clients.
 Businesses create a RewardsHub account and configure their custom rewards and points systems.

@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import Landing from './pages/Landing'
 import Login from './pages/Login'
 import SignUpChoice from './pages/SignUpChoice'
 import SignUpClient from './pages/SignUpClient'
@@ -21,7 +22,7 @@ function App() {
         <Router>
             <div className="App min-h-screen bg-gray-50">
                 <Routes>
-                    <Route path="/" element={<Navigate to="/login" replace />} />
+                    <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<SignUpChoice />} />
                     <Route path="/signup/client" element={<SignUpClient />} />

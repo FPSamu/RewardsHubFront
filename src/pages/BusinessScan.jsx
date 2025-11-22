@@ -79,8 +79,10 @@ const BusinessScan = () => {
                 qrReaderRef.current.id,
                 {
                     fps: 10,
-                    qrbox: { width: 250, height: 250 },
+                    qrbox: { width: 280, height: 280 },
                     aspectRatio: 1.0,
+                    rememberLastUsedCamera: true,
+                    showTorchButtonIfSupported: true,
                 },
                 false
             );
@@ -161,8 +163,8 @@ const BusinessScan = () => {
                                 <button
                                     onClick={() => setRewardType('points')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'points'
-                                            ? 'border-brand-primary bg-brand-muted'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-brand-primary bg-brand-muted'
+                                        : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     <div className="flex flex-col items-center">
@@ -190,8 +192,8 @@ const BusinessScan = () => {
                                 <button
                                     onClick={() => setRewardType('stamps')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'stamps'
-                                            ? 'border-accent-success bg-green-50'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-accent-success bg-green-50'
+                                        : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     <div className="flex flex-col items-center">
@@ -219,8 +221,8 @@ const BusinessScan = () => {
                                 <button
                                     onClick={() => setRewardType('both')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'both'
-                                            ? 'border-accent-gold bg-yellow-50'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-accent-gold bg-yellow-50'
+                                        : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     <div className="flex flex-col items-center">
@@ -318,21 +320,76 @@ const BusinessScan = () => {
             {/* Scanning Step */}
             {step === 'scanning' && (
                 <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                    <div className="max-w-2xl mx-auto">
+                    <div className="max-w-3xl mx-auto">
                         <h3 className="text-xl font-bold text-gray-800 mb-4 tracking-tight text-center">
                             Escanea el Código QR del Cliente
                         </h3>
                         <p className="text-gray-600 text-center mb-6">
-                            Centra el código QR en la cámara
+                            Centra el código QR en la cámara para registrar la transacción
                         </p>
 
-                        <div id="qr-reader" ref={qrReaderRef} className="w-full mb-6"></div>
+                        {/* Resumen de la transacción */}
+                        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Resumen de la transacción:</h4>
+                            <div className="space-y-2">
+                                {(rewardType === 'points' || rewardType === 'both') && purchaseAmount && (
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Monto:</span>
+                                        <span className="font-bold text-gray-800">${parseFloat(purchaseAmount).toFixed(2)} MXN</span>
+                                    </div>
+                                )}
+                                {(rewardType === 'points' || rewardType === 'both') && (
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Puntos a otorgar:</span>
+                                        <span className="font-bold text-brand-primary">{Math.floor(parseFloat(purchaseAmount || 0) / 10)}</span>
+                                    </div>
+                                )}
+                                {(rewardType === 'stamps' || rewardType === 'both') && (
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Sellos a otorgar:</span>
+                                        <span className="font-bold text-accent-success">{stampQuantity}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* QR Scanner Container */}
+                        <div className="bg-gray-100 rounded-xl overflow-hidden mb-6">
+                            <div id="qr-reader" ref={qrReaderRef} className="w-full"></div>
+                        </div>
+
+                        {/* Instrucciones */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                            <div className="flex items-start">
+                                <svg
+                                    className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
+                                <div className="text-sm text-blue-800">
+                                    <p className="font-semibold mb-1">Consejos para un mejor escaneo:</p>
+                                    <ul className="list-disc list-inside space-y-1 text-blue-700">
+                                        <li>Asegúrate de tener buena iluminación</li>
+                                        <li>Mantén el código QR estable y centrado</li>
+                                        <li>Evita reflejos en la pantalla del cliente</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
 
                         <button
                             onClick={handleReset}
                             className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-pill font-semibold hover:bg-gray-300 transition-colors duration-180"
                         >
-                            Cancelar
+                            Cancelar Escaneo
                         </button>
                     </div>
                 </div>
