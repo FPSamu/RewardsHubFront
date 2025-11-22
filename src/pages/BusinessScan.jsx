@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import businessService from '../services/businessService';
 import userPointsService from '../services/userPointsService';
+import systemService from '../services/systemService';
 
 const BusinessScan = () => {
     const navigate = useNavigate();
@@ -12,41 +13,71 @@ const BusinessScan = () => {
     const [rewardType, setRewardType] = useState('points'); // 'points', 'stamps', 'both'
     const [error, setError] = useState(null);
     const [business, setBusiness] = useState(null);
+    const [rewardSystems, setRewardSystems] = useState({ points: null, stamps: [] });
+    const [selectedStampSystem, setSelectedStampSystem] = useState(null);
+    const [productIdentifier, setProductIdentifier] = useState('');
     const scannerRef = useRef(null);
     const qrReaderRef = useRef(null);
 
     useEffect(() => {
-        // Fetch business details
-        const fetchBusiness = async () => {
+        // Fetch business details and reward systems
+        const fetchBusinessData = async () => {
             try {
                 const businessData = await businessService.getMyBusiness();
                 setBusiness(businessData);
+
+                // Fetch reward systems
+                const systems = await systemService.getBusinessSystems();
+                const pointsSystem = systems.find(sys => sys.type === 'points' && sys.isActive);
+                const stampSystems = systems.filter(sys => sys.type === 'stamps' && sys.isActive);
+                
+                setRewardSystems({
+                    points: pointsSystem || null,
+                    stamps: stampSystems || []
+                });
+
+                // Set default stamp system if only one exists
+                if (stampSystems.length === 1) {
+                    setSelectedStampSystem(stampSystems[0].id);
+                }
             } catch (err) {
-                console.error('Error fetching business:', err);
+                console.error('Error fetching business data:', err);
+                setError('Error al cargar la información del negocio');
             }
         };
-        fetchBusiness();
+        fetchBusinessData();
     }, []);
 
     const processTransaction = useCallback(async (userId) => {
         setStep('processing');
         try {
-            // Calculate points/stamps based on purchase amount
-            const pointsToAdd = rewardType === 'points' || rewardType === 'both'
-                ? Math.floor(parseFloat(purchaseAmount) / 10) || 0
-                : 0;
-            const stampsToAdd = rewardType === 'stamps' || rewardType === 'both'
-                ? parseInt(stampQuantity) || 0
-                : 0;
+            const requestData = {
+                userId: userId
+            };
+
+            // Add purchase amount for points
+            if ((rewardType === 'points' || rewardType === 'both') && purchaseAmount) {
+                requestData.purchaseAmount = parseFloat(purchaseAmount);
+            }
+
+            // Add stamp data for stamps
+            if ((rewardType === 'stamps' || rewardType === 'both') && stampQuantity) {
+                const stampDataItem = {
+                    rewardSystemId: selectedStampSystem,
+                    stampsCount: parseInt(stampQuantity)
+                };
+
+                // Add product identifier if required by the stamp system
+                const selectedSystem = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
+                if (selectedSystem?.productType === 'specific' && productIdentifier) {
+                    stampDataItem.productIdentifier = productIdentifier;
+                }
+
+                requestData.stampData = [stampDataItem];
+            }
 
             // Call API to add points/stamps to user
-            await userPointsService.addPoints({
-                userId: userId,
-                businessId: business.id,
-                points: pointsToAdd,
-                stamps: stampsToAdd,
-                purchaseAmount: parseFloat(purchaseAmount) || 0
-            });
+            await userPointsService.addPoints(requestData);
 
             setStep('success');
             setError(null);
@@ -55,7 +86,7 @@ const BusinessScan = () => {
             setError(err.message || 'Error al procesar la transacción');
             setStep('error');
         }
-    }, [rewardType, purchaseAmount, stampQuantity, business]);
+    }, [rewardType, purchaseAmount, stampQuantity, selectedStampSystem, productIdentifier, rewardSystems, business]);
 
     useEffect(() => {
         const onScanSuccess = async (decodedText) => {
@@ -100,14 +131,41 @@ const BusinessScan = () => {
     }, [step, processTransaction]);
 
     const handleStartScan = () => {
-        if (rewardType === 'points' && !purchaseAmount) {
-            setError('Por favor ingresa el monto de la compra');
-            return;
+        // Validate points
+        if (rewardType === 'points' || rewardType === 'both') {
+            if (!rewardSystems.points) {
+                setError('No hay un sistema de puntos activo');
+                return;
+            }
+            if (!purchaseAmount) {
+                setError('Por favor ingresa el monto de la compra');
+                return;
+            }
         }
-        if ((rewardType === 'stamps' || rewardType === 'both') && !stampQuantity) {
-            setError('Por favor ingresa la cantidad de sellos');
-            return;
+
+        // Validate stamps
+        if (rewardType === 'stamps' || rewardType === 'both') {
+            if (rewardSystems.stamps.length === 0) {
+                setError('No hay sistemas de sellos activos');
+                return;
+            }
+            if (!selectedStampSystem) {
+                setError('Por favor selecciona un sistema de sellos');
+                return;
+            }
+            if (!stampQuantity) {
+                setError('Por favor ingresa la cantidad de sellos');
+                return;
+            }
+
+            // Validate product identifier for specific product types
+            const selectedSystem = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
+            if (selectedSystem?.productType === 'specific' && !productIdentifier) {
+                setError('Por favor ingresa el identificador del producto');
+                return;
+            }
         }
+
         setError(null);
         setStep('scanning');
     };
@@ -115,9 +173,15 @@ const BusinessScan = () => {
     const handleReset = () => {
         setPurchaseAmount('');
         setStampQuantity('');
+        setProductIdentifier('');
         setRewardType('points');
         setError(null);
         setStep('form');
+        
+        // Reset to default stamp system if only one exists
+        if (rewardSystems.stamps.length === 1) {
+            setSelectedStampSystem(rewardSystems.stamps[0].id);
+        }
     };
 
     const handleGoBack = () => {
@@ -163,8 +227,8 @@ const BusinessScan = () => {
                                 <button
                                     onClick={() => setRewardType('points')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'points'
-                                        ? 'border-brand-primary bg-brand-muted'
-                                        : 'border-gray-200 hover:border-gray-300'
+                                            ? 'border-brand-primary bg-brand-muted'
+                                            : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     <div className="flex flex-col items-center">
@@ -192,8 +256,8 @@ const BusinessScan = () => {
                                 <button
                                     onClick={() => setRewardType('stamps')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'stamps'
-                                        ? 'border-accent-success bg-green-50'
-                                        : 'border-gray-200 hover:border-gray-300'
+                                            ? 'border-accent-success bg-green-50'
+                                            : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     <div className="flex flex-col items-center">
@@ -221,8 +285,8 @@ const BusinessScan = () => {
                                 <button
                                     onClick={() => setRewardType('both')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'both'
-                                        ? 'border-accent-gold bg-yellow-50'
-                                        : 'border-gray-200 hover:border-gray-300'
+                                            ? 'border-accent-gold bg-yellow-50'
+                                            : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     <div className="flex flex-col items-center">
@@ -270,33 +334,118 @@ const BusinessScan = () => {
                                         className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
                                     />
                                 </div>
-                                {purchaseAmount && (
-                                    <p className="mt-2 text-sm text-brand-primary font-semibold">
-                                        Se otorgarán {Math.floor(parseFloat(purchaseAmount) / 10)} puntos
+                                {purchaseAmount && rewardSystems.points && (() => {
+                                    const amount = parseFloat(purchaseAmount);
+                                    const pointsToEarn = Math.floor(amount * rewardSystems.points.pointsPerPurchase);
+                                    return (
+                                        <p className="mt-2 text-sm text-brand-primary font-semibold">
+                                            Se otorgarán {pointsToEarn} puntos (${amount.toFixed(2)} × {rewardSystems.points.pointsPerPurchase})
+                                        </p>
+                                    );
+                                })()}
+                                {!rewardSystems.points && (
+                                    <p className="mt-2 text-sm text-yellow-600 font-semibold">
+                                        No hay un sistema de puntos activo
                                     </p>
                                 )}
                             </div>
                         )}
 
-                        {/* Stamp Quantity */}
+                        {/* Stamp System Selection */}
                         {(rewardType === 'stamps' || rewardType === 'both') && (
-                            <div className="mb-6">
-                                <label htmlFor="stampQuantity" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Cantidad de Sellos
-                                </label>
-                                <input
-                                    id="stampQuantity"
-                                    type="number"
-                                    min="1"
-                                    value={stampQuantity}
-                                    onChange={(e) => setStampQuantity(e.target.value)}
-                                    placeholder="1"
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
-                                />
-                                <p className="mt-2 text-sm text-gray-500">
-                                    Ingresa cuántos productos especiales compró el cliente
-                                </p>
-                            </div>
+                            <>
+                                {rewardSystems.stamps.length === 0 ? (
+                                    <div className="mb-6 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
+                                        No hay sistemas de sellos activos. Por favor crea uno primero.
+                                    </div>
+                                ) : rewardSystems.stamps.length === 1 ? (
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Sistema de Sellos
+                                        </label>
+                                        <div className="bg-gray-50 border border-gray-300 rounded-lg px-4 py-3">
+                                            <p className="font-semibold text-gray-800">{rewardSystems.stamps[0].name}</p>
+                                            <p className="text-sm text-gray-600 mt-1">{rewardSystems.stamps[0].description}</p>
+                                            {rewardSystems.stamps[0].stampsRequired && (
+                                                <p className="text-sm text-brand-primary mt-1">
+                                                    Requiere {rewardSystems.stamps[0].stampsRequired} sellos para recompensa
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="mb-6">
+                                        <label htmlFor="stampSystem" className="block text-sm font-medium text-gray-700 mb-2">
+                                            Selecciona Sistema de Sellos
+                                        </label>
+                                        <select
+                                            id="stampSystem"
+                                            value={selectedStampSystem || ''}
+                                            onChange={(e) => setSelectedStampSystem(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
+                                        >
+                                            <option value="">Selecciona un sistema...</option>
+                                            {rewardSystems.stamps.map(system => (
+                                                <option key={system.id} value={system.id}>
+                                                    {system.name} - {system.description}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {selectedStampSystem && (() => {
+                                            const system = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
+                                            return system?.stampsRequired && (
+                                                <p className="mt-2 text-sm text-brand-primary font-semibold">
+                                                    Requiere {system.stampsRequired} sellos para recompensa
+                                                </p>
+                                            );
+                                        })()}
+                                    </div>
+                                )}
+
+                                {/* Product Identifier (if required) */}
+                                {selectedStampSystem && (() => {
+                                    const selectedSystem = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
+                                    return selectedSystem?.productType === 'specific' && (
+                                        <div className="mb-6">
+                                            <label htmlFor="productIdentifier" className="block text-sm font-medium text-gray-700 mb-2">
+                                                Identificador del Producto
+                                            </label>
+                                            <input
+                                                id="productIdentifier"
+                                                type="text"
+                                                value={productIdentifier}
+                                                onChange={(e) => setProductIdentifier(e.target.value)}
+                                                placeholder={selectedSystem.productIdentifier || "Ej: SKU-12345"}
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
+                                            />
+                                            <p className="mt-2 text-sm text-gray-500">
+                                                Este sistema requiere un producto específico: {selectedSystem.productIdentifier}
+                                            </p>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Stamp Quantity */}
+                                {rewardSystems.stamps.length > 0 && (
+                                    <div className="mb-6">
+                                        <label htmlFor="stampQuantity" className="block text-sm font-medium text-gray-700 mb-2">
+                                            Cantidad de Sellos
+                                        </label>
+                                        <input
+                                            id="stampQuantity"
+                                            type="number"
+                                            min="1"
+                                            value={stampQuantity}
+                                            onChange={(e) => setStampQuantity(e.target.value)}
+                                            placeholder="1"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
+                                        />
+                                        <p className="mt-2 text-sm text-gray-500">
+                                            Ingresa cuántos sellos deseas otorgar al cliente
+                                        </p>
+                                    </div>
+                                )}
+                            </>
                         )}
 
                         {/* Error Message */}
@@ -333,22 +482,40 @@ const BusinessScan = () => {
                             <h4 className="text-sm font-semibold text-gray-700 mb-3">Resumen de la transacción:</h4>
                             <div className="space-y-2">
                                 {(rewardType === 'points' || rewardType === 'both') && purchaseAmount && (
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-600">Monto:</span>
-                                        <span className="font-bold text-gray-800">${parseFloat(purchaseAmount).toFixed(2)} MXN</span>
-                                    </div>
+                                    <>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-600">Monto:</span>
+                                            <span className="font-bold text-gray-800">${parseFloat(purchaseAmount).toFixed(2)} MXN</span>
+                                        </div>
+                                        {rewardSystems.points && (
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-600">Puntos a otorgar:</span>
+                                                <span className="font-bold text-brand-primary">
+                                                    {Math.floor(parseFloat(purchaseAmount) * rewardSystems.points.pointsPerPurchase)}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
-                                {(rewardType === 'points' || rewardType === 'both') && (
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-600">Puntos a otorgar:</span>
-                                        <span className="font-bold text-brand-primary">{Math.floor(parseFloat(purchaseAmount || 0) / 10)}</span>
-                                    </div>
-                                )}
-                                {(rewardType === 'stamps' || rewardType === 'both') && (
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-600">Sellos a otorgar:</span>
-                                        <span className="font-bold text-accent-success">{stampQuantity}</span>
-                                    </div>
+                                {(rewardType === 'stamps' || rewardType === 'both') && selectedStampSystem && (
+                                    <>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-600">Sistema:</span>
+                                            <span className="font-bold text-gray-800">
+                                                {rewardSystems.stamps.find(s => s.id === selectedStampSystem)?.name}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-600">Sellos a otorgar:</span>
+                                            <span className="font-bold text-accent-success">{stampQuantity}</span>
+                                        </div>
+                                        {productIdentifier && (
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-600">Producto:</span>
+                                                <span className="font-bold text-gray-800">{productIdentifier}</span>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
@@ -439,22 +606,40 @@ const BusinessScan = () => {
                         <div className="bg-gray-50 rounded-lg p-6 mb-8">
                             <div className="space-y-3">
                                 {(rewardType === 'points' || rewardType === 'both') && purchaseAmount && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Monto de compra:</span>
-                                        <span className="font-bold text-gray-800">${parseFloat(purchaseAmount).toFixed(2)} MXN</span>
-                                    </div>
+                                    <>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-600">Monto de compra:</span>
+                                            <span className="font-bold text-gray-800">${parseFloat(purchaseAmount).toFixed(2)} MXN</span>
+                                        </div>
+                                        {rewardSystems.points && (
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-600">Puntos otorgados:</span>
+                                                <span className="font-bold text-brand-primary">
+                                                    {Math.floor(parseFloat(purchaseAmount) * rewardSystems.points.pointsPerPurchase)}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
-                                {(rewardType === 'points' || rewardType === 'both') && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Puntos otorgados:</span>
-                                        <span className="font-bold text-brand-primary">{Math.floor(parseFloat(purchaseAmount) / 10)}</span>
-                                    </div>
-                                )}
-                                {(rewardType === 'stamps' || rewardType === 'both') && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Sellos otorgados:</span>
-                                        <span className="font-bold text-accent-success">{stampQuantity}</span>
-                                    </div>
+                                {(rewardType === 'stamps' || rewardType === 'both') && selectedStampSystem && (
+                                    <>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-600">Sistema de sellos:</span>
+                                            <span className="font-bold text-gray-800">
+                                                {rewardSystems.stamps.find(s => s.id === selectedStampSystem)?.name}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-600">Sellos otorgados:</span>
+                                            <span className="font-bold text-accent-success">{stampQuantity}</span>
+                                        </div>
+                                        {productIdentifier && (
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-600">Producto:</span>
+                                                <span className="font-bold text-gray-800">{productIdentifier}</span>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
