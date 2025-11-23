@@ -2,9 +2,11 @@ import api from "./api";
 
 export const rewardService = {
   // Get all rewards for a business
-  getBusinessRewards: async (businessId) => {
+  getBusinessRewards: async (businessId, includeInactive = false) => {
     try {
-      const response = await api.get(`/rewards/business/${businessId}`);
+      const response = await api.get(`/rewards/business/${businessId}`, {
+        params: { includeInactive },
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -45,6 +47,16 @@ export const rewardService = {
   createStampsReward: async (rewardData) => {
     try {
       const response = await api.post("/rewards", rewardData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Update a reward
+  updateReward: async (rewardId, rewardData) => {
+    try {
+      const response = await api.put(`/rewards/${rewardId}`, rewardData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

@@ -10,9 +10,13 @@ const BusinessRewards = () => {
     const [error, setError] = useState(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showPointsSystemModal, setShowPointsSystemModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingReward, setEditingReward] = useState(null);
     const [rewardType, setRewardType] = useState(null); // 'points' or 'stamps'
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState(null);
+    const [updating, setUpdating] = useState(false);
+    const [updateError, setUpdateError] = useState(null);
 
     // Estado para verificar si existe sistema de puntos
     const [hasPointsSystem, setHasPointsSystem] = useState(false);
@@ -51,6 +55,16 @@ const BusinessRewards = () => {
         }
     });
 
+    // Edit reward form state
+    const [editFormData, setEditFormData] = useState({
+        name: '',
+        description: '',
+        rewardType: '',
+        rewardValue: '',
+        pointsRequired: '',
+        stampsRequired: ''
+    });
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -63,8 +77,8 @@ const BusinessRewards = () => {
             const businessData = await businessService.getMyBusiness();
             setBusiness(businessData);
 
-            // Fetch rewards
-            const rewardsData = await rewardService.getBusinessRewards(businessData.id);
+            // Fetch rewards (including inactive ones)
+            const rewardsData = await rewardService.getBusinessRewards(businessData.id, true);
             setRewards(rewardsData);
 
             // Fetch systems (separado de rewards)
@@ -299,11 +313,13 @@ const BusinessRewards = () => {
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <button
+                                        onClick={() => handleOpenEditModal(reward)}
                                         className="px-4 py-2 bg-gray-200 text-gray-700 rounded-pill text-sm font-semibold hover:bg-gray-300 transition-colors duration-180"
                                     >
                                         Editar
                                     </button>
                                     <button
+                                        onClick={() => handleDeactivateReward(reward.id)}
                                         className="px-4 py-2 bg-red-50 text-red-600 rounded-pill text-sm font-semibold hover:bg-red-100 transition-colors duration-180"
                                     >
                                         Desactivar
@@ -384,6 +400,7 @@ const BusinessRewards = () => {
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <button
+                                        onClick={() => handleActivateReward(reward.id)}
                                         className="px-4 py-2 bg-accent-success text-white rounded-pill text-sm font-semibold hover:opacity-90 transition-opacity duration-180"
                                     >
                                         Activar
@@ -435,6 +452,19 @@ const BusinessRewards = () => {
                         setCreateError(null);
                     }}
                     onSubmit={handleCreatePointsSystem}
+                />
+            )}
+
+            {/* Edit Reward Modal */}
+            {showEditModal && editingReward && (
+                <EditRewardModal
+                    reward={editingReward}
+                    formData={editFormData}
+                    setFormData={setEditFormData}
+                    updating={updating}
+                    error={updateError}
+                    onClose={handleCloseEditModal}
+                    onSubmit={handleUpdateReward}
                 />
             )}
         </div>
@@ -544,6 +574,93 @@ const BusinessRewards = () => {
             setCreateError(err.message || 'Error al crear la recompensa');
         } finally {
             setCreating(false);
+        }
+    }
+
+    function handleOpenEditModal(reward) {
+        setEditingReward(reward);
+        setEditFormData({
+            name: reward.name || '',
+            description: reward.description || '',
+            rewardType: reward.rewardType || '',
+            rewardValue: reward.rewardValue || '',
+            pointsRequired: reward.pointsRequired || '',
+            stampsRequired: reward.stampsRequired || ''
+        });
+        setShowEditModal(true);
+    }
+
+    function handleCloseEditModal() {
+        setShowEditModal(false);
+        setEditingReward(null);
+        setUpdateError(null);
+        setEditFormData({
+            name: '',
+            description: '',
+            rewardType: '',
+            rewardValue: '',
+            pointsRequired: '',
+            stampsRequired: ''
+        });
+    }
+
+    async function handleUpdateReward(e) {
+        e.preventDefault();
+        if (!editingReward) return;
+
+        setUpdating(true);
+        setUpdateError(null);
+
+        try {
+            const payload = {
+                name: editFormData.name,
+                description: editFormData.description,
+                rewardType: editFormData.rewardType,
+                rewardValue: editFormData.rewardType === 'discount' ?
+                    parseFloat(editFormData.rewardValue) :
+                    editFormData.rewardValue
+            };
+
+            // Include points or stamps requirement based on what the reward has
+            if (editFormData.pointsRequired) {
+                payload.pointsRequired = parseInt(editFormData.pointsRequired);
+            }
+            if (editFormData.stampsRequired) {
+                payload.stampsRequired = parseInt(editFormData.stampsRequired);
+            }
+
+            await rewardService.updateReward(editingReward.id, payload);
+            await fetchData();
+            handleCloseEditModal();
+        } catch (err) {
+            console.error('Error updating reward:', err);
+            setUpdateError(err.message || 'Error al actualizar la recompensa');
+        } finally {
+            setUpdating(false);
+        }
+    }
+
+    async function handleDeactivateReward(rewardId) {
+        if (!confirm('¿Estás seguro de que deseas desactivar esta recompensa?')) {
+            return;
+        }
+
+        try {
+            await rewardService.updateReward(rewardId, { isActive: false });
+            await fetchData();
+        } catch (err) {
+            console.error('Error deactivating reward:', err);
+            alert(err.message || 'Error al desactivar la recompensa');
+        }
+    }
+
+    async function handleActivateReward(rewardId) {
+        try {
+            await rewardService.updateReward(rewardId, { isActive: true });
+            await fetchData();
+        } catch (err) {
+            console.error('Error activating reward:', err);
+            alert(err.message || 'Error al activar la recompensa');
         }
     }
 };
@@ -1078,6 +1195,178 @@ function StampsRewardForm({ formData, setFormData, onSubmit, creating, error, on
                 </button>
             </div>
         </form>
+    );
+}
+
+// Edit Reward Modal Component
+function EditRewardModal({ reward, formData, setFormData, updating, error, onClose, onSubmit }) {
+    const isPointsReward = reward.pointsRequired !== undefined && reward.pointsRequired !== null;
+    const isStampsReward = reward.stampsRequired !== undefined && reward.stampsRequired !== null;
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-popover max-w-2xl w-full my-8">
+                <div className="p-6 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-2xl font-bold text-gray-800">Editar Recompensa</h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                                {isPointsReward ? 'Recompensa por puntos' : 'Recompensa por sellos'}
+                            </p>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <form onSubmit={onSubmit} className="p-6 space-y-6">
+                    {/* Nombre */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Nombre de la Recompensa <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                            placeholder="Ej: Café Gratis"
+                        />
+                    </div>
+
+                    {/* Descripción */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Descripción
+                        </label>
+                        <textarea
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none"
+                            rows="3"
+                            placeholder="Describe los detalles de la recompensa"
+                        />
+                    </div>
+
+                    {/* Tipo de Recompensa */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Tipo de Recompensa <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                            required
+                            value={formData.rewardType}
+                            onChange={(e) => setFormData({ ...formData, rewardType: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                        >
+                            <option value="discount">💰 Descuento</option>
+                            <option value="free_product">🎁 Producto Gratis</option>
+                            <option value="coupon">🎟️ Cupón</option>
+                            <option value="cashback">💵 Cashback</option>
+                        </select>
+                    </div>
+
+                    {/* Valor de la Recompensa */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Valor de la Recompensa <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type={formData.rewardType === 'discount' || formData.rewardType === 'cashback' ? 'number' : 'text'}
+                            required
+                            min={formData.rewardType === 'discount' || formData.rewardType === 'cashback' ? '0' : undefined}
+                            step={formData.rewardType === 'discount' || formData.rewardType === 'cashback' ? '0.01' : undefined}
+                            value={formData.rewardValue}
+                            onChange={(e) => setFormData({ ...formData, rewardValue: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                            placeholder={
+                                formData.rewardType === 'discount' ? '10 (para 10% o $10)' :
+                                    formData.rewardType === 'free_product' ? 'Nombre del producto gratis' :
+                                        formData.rewardType === 'cashback' ? '50 (pesos)' :
+                                            'Descripción del cupón'
+                            }
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                            {formData.rewardType === 'discount' && 'Porcentaje (%) o monto fijo ($) de descuento'}
+                            {formData.rewardType === 'free_product' && 'Nombre del producto que se regala'}
+                            {formData.rewardType === 'cashback' && 'Cantidad de dinero a devolver en pesos'}
+                            {formData.rewardType === 'coupon' && 'Descripción de lo que incluye el cupón'}
+                        </p>
+                    </div>
+
+                    {/* Objetivo (Puntos o Sellos) */}
+                    {isPointsReward && (
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Puntos Requeridos <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="number"
+                                required
+                                min="1"
+                                value={formData.pointsRequired}
+                                onChange={(e) => setFormData({ ...formData, pointsRequired: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                placeholder="100"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Cantidad de puntos que debe acumular el cliente para canjear esta recompensa
+                            </p>
+                        </div>
+                    )}
+
+                    {isStampsReward && (
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Sellos Requeridos <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="number"
+                                required
+                                min="1"
+                                value={formData.stampsRequired}
+                                onChange={(e) => setFormData({ ...formData, stampsRequired: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                placeholder="10"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Cantidad de sellos que debe acumular el cliente para canjear esta recompensa
+                            </p>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="flex gap-3 pt-4 border-t border-gray-200">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-pill font-semibold hover:bg-gray-300 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={updating}
+                            className="flex-1 px-6 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {updating ? 'Guardando...' : 'Guardar Cambios'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 }
 
