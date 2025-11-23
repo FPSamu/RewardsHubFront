@@ -4,10 +4,11 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import businessService from '../services/businessService';
 import userPointsService from '../services/userPointsService';
 import systemService from '../services/systemService';
+import rewardService from '../services/rewardService';
 
 const BusinessScan = () => {
     const navigate = useNavigate();
-    const [step, setStep] = useState('form'); // 'form', 'scanning', 'processing', 'success', 'error'
+    const [step, setStep] = useState('form'); // 'form', 'scanning', 'processing', 'success', 'error', 'rewards-preview'
     const [purchaseAmount, setPurchaseAmount] = useState('');
     const [stampQuantity, setStampQuantity] = useState('');
     const [rewardType, setRewardType] = useState('points'); // 'points', 'stamps', 'both'
@@ -16,6 +17,10 @@ const BusinessScan = () => {
     const [rewardSystems, setRewardSystems] = useState({ points: null, stamps: [] });
     const [selectedStampSystem, setSelectedStampSystem] = useState(null);
     const [productIdentifier, setProductIdentifier] = useState('');
+    const [rewards, setRewards] = useState([]);
+    const [userPoints, setUserPoints] = useState(null);
+    const [availableRewards, setAvailableRewards] = useState([]);
+    const [scannedUserId, setScannedUserId] = useState(null);
     const scannerRef = useRef(null);
     const qrReaderRef = useRef(null);
 
@@ -30,11 +35,15 @@ const BusinessScan = () => {
                 const systems = await systemService.getBusinessSystems();
                 const pointsSystem = systems.find(sys => sys.type === 'points' && sys.isActive);
                 const stampSystems = systems.filter(sys => sys.type === 'stamps' && sys.isActive);
-                
+
                 setRewardSystems({
                     points: pointsSystem || null,
                     stamps: stampSystems || []
                 });
+
+                // Fetch business rewards
+                const rewardsData = await rewardService.getBusinessRewards(businessData.id);
+                setRewards(rewardsData);
 
                 // Set default stamp system if only one exists
                 if (stampSystems.length === 1) {
@@ -47,6 +56,80 @@ const BusinessScan = () => {
         };
         fetchBusinessData();
     }, []);
+
+    const checkAvailableRewards = async (userId) => {
+        try {
+            setStep('processing');
+            setScannedUserId(userId);
+
+            console.log('Checking rewards for user:', userId);
+            console.log('Business ID:', business?.id);
+
+            // Get user's current points for this business
+            // The endpoint /user-points/:userId returns only the points for the authenticated business
+            const businessPointsData = await userPointsService.getUserPointsById(userId);
+            console.log('Business points data received:', businessPointsData);
+
+            // The response from getUserPointsForBusiness has this structure:
+            // { userId, businessId, points, stamps, rewardSystems, lastVisit }
+            const currentPoints = businessPointsData?.points || 0;
+            const currentStamps = businessPointsData?.stamps || 0;
+
+            console.log('Current points:', currentPoints);
+            console.log('Current stamps:', currentStamps);
+
+            // Store the data for display in modal
+            setUserPoints({
+                businessPoints: [{
+                    businessId: business?.id,
+                    points: currentPoints,
+                    stamps: currentStamps
+                }]
+            });
+
+            console.log('Current points:', currentPoints, 'Current stamps:', currentStamps);
+            console.log('Available rewards to check:', rewards);
+
+            // Filter available rewards
+            const available = rewards.filter(reward => {
+                if (!reward.isActive) {
+                    console.log('Reward inactive:', reward.name);
+                    return false;
+                }
+
+                if (reward.pointsRequired !== undefined && reward.pointsRequired !== null) {
+                    const hasEnough = currentPoints >= reward.pointsRequired;
+                    console.log(`Reward ${reward.name}: needs ${reward.pointsRequired} points, has ${currentPoints}, available: ${hasEnough}`);
+                    if (hasEnough) return true;
+                }
+
+                if (reward.stampsRequired !== undefined && reward.stampsRequired !== null) {
+                    const hasEnough = currentStamps >= reward.stampsRequired;
+                    console.log(`Reward ${reward.name}: needs ${reward.stampsRequired} stamps, has ${currentStamps}, available: ${hasEnough}`);
+                    if (hasEnough) return true;
+                }
+
+                return false;
+            });
+
+            console.log('Available rewards found:', available.length, available);
+            setAvailableRewards(available);
+
+            // Show rewards preview if there are available rewards
+            if (available.length > 0) {
+                console.log('Showing rewards preview modal');
+                setStep('rewards-preview');
+            } else {
+                console.log('No rewards available, proceeding with transaction');
+                // No rewards available, proceed with transaction
+                await processTransaction(userId);
+            }
+        } catch (err) {
+            console.error('Error checking rewards:', err);
+            // If error checking rewards, proceed anyway
+            await processTransaction(userId);
+        }
+    };
 
     const processTransaction = useCallback(async (userId) => {
         setStep('processing');
@@ -97,7 +180,8 @@ const BusinessScan = () => {
                 scannerRef.current = null;
             }
 
-            await processTransaction(decodedText);
+            // Check for available rewards before processing
+            await checkAvailableRewards(decodedText);
         };
 
         const onScanFailure = (error) => {
@@ -170,6 +254,12 @@ const BusinessScan = () => {
         setStep('scanning');
     };
 
+    const handleContinueTransaction = async () => {
+        if (scannedUserId) {
+            await processTransaction(scannedUserId);
+        }
+    };
+
     const handleReset = () => {
         setPurchaseAmount('');
         setStampQuantity('');
@@ -177,14 +267,15 @@ const BusinessScan = () => {
         setRewardType('points');
         setError(null);
         setStep('form');
-        
+        setUserPoints(null);
+        setAvailableRewards([]);
+        setScannedUserId(null);
+
         // Reset to default stamp system if only one exists
         if (rewardSystems.stamps.length === 1) {
             setSelectedStampSystem(rewardSystems.stamps[0].id);
         }
-    };
-
-    const handleGoBack = () => {
+    }; const handleGoBack = () => {
         navigate('/business/dashboard');
     };
 
@@ -227,8 +318,8 @@ const BusinessScan = () => {
                                 <button
                                     onClick={() => setRewardType('points')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'points'
-                                            ? 'border-brand-primary bg-brand-muted'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-brand-primary bg-brand-muted'
+                                        : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     <div className="flex flex-col items-center">
@@ -256,8 +347,8 @@ const BusinessScan = () => {
                                 <button
                                     onClick={() => setRewardType('stamps')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'stamps'
-                                            ? 'border-accent-success bg-green-50'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-accent-success bg-green-50'
+                                        : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     <div className="flex flex-col items-center">
@@ -285,8 +376,8 @@ const BusinessScan = () => {
                                 <button
                                     onClick={() => setRewardType('both')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'both'
-                                            ? 'border-accent-gold bg-yellow-50'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-accent-gold bg-yellow-50'
+                                        : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     <div className="flex flex-col items-center">
@@ -558,6 +649,128 @@ const BusinessScan = () => {
                         >
                             Cancelar Escaneo
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Rewards Preview Step */}
+            {step === 'rewards-preview' && (
+                <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
+                    <div className="max-w-3xl mx-auto">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4 tracking-tight text-center">
+                            ¡El Cliente Tiene Recompensas Disponibles!
+                        </h3>
+                        <p className="text-gray-600 text-center mb-6">
+                            Antes de agregar los puntos, el cliente puede canjear las siguientes recompensas
+                        </p>
+
+                        {/* User Current Points */}
+                        {userPoints && (() => {
+                            const businessPoints = userPoints?.businessPoints?.find(
+                                bp => bp.businessId?.toString() === business?.id?.toString()
+                            );
+                            return businessPoints && (
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div className="bg-gradient-to-br from-brand-primary to-amber-500 rounded-xl p-4 shadow-md">
+                                        <div className="text-white text-sm opacity-90 mb-1">Puntos Actuales</div>
+                                        <div className="text-white text-3xl font-bold">{businessPoints.points || 0}</div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-green-400 to-green-600 rounded-xl p-4 shadow-md">
+                                        <div className="text-white text-sm opacity-90 mb-1">Sellos Actuales</div>
+                                        <div className="text-white text-3xl font-bold">{businessPoints.stamps || 0}</div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Available Rewards */}
+                        <div className="mb-6">
+                            <h5 className="text-sm font-bold text-green-700 mb-3 flex items-center">
+                                <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                Recompensas Disponibles ({availableRewards.length})
+                            </h5>
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                                {availableRewards.map((reward) => (
+                                    <div
+                                        key={reward.id}
+                                        className="flex items-center justify-between p-4 rounded-xl bg-green-50 border-2 border-green-200"
+                                    >
+                                        <div className="flex-1">
+                                            <div className="flex items-center space-x-2 mb-1">
+                                                <span className="font-semibold text-gray-900">{reward.name}</span>
+                                                <span className="text-green-600">✓</span>
+                                            </div>
+                                            <div className="text-sm text-gray-600 mb-2">{reward.description}</div>
+                                            <div className="flex items-center space-x-2 flex-wrap gap-2">
+                                                {reward.pointsRequired !== undefined && reward.pointsRequired !== null && (
+                                                    <span className="px-3 py-1 bg-brand-muted text-brand-primary text-xs font-semibold rounded-full">
+                                                        {reward.pointsRequired} puntos
+                                                    </span>
+                                                )}
+                                                {reward.stampsRequired !== undefined && reward.stampsRequired !== null && (
+                                                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                                                        {reward.stampsRequired} sellos
+                                                    </span>
+                                                )}
+                                                <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                                                    {reward.rewardType === 'discount' && '💰 Descuento'}
+                                                    {reward.rewardType === 'free_product' && '🎁 Producto Gratis'}
+                                                    {reward.rewardType === 'coupon' && '🎟️ Cupón'}
+                                                    {reward.rewardType === 'cashback' && '💵 Cashback'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="ml-4">
+                                            <span className="px-4 py-2 text-sm font-semibold rounded-full bg-green-500 text-white">
+                                                Disponible
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Info message */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                            <div className="flex items-start">
+                                <svg
+                                    className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
+                                <div className="text-sm text-blue-800">
+                                    <p className="font-semibold mb-1">Información importante:</p>
+                                    <p className="text-blue-700">
+                                        El cliente puede canjear estas recompensas antes de agregar los nuevos puntos/sellos.
+                                        Presiona "Continuar" para procesar la transacción y agregar los puntos.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex gap-4">
+                            <button
+                                onClick={handleContinueTransaction}
+                                className="flex-1 px-6 py-4 bg-brand-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card text-lg"
+                            >
+                                Continuar con Transacción
+                            </button>
+                            <button
+                                onClick={handleReset}
+                                className="px-6 py-4 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors duration-180"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

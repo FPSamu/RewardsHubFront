@@ -35,7 +35,7 @@ const BusinessClients = () => {
             const systems = await systemService.getBusinessSystems();
             const pointsSystem = systems.find(sys => sys.type === 'points' && sys.isActive);
             const stampSystems = systems.filter(sys => sys.type === 'stamps' && sys.isActive);
-            
+
             setRewardSystems({
                 points: pointsSystem || null,
                 stamps: stampSystems || []
@@ -133,22 +133,22 @@ const BusinessClients = () => {
 
     const getAvailableRewards = (client) => {
         if (!rewards || rewards.length === 0) return 0;
-        
+
         let availableCount = 0;
         rewards.forEach(reward => {
             // Check if reward is active
             if (!reward.isActive) return;
-            
+
             // Check for points-based rewards
             if (reward.pointsRequired && client.points >= reward.pointsRequired) {
                 availableCount++;
-            } 
+            }
             // Check for stamps-based rewards
             else if (reward.stampsRequired && client.stamps >= reward.stampsRequired) {
                 availableCount++;
             }
         });
-        
+
         return availableCount;
     };
 
@@ -175,7 +175,7 @@ const BusinessClients = () => {
             }
             const pointsNeeded = reward.pointsRequired - clientPoints;
             return { available: false, label: `Faltan ${pointsNeeded} pts`, color: 'amber' };
-        } 
+        }
         // Check for stamps-based rewards
         else if (reward.stampsRequired !== undefined && reward.stampsRequired !== null) {
             if (clientStamps >= reward.stampsRequired) {
@@ -184,7 +184,7 @@ const BusinessClients = () => {
             const stampsNeeded = reward.stampsRequired - clientStamps;
             return { available: false, label: `Faltan ${stampsNeeded} sellos`, color: 'amber' };
         }
-        
+
         return { available: false, label: 'No configurada', color: 'gray' };
     };
 
@@ -528,7 +528,7 @@ const BusinessClients = () => {
 
                                 {/* Rewards Summary */}
                                 {rewards && rewards.length > 0 && (() => {
-                                    const availableCount = rewards.filter(r => 
+                                    const availableCount = rewards.filter(r =>
                                         r.isActive && (
                                             (r.pointsRequired && selectedClient.points >= r.pointsRequired) ||
                                             (r.stampsRequired && selectedClient.stamps >= r.stampsRequired)
@@ -573,18 +573,18 @@ const BusinessClients = () => {
                                                 .sort((a, b) => {
                                                     const statusA = getRewardStatus(a, selectedClient.points, selectedClient.stamps);
                                                     const statusB = getRewardStatus(b, selectedClient.points, selectedClient.stamps);
-                                                    
+
                                                     // Available rewards first
                                                     if (statusA.available && !statusB.available) return -1;
                                                     if (!statusA.available && statusB.available) return 1;
-                                                    
+
                                                     // Then sort by points/stamps required (lowest first)
                                                     const costA = a.pointsRequired || a.stampsRequired || 0;
                                                     const costB = b.pointsRequired || b.stampsRequired || 0;
                                                     return costA - costB;
                                                 });
 
-                                            const availableRewards = sortedRewards.filter(r => 
+                                            const availableRewards = sortedRewards.filter(r =>
                                                 getRewardStatus(r, selectedClient.points, selectedClient.stamps).available
                                             );
                                             // Only show available rewards
@@ -619,56 +619,55 @@ const BusinessClients = () => {
                                                         Recompensas Disponibles ({availableRewards.length})
                                                     </h5>
                                                     {availableRewards.map((reward) => {
-                                                                const status = getRewardStatus(reward, selectedClient.points, selectedClient.stamps);
-                                                                return (
-                                                                    <div
-                                                                        key={reward.id}
-                                                                        className="flex items-center justify-between p-4 rounded-xl transition-all duration-180 bg-green-50 border-2 border-green-200 mb-3"
-                                                                    >
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center space-x-2 mb-1">
-                                                            <span className="font-semibold text-gray-900">{reward.name}</span>
-                                                            {status.available && (
-                                                                <span className="text-green-600">✓</span>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-sm text-gray-600 mb-2">{reward.description}</div>
-                                                        <div className="flex items-center space-x-2 flex-wrap gap-2">
-                                                            {/* Show points requirement */}
-                                                            {reward.pointsRequired !== undefined && reward.pointsRequired !== null && (
-                                                                <span className="px-3 py-1 bg-brand-muted text-brand-primary text-xs font-semibold rounded-full">
-                                                                    {reward.pointsRequired} puntos
-                                                                </span>
-                                                            )}
-                                                            {/* Show stamps requirement */}
-                                                            {reward.stampsRequired !== undefined && reward.stampsRequired !== null && (
-                                                                <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                                                                    {reward.stampsRequired} sellos
-                                                                </span>
-                                                            )}
-                                                            {/* Show reward type badge */}
-                                                            <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
-                                                                {reward.rewardType === 'discount' && '💰 Descuento'}
-                                                                {reward.rewardType === 'free_product' && '🎁 Producto Gratis'}
-                                                                {reward.rewardType === 'coupon' && '🎟️ Cupón'}
-                                                                {reward.rewardType === 'cashback' && '💵 Cashback'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="ml-4">
-                                                        <span
-                                                            className={`px-4 py-2 text-sm font-semibold rounded-full ${
-                                                                status.available
-                                                                    ? 'bg-green-500 text-white'
-                                                                    : status.color === 'amber'
-                                                                    ? 'bg-amber-100 text-amber-700'
-                                                                    : 'bg-gray-200 text-gray-600'
-                                                            }`}
-                                                        >
-                                                            {status.label}
-                                                        </span>
+                                                        const status = getRewardStatus(reward, selectedClient.points, selectedClient.stamps);
+                                                        return (
+                                                            <div
+                                                                key={reward.id}
+                                                                className="flex items-center justify-between p-4 rounded-xl transition-all duration-180 bg-green-50 border-2 border-green-200 mb-3"
+                                                            >
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center space-x-2 mb-1">
+                                                                        <span className="font-semibold text-gray-900">{reward.name}</span>
+                                                                        {status.available && (
+                                                                            <span className="text-green-600">✓</span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="text-sm text-gray-600 mb-2">{reward.description}</div>
+                                                                    <div className="flex items-center space-x-2 flex-wrap gap-2">
+                                                                        {/* Show points requirement */}
+                                                                        {reward.pointsRequired !== undefined && reward.pointsRequired !== null && (
+                                                                            <span className="px-3 py-1 bg-brand-muted text-brand-primary text-xs font-semibold rounded-full">
+                                                                                {reward.pointsRequired} puntos
+                                                                            </span>
+                                                                        )}
+                                                                        {/* Show stamps requirement */}
+                                                                        {reward.stampsRequired !== undefined && reward.stampsRequired !== null && (
+                                                                            <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                                                                                {reward.stampsRequired} sellos
+                                                                            </span>
+                                                                        )}
+                                                                        {/* Show reward type badge */}
+                                                                        <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                                                                            {reward.rewardType === 'discount' && '💰 Descuento'}
+                                                                            {reward.rewardType === 'free_product' && '🎁 Producto Gratis'}
+                                                                            {reward.rewardType === 'coupon' && '🎟️ Cupón'}
+                                                                            {reward.rewardType === 'cashback' && '💵 Cashback'}
+                                                                        </span>
                                                                     </div>
                                                                 </div>
+                                                                <div className="ml-4">
+                                                                    <span
+                                                                        className={`px-4 py-2 text-sm font-semibold rounded-full ${status.available
+                                                                                ? 'bg-green-500 text-white'
+                                                                                : status.color === 'amber'
+                                                                                    ? 'bg-amber-100 text-amber-700'
+                                                                                    : 'bg-gray-200 text-gray-600'
+                                                                            }`}
+                                                                    >
+                                                                        {status.label}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
                                                         );
                                                     })}
                                                 </div>
