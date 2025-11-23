@@ -21,6 +21,8 @@ const BusinessScan = () => {
     const [userPoints, setUserPoints] = useState(null);
     const [availableRewards, setAvailableRewards] = useState([]);
     const [scannedUserId, setScannedUserId] = useState(null);
+    const [redeemingReward, setRedeemingReward] = useState(null); // Reward being redeemed
+    const [showRedeemModal, setShowRedeemModal] = useState(false);
     const scannerRef = useRef(null);
     const qrReaderRef = useRef(null);
 
@@ -260,6 +262,57 @@ const BusinessScan = () => {
         }
     };
 
+    const handleRedeemClick = (reward) => {
+        setRedeemingReward(reward);
+        setShowRedeemModal(true);
+    };
+
+    const handleConfirmRedeem = async () => {
+        if (!redeemingReward || !scannedUserId) return;
+
+        setStep('processing');
+        setShowRedeemModal(false);
+
+        try {
+            const requestData = {
+                userId: scannedUserId
+            };
+
+            // Subtract points if reward requires points
+            if (redeemingReward.pointsRequired !== undefined && redeemingReward.pointsRequired !== null) {
+                requestData.pointsToSubtract = redeemingReward.pointsRequired;
+                requestData.rewardSystemId = rewardSystems.points?.id;
+            }
+
+            // Subtract stamps if reward requires stamps
+            if (redeemingReward.stampsRequired !== undefined && redeemingReward.stampsRequired !== null) {
+                // Find the stamp system for this reward
+                const stampSystem = rewardSystems.stamps.find(s => s.id === selectedStampSystem) || rewardSystems.stamps[0];
+                requestData.stampData = [{
+                    rewardSystemId: stampSystem?.id,
+                    stampsCount: redeemingReward.stampsRequired
+                }];
+            }
+
+            // Call API to subtract points/stamps
+            await userPointsService.subtractPoints(requestData);
+
+            setStep('success');
+            setError(null);
+            setRedeemingReward(null);
+        } catch (err) {
+            console.error('Error redeeming reward:', err);
+            setError(err.message || 'Error al canjear la recompensa');
+            setStep('error');
+            setRedeemingReward(null);
+        }
+    };
+
+    const handleCancelRedeem = () => {
+        setShowRedeemModal(false);
+        setRedeemingReward(null);
+    };
+
     const handleReset = () => {
         setPurchaseAmount('');
         setStampQuantity('');
@@ -425,12 +478,13 @@ const BusinessScan = () => {
                                         className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
                                     />
                                 </div>
-                                {purchaseAmount && rewardSystems.points && (() => {
+                                {purchaseAmount && rewardSystems.points && rewardSystems.points.pointsConversion && (() => {
                                     const amount = parseFloat(purchaseAmount);
-                                    const pointsToEarn = Math.floor(amount * rewardSystems.points.pointsPerPurchase);
+                                    const conversionRate = rewardSystems.points.pointsConversion.points / rewardSystems.points.pointsConversion.amount;
+                                    const pointsToEarn = Math.floor(amount * conversionRate);
                                     return (
                                         <p className="mt-2 text-sm text-brand-primary font-semibold">
-                                            Se otorgarán {pointsToEarn} puntos (${amount.toFixed(2)} × {rewardSystems.points.pointsPerPurchase})
+                                            Se otorgarán {pointsToEarn} puntos (${amount.toFixed(2)} × {conversionRate.toFixed(2)})
                                         </p>
                                     );
                                 })()}
@@ -578,11 +632,11 @@ const BusinessScan = () => {
                                             <span className="text-gray-600">Monto:</span>
                                             <span className="font-bold text-gray-800">${parseFloat(purchaseAmount).toFixed(2)} MXN</span>
                                         </div>
-                                        {rewardSystems.points && (
+                                        {rewardSystems.points && rewardSystems.points.pointsConversion && (
                                             <div className="flex justify-between items-center text-sm">
                                                 <span className="text-gray-600">Puntos a otorgar:</span>
                                                 <span className="font-bold text-brand-primary">
-                                                    {Math.floor(parseFloat(purchaseAmount) * rewardSystems.points.pointsPerPurchase)}
+                                                    {Math.floor(parseFloat(purchaseAmount) * (rewardSystems.points.pointsConversion.points / rewardSystems.points.pointsConversion.amount))}
                                                 </span>
                                             </div>
                                         )}
@@ -720,8 +774,14 @@ const BusinessScan = () => {
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="ml-4">
-                                            <span className="px-4 py-2 text-sm font-semibold rounded-full bg-green-500 text-white">
+                                        <div className="ml-4 flex flex-col gap-2">
+                                            <button
+                                                onClick={() => handleRedeemClick(reward)}
+                                                className="px-4 py-2 text-sm font-semibold rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors duration-180"
+                                            >
+                                                Canjear
+                                            </button>
+                                            <span className="px-4 py-1 text-xs font-medium text-center rounded-full bg-green-100 text-green-700">
                                                 Disponible
                                             </span>
                                         </div>
@@ -824,11 +884,11 @@ const BusinessScan = () => {
                                             <span className="text-gray-600">Monto de compra:</span>
                                             <span className="font-bold text-gray-800">${parseFloat(purchaseAmount).toFixed(2)} MXN</span>
                                         </div>
-                                        {rewardSystems.points && (
+                                        {rewardSystems.points && rewardSystems.points.pointsConversion && (
                                             <div className="flex justify-between items-center">
                                                 <span className="text-gray-600">Puntos otorgados:</span>
                                                 <span className="font-bold text-brand-primary">
-                                                    {Math.floor(parseFloat(purchaseAmount) * rewardSystems.points.pointsPerPurchase)}
+                                                    {Math.floor(parseFloat(purchaseAmount) * (rewardSystems.points.pointsConversion.points / rewardSystems.points.pointsConversion.amount))}
                                                 </span>
                                             </div>
                                         )}
@@ -913,6 +973,86 @@ const BusinessScan = () => {
                                 className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-pill font-semibold hover:bg-gray-300 transition-colors duration-180"
                             >
                                 Ir al Inicio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Redeem Confirmation Modal */}
+            {showRedeemModal && redeemingReward && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-slideUp">
+                        <div className="text-center mb-6">
+                            <div className="bg-amber-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                <span className="text-3xl">🎁</span>
+                            </div>
+                            <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                                Confirmar Canjeo
+                            </h3>
+                            <p className="text-gray-600">
+                                ¿Estás seguro de que deseas canjear esta recompensa?
+                            </p>
+                        </div>
+
+                        {/* Reward Details */}
+                        <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                            <div className="mb-3">
+                                <h4 className="font-bold text-gray-900 mb-1">{redeemingReward.name}</h4>
+                                <p className="text-sm text-gray-600">{redeemingReward.description}</p>
+                            </div>
+                            <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                                <span className="text-sm text-gray-600">Costo:</span>
+                                <div className="flex gap-2">
+                                    {redeemingReward.pointsRequired !== undefined && redeemingReward.pointsRequired !== null && (
+                                        <span className="px-3 py-1 bg-brand-muted text-brand-primary text-sm font-semibold rounded-full">
+                                            {redeemingReward.pointsRequired} puntos
+                                        </span>
+                                    )}
+                                    {redeemingReward.stampsRequired !== undefined && redeemingReward.stampsRequired !== null && (
+                                        <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">
+                                            {redeemingReward.stampsRequired} sellos
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Warning Message */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+                            <div className="flex items-start">
+                                <svg
+                                    className="w-5 h-5 text-amber-600 mt-0.5 mr-2 flex-shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                    />
+                                </svg>
+                                <p className="text-sm text-amber-800">
+                                    Esta acción <strong>restará</strong> los puntos/sellos del cliente. No se pueden agregar puntos en la misma transacción.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleCancelRedeem}
+                                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors duration-180"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleConfirmRedeem}
+                                className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors duration-180"
+                            >
+                                Confirmar Canjeo
                             </button>
                         </div>
                     </div>
