@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import userPointsService from '../services/userPointsService';
+import { transactionService } from '../services/transactionService';
 
 const ClientPoints = () => {
     const [userPointsData, setUserPointsData] = useState(null);
+    const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -10,11 +12,28 @@ const ClientPoints = () => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const pointsData = await userPointsService.getUserPoints();
+
+                // Fetch user points and transactions in parallel
+                const [pointsData, transactionsData] = await Promise.all([
+                    userPointsService.getUserPoints(),
+                    transactionService.getUserTransactions(50, 0),
+                ]);
+
                 setUserPointsData(pointsData);
+
+                // Ensure transactions is always an array
+                if (Array.isArray(transactionsData)) {
+                    setTransactions(transactionsData);
+                } else if (transactionsData && Array.isArray(transactionsData.transactions)) {
+                    setTransactions(transactionsData.transactions);
+                } else {
+                    console.log('Transactions data:', transactionsData);
+                    setTransactions([]);
+                }
+
                 setError(null);
             } catch (err) {
-                console.error('Error fetching points data:', err);
+                console.error('Error fetching data:', err);
                 setError(err.message || 'Error al cargar los datos');
             } finally {
                 setLoading(false);
@@ -58,6 +77,52 @@ const ClientPoints = () => {
     const totalPoints = userPointsData.businessPoints.reduce((sum, bp) => sum + bp.points, 0);
     const totalStamps = userPointsData.businessPoints.reduce((sum, bp) => sum + bp.stamps, 0);
 
+    // Helper function to format transaction type
+    const getTransactionTypeInfo = (type) => {
+        switch (type) {
+            case 'add':
+                return {
+                    label: 'Suma',
+                    bgColor: 'bg-green-100',
+                    textColor: 'text-green-800',
+                    icon: '➕'
+                };
+            case 'subtract':
+                return {
+                    label: 'Resta',
+                    bgColor: 'bg-orange-100',
+                    textColor: 'text-orange-800',
+                    icon: '➖'
+                };
+            case 'redeem':
+                return {
+                    label: 'Canje',
+                    bgColor: 'bg-purple-100',
+                    textColor: 'text-purple-800',
+                    icon: '🎁'
+                };
+            default:
+                return {
+                    label: type,
+                    bgColor: 'bg-gray-100',
+                    textColor: 'text-gray-800',
+                    icon: '•'
+                };
+        }
+    };
+
+    // Helper function to format date
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -87,174 +152,102 @@ const ClientPoints = () => {
                 </div>
             </div>
 
-            {/* Business Points Details */}
-            <div className="space-y-4">
-                {userPointsData.businessPoints.map((business) => (
-                    <div key={business.businessId} className="bg-white rounded-xl shadow-card overflow-hidden border border-gray-200">
-                        {/* Business Header */}
-                        <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-2xl font-bold">{business.businessName}</h3>
-                                    <p className="text-sm text-gray-300 mt-1">
-                                        Última visita:{' '}
-                                        {new Date(business.lastVisit).toLocaleDateString('es-ES', {
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                        })}
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    {business.points > 0 && (
-                                        <div className="bg-brand-primary rounded-lg px-4 py-2 mb-2 shadow-card">
-                                            <p className="text-sm font-medium">Puntos</p>
-                                            <p className="text-2xl font-bold">{business.points}</p>
-                                        </div>
-                                    )}
-                                    {business.stamps > 0 && (
-                                        <div className="bg-accent-success rounded-lg px-4 py-2 shadow-card">
-                                            <p className="text-sm font-medium">Sellos</p>
-                                            <p className="text-2xl font-bold">{business.stamps}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+            {/* Transaction History */}
+            <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
+                <h3 className="text-2xl font-bold text-gray-800 mb-4">Historial de Transacciones</h3>
 
-                        {/* Reward Systems */}
-                        <div className="p-6 space-y-6">
-                            {business.rewardSystems.map((system) => (
-                                <div key={system.rewardSystemId} className="border-l-4 border-brand-primary pl-4">
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div>
-                                            <h4 className="text-lg font-semibold text-gray-800">{system.systemName}</h4>
-                                            <p className="text-sm text-gray-600">
-                                                Sistema de {system.type === 'points' ? 'puntos' : 'sellos'}
-                                            </p>
-                                        </div>
-                                        <span
-                                            className={`px-3 py-1 rounded-pill text-sm font-medium ${system.type === 'points'
-                                                ? 'bg-brand-muted text-brand-onColor'
-                                                : 'bg-green-50 text-accent-successOnColor'
-                                                }`}
-                                        >
-                                            {system.type === 'points' ? `${system.points} pts` : `${system.stamps}/${system.targetStamps} sellos`}
-                                        </span>
-                                    </div>
+                {transactions.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                        <p className="text-lg">No hay transacciones registradas</p>
+                        <p className="text-sm mt-2">Tus transacciones aparecerán aquí cuando realices compras o canjes</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {transactions.map((transaction) => {
+                            const typeInfo = getTransactionTypeInfo(transaction.type);
+                            const hasPoints = transaction.totalPointsChange !== 0;
+                            const hasStamps = transaction.totalStampsChange !== 0;
 
-                                    {/* Points System Details */}
-                                    {system.type === 'points' && system.pointsConversion && (
-                                        <div className="mb-4">
-                                            <p className="text-sm text-gray-600 mb-3">
-                                                <span className="font-semibold">Conversión:</span> {system.pointsConversion.amount}{' '}
-                                                {system.pointsConversion.currency} = {system.pointsConversion.points} punto(s)
-                                            </p>
-
-                                            {/* Available Rewards */}
-                                            {system.availableRewards && system.availableRewards.length > 0 && (
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-700 mb-2">
-                                                        Recompensas disponibles:
-                                                    </p>
-                                                    <div className="space-y-2">
-                                                        {system.availableRewards.map((reward, idx) => {
-                                                            const canRedeem = system.points >= reward.pointsRequired;
-                                                            const progress = Math.min((system.points / reward.pointsRequired) * 100, 100);
-
-                                                            return (
-                                                                <div
-                                                                    key={idx}
-                                                                    className={`p-3 rounded-lg border transition-all duration-180 ${canRedeem ? 'bg-green-50 border-accent-success' : 'bg-gray-50 border-gray-200'
-                                                                        }`}
-                                                                >
-                                                                    <div className="flex items-center justify-between mb-2">
-                                                                        <div>
-                                                                            <p
-                                                                                className={`text-sm font-medium ${canRedeem ? 'text-accent-successOnColor' : 'text-gray-800'
-                                                                                    }`}
-                                                                            >
-                                                                                {reward.description}
-                                                                            </p>
-                                                                            <p className="text-xs text-gray-600">
-                                                                                {reward.pointsRequired} puntos requeridos
-                                                                            </p>
-                                                                        </div>
-                                                                        {canRedeem && (
-                                                                            <span className="px-3 py-1 bg-accent-success text-white text-xs font-semibold rounded-pill shadow-card">
-                                                                                ¡Disponible!
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    {/* Progress bar */}
-                                                                    <div className="w-full bg-gray-200 rounded-pill h-2">
-                                                                        <div
-                                                                            className={`h-2 rounded-pill transition-all duration-240 ${canRedeem ? 'bg-accent-success' : 'bg-brand-primary'
-                                                                                }`}
-                                                                            style={{ width: `${progress}%` }}
-                                                                        ></div>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Stamps System Details */}
-                                    {system.type === 'stamps' && (
-                                        <div className="mb-4">
-                                            <p className="text-sm text-gray-600 mb-3">
-                                                <span className="font-semibold">Objetivo:</span> {system.targetStamps} sellos para
-                                                obtener: {system.stampReward?.description}
-                                            </p>
-
-                                            {/* Stamps Progress */}
-                                            <div className="flex flex-wrap items-center gap-2 mb-3">
-                                                {Array.from({ length: system.targetStamps }).map((_, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-card transition-all duration-180 ${idx < system.stamps
-                                                            ? 'bg-accent-success text-white'
-                                                            : 'bg-gray-200 text-gray-400'
-                                                            }`}
-                                                    >
-                                                        {idx < system.stamps ? '✓' : idx + 1}
-                                                    </div>
-                                                ))}
+                            return (
+                                <div
+                                    key={transaction.id}
+                                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                >
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        {/* Left section: Business and type */}
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${typeInfo.bgColor} ${typeInfo.textColor}`}>
+                                                    {typeInfo.icon} {typeInfo.label}
+                                                </span>
+                                                <h4 className="font-bold text-gray-800">{transaction.businessName}</h4>
                                             </div>
 
-                                            {system.stamps >= system.targetStamps && (
-                                                <div className="bg-green-50 border border-accent-success text-accent-successOnColor px-4 py-3 rounded-lg">
-                                                    <p className="font-semibold">¡Recompensa disponible!</p>
-                                                    <p className="text-sm">{system.stampReward?.description}</p>
-                                                </div>
-                                            )}
+                                            {/* Transaction details */}
+                                            <div className="space-y-1 text-sm text-gray-600">
+                                                {transaction.purchaseAmount && (
+                                                    <p>💰 Monto de compra: ${transaction.purchaseAmount.toFixed(2)}</p>
+                                                )}
 
-                                            {system.stamps < system.targetStamps && (
-                                                <p className="text-sm text-gray-600">
-                                                    Te faltan {system.targetStamps - system.stamps} sello(s) para completar esta
-                                                    tarjeta
-                                                </p>
-                                            )}
+                                                {transaction.rewardName && (
+                                                    <p>🎁 Recompensa: {transaction.rewardName}</p>
+                                                )}
+
+                                                {transaction.notes && (
+                                                    <p className="italic">📝 {transaction.notes}</p>
+                                                )}
+
+                                                {/* Systems affected */}
+                                                {transaction.items && transaction.items.length > 0 && (
+                                                    <div className="mt-2">
+                                                        <p className="font-semibold text-gray-700">Sistemas de recompensa:</p>
+                                                        <ul className="ml-4 space-y-1">
+                                                            {transaction.items.map((item, idx) => (
+                                                                <li key={idx}>
+                                                                    <span className="font-medium">{item.rewardSystemName}:</span>
+                                                                    {item.pointsChange !== 0 && (
+                                                                        <span className={item.pointsChange > 0 ? 'text-green-600' : 'text-red-600'}>
+                                                                            {' '}{item.pointsChange > 0 ? '+' : ''}{item.pointsChange} pts
+                                                                        </span>
+                                                                    )}
+                                                                    {item.stampsChange !== 0 && (
+                                                                        <span className={item.stampsChange > 0 ? 'text-green-600' : 'text-red-600'}>
+                                                                            {item.pointsChange !== 0 ? ', ' : ' '}
+                                                                            {item.stampsChange > 0 ? '+' : ''}{item.stampsChange} sellos
+                                                                        </span>
+                                                                    )}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    )}
 
-                                    <p className="text-xs text-gray-500">
-                                        Última actualización:{' '}
-                                        {new Date(system.lastUpdated).toLocaleDateString('es-ES', {
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                        })}
-                                    </p>
+                                        {/* Right section: Points/Stamps and date */}
+                                        <div className="flex flex-col items-end gap-2">
+                                            <div className="text-right">
+                                                {hasPoints && (
+                                                    <p className={`text-2xl font-bold ${transaction.totalPointsChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        {transaction.totalPointsChange > 0 ? '+' : ''}{transaction.totalPointsChange} pts
+                                                    </p>
+                                                )}
+                                                {hasStamps && (
+                                                    <p className={`text-lg font-semibold ${transaction.totalStampsChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        {transaction.totalStampsChange > 0 ? '+' : ''}{transaction.totalStampsChange} sellos
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-500">
+                                                {formatDate(transaction.createdAt)}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })}
                     </div>
-                ))}
+                )}
             </div>
         </div>
     );

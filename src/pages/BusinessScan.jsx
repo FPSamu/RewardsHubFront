@@ -140,26 +140,41 @@ const BusinessScan = () => {
                 userId: userId
             };
 
+            // Build transaction notes for better tracking
+            const transactionNotes = [];
+
             // Add purchase amount for points
             if ((rewardType === 'points' || rewardType === 'both') && purchaseAmount) {
-                requestData.purchaseAmount = parseFloat(purchaseAmount);
+                const amount = parseFloat(purchaseAmount);
+                requestData.purchaseAmount = amount;
+                transactionNotes.push(`Compra de $${amount.toFixed(2)}`);
             }
 
             // Add stamp data for stamps
             if ((rewardType === 'stamps' || rewardType === 'both') && stampQuantity) {
+                const quantity = parseInt(stampQuantity);
                 const stampDataItem = {
                     rewardSystemId: selectedStampSystem,
-                    stampsCount: parseInt(stampQuantity)
+                    stampsCount: quantity
                 };
 
                 // Add product identifier if required by the stamp system
                 const selectedSystem = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
                 if (selectedSystem?.productType === 'specific' && productIdentifier) {
                     stampDataItem.productIdentifier = productIdentifier;
+                    transactionNotes.push(`Producto: ${productIdentifier}`);
                 }
 
                 requestData.stampData = [stampDataItem];
+                transactionNotes.push(`${quantity} sello${quantity !== 1 ? 's' : ''} agregado${quantity !== 1 ? 's' : ''}`);
             }
+
+            // Add notes to help track the transaction
+            if (transactionNotes.length > 0) {
+                requestData.notes = transactionNotes.join(' - ');
+            }
+
+            console.log('Processing transaction with data:', requestData);
 
             // Call API to add points/stamps to user
             await userPointsService.addPoints(requestData);
@@ -275,24 +290,32 @@ const BusinessScan = () => {
 
         try {
             const requestData = {
-                userId: scannedUserId
+                userId: scannedUserId,
+                // Include reward information for transaction history
+                rewardId: redeemingReward.id,
+                rewardName: redeemingReward.name,
+                notes: `Canje de recompensa: ${redeemingReward.name} - ${redeemingReward.description || ''}`
             };
 
             // Subtract points if reward requires points
-            if (redeemingReward.pointsRequired !== undefined && redeemingReward.pointsRequired !== null) {
+            if (redeemingReward.pointsRequired !== undefined && redeemingReward.pointsRequired !== null && redeemingReward.pointsRequired > 0) {
                 requestData.pointsToSubtract = redeemingReward.pointsRequired;
                 requestData.rewardSystemId = rewardSystems.points?.id;
             }
 
             // Subtract stamps if reward requires stamps
-            if (redeemingReward.stampsRequired !== undefined && redeemingReward.stampsRequired !== null) {
+            if (redeemingReward.stampsRequired !== undefined && redeemingReward.stampsRequired !== null && redeemingReward.stampsRequired > 0) {
                 // Find the stamp system for this reward
                 const stampSystem = rewardSystems.stamps.find(s => s.id === selectedStampSystem) || rewardSystems.stamps[0];
-                requestData.stampData = [{
-                    rewardSystemId: stampSystem?.id,
-                    stampsCount: redeemingReward.stampsRequired
-                }];
+                if (stampSystem) {
+                    requestData.stampData = [{
+                        rewardSystemId: stampSystem.id,
+                        stampsCount: redeemingReward.stampsRequired
+                    }];
+                }
             }
+
+            console.log('Redeeming reward with data:', requestData);
 
             // Call API to subtract points/stamps
             await userPointsService.subtractPoints(requestData);
