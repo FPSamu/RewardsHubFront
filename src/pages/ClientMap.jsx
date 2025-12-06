@@ -515,6 +515,7 @@ const ClientMap = () => {
                             const status = businessData.status || 'not_visited';
                             const availableRewardsCount = businessData.availableRewards || 0;
                             const userPoints = userPointsData?.businessPoints?.find(bp => bp.businessId === business.id);
+                            const availableRewardsList = businessesWithRewards[business.id] || [];
 
                             // Determine marker color based on status
                             let markerColor = 'blue'; // not visited
@@ -584,6 +585,51 @@ const ClientMap = () => {
                                                                 🎫 {userPoints.stamps} sellos
                                                             </p>
                                                         )}
+                                                    </div>
+                                                )}
+
+                                                {/* Show available rewards list */}
+                                                {availableRewardsList.length > 0 && (
+                                                    <div className="mt-2 pt-2 border-t border-gray-200">
+                                                        <p className="text-xs font-semibold text-green-700 mb-2">
+                                                            🎁 Recompensas disponibles para canjear:
+                                                        </p>
+                                                        <div className="space-y-2">
+                                                            {availableRewardsList.map((reward, idx) => (
+                                                                <div 
+                                                                    key={reward.id || idx} 
+                                                                    className="bg-green-50 rounded p-2 border border-green-200"
+                                                                >
+                                                                    <p className="text-xs font-semibold text-gray-800">
+                                                                        {reward.name}
+                                                                    </p>
+                                                                    {reward.description && (
+                                                                        <p className="text-xs text-gray-600 mt-1">
+                                                                            {reward.description}
+                                                                        </p>
+                                                                    )}
+                                                                    <div className="mt-1 flex items-center justify-between">
+                                                                        <span className="text-xs text-gray-500">
+                                                                            {reward.rewardType === 'discount' && '💰 Descuento'}
+                                                                            {reward.rewardType === 'free_product' && '🎁 Producto gratis'}
+                                                                            {reward.rewardType === 'coupon' && '🎟️ Cupón'}
+                                                                            {reward.rewardType === 'cashback' && '💵 Cashback'}
+                                                                        </span>
+                                                                        <span className="text-xs font-semibold text-green-600">
+                                                                            {reward.rewardValue}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-xs text-gray-500 mt-1">
+                                                                        {reward.pointsRequired && (
+                                                                            <span>Cuesta: {reward.pointsRequired} pts</span>
+                                                                        )}
+                                                                        {reward.stampsRequired && (
+                                                                            <span>Cuesta: {reward.stampsRequired} sellos</span>
+                                                                        )}
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
