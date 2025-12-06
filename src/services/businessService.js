@@ -11,6 +11,18 @@ export const businessService = {
     }
   },
 
+  // Get nearby businesses
+  getNearbyBusinesses: async (latitude, longitude, maxDistanceKm = 50) => {
+    try {
+      const response = await api.get("/business/nearby", {
+        params: { latitude, longitude, maxDistanceKm },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Get business by ID
   getBusinessById: async (businessId) => {
     try {
@@ -44,7 +56,10 @@ export const businessService = {
   // Update business coordinates
   updateCoordinates: async ({ latitude, longitude }) => {
     try {
-      const response = await api.put("/business/coordinates", { latitude, longitude });
+      const response = await api.put("/business/coordinates", {
+        latitude,
+        longitude,
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
