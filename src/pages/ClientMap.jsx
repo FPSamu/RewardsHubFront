@@ -596,8 +596,8 @@ const ClientMap = () => {
                                                         </p>
                                                         <div className="space-y-2">
                                                             {availableRewardsList.map((reward, idx) => (
-                                                                <div 
-                                                                    key={reward.id || idx} 
+                                                                <div
+                                                                    key={reward.id || idx}
                                                                     className="bg-green-50 rounded p-2 border border-green-200"
                                                                 >
                                                                     <p className="text-xs font-semibold text-gray-800">

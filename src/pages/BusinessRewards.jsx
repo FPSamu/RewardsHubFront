@@ -538,19 +538,46 @@ const BusinessRewards = () => {
                     throw new Error('No se encontró el sistema de puntos');
                 }
 
+                // Determinar el valor de la recompensa según el tipo
+                let rewardValue;
+                if (pointsRewardFormData.rewardType === 'free_product') {
+                    // Para producto gratis, usar el nombre de la recompensa
+                    rewardValue = pointsRewardFormData.name;
+                } else if (pointsRewardFormData.rewardType === 'discount') {
+                    // Para descuento, convertir a número
+                    rewardValue = parseFloat(pointsRewardFormData.rewardValue);
+                } else {
+                    // Para otros tipos (cupón), usar el valor como está
+                    rewardValue = pointsRewardFormData.rewardValue;
+                }
+
                 const payload = {
                     systemId: pointsSystem.id,
                     name: pointsRewardFormData.name,
                     description: pointsRewardFormData.description,
                     rewardType: pointsRewardFormData.rewardType,
-                    rewardValue: pointsRewardFormData.rewardType === 'discount' ?
-                        parseFloat(pointsRewardFormData.rewardValue) :
-                        pointsRewardFormData.rewardValue,
+                    rewardValue: rewardValue,
                     pointsRequired: parseInt(pointsRewardFormData.pointsRequired)
                 };
                 await rewardService.createPointsReward(payload);
             } else if (rewardType === 'stamps') {
+                let systemIdToUse = stampsSystem?.id;
+
+                // Si no existe un sistema de sellos, crear uno automáticamente
+                if (!systemIdToUse) {
+                    const systemData = {
+                        name: 'Sistema de Sellos',
+                        description: 'Sistema de recompensas por sellos',
+                        targetStamps: parseInt(stampsFormData.targetStamps),
+                        productType: stampsFormData.productType,
+                        productIdentifier: stampsFormData.productIdentifier || undefined
+                    };
+                    const newSystem = await systemService.createStampsSystem(systemData);
+                    systemIdToUse = newSystem.id;
+                }
+
                 const payload = {
+                    systemId: systemIdToUse,
                     name: stampsFormData.name,
                     description: stampsFormData.description,
                     rewardType: stampsFormData.stampReward.rewardType,
@@ -559,11 +586,6 @@ const BusinessRewards = () => {
                         stampsFormData.name,
                     stampsRequired: parseInt(stampsFormData.targetStamps)
                 };
-
-                // Si ya existe un sistema de sellos, incluir su ID
-                if (stampsSystem) {
-                    payload.systemId = stampsSystem.id;
-                }
 
                 await rewardService.createStampsReward(payload);
             }            // Reload rewards
@@ -1028,24 +1050,26 @@ function PointsRewardForm({ formData, setFormData, pointsSystemConfig, onSubmit,
                         </select>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Valor de la Recompensa <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="number"
-                            required
-                            min="0"
-                            step="0.01"
-                            value={formData.rewardValue}
-                            onChange={(e) => setFormData({ ...formData, rewardValue: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                            placeholder="50"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                            {formData.rewardType === 'discount' ? 'Porcentaje o monto en pesos del descuento' : 'Valor del producto o cupón'}
-                        </p>
-                    </div>
+                    {formData.rewardType !== 'free_product' && (
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Valor de la Recompensa <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="number"
+                                required
+                                min="0"
+                                step="0.01"
+                                value={formData.rewardValue}
+                                onChange={(e) => setFormData({ ...formData, rewardValue: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                placeholder="50"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                {formData.rewardType === 'discount' ? 'Porcentaje o monto en pesos del descuento' : 'Valor del producto o cupón'}
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
 
