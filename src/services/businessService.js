@@ -65,6 +65,16 @@ export const businessService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Update business information
+  updateBusinessInfo: async (updates) => {
+    try {
+      const response = await api.put("/business/me", updates);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default businessService;
