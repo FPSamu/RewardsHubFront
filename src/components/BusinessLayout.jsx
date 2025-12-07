@@ -70,9 +70,13 @@ const BusinessLayout = () => {
     });
     const [mapPosition, setMapPosition] = useState([20.6597, -103.3496]); // Guadalajara default
     const [locationChanged, setLocationChanged] = useState(false);
+    const [logoFile, setLogoFile] = useState(null);
+    const [logoPreview, setLogoPreview] = useState(null);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
     const [savingSettings, setSavingSettings] = useState(false);
     const [settingsError, setSettingsError] = useState(null);
     const menuRef = useRef(null);
+    const fileInputRef = useRef(null);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -82,7 +86,7 @@ const BusinessLayout = () => {
 
     const handleSettings = async () => {
         setIsMenuOpen(false);
-        
+
         // Cargar datos del negocio
         try {
             const data = await businessService.getMyBusiness();
@@ -91,13 +95,19 @@ const BusinessLayout = () => {
                 name: data.name || '',
                 description: data.description || ''
             });
-            
+
             // Configurar posición del mapa
             if (data.location && data.location.latitude && data.location.longitude) {
                 setMapPosition([data.location.latitude, data.location.longitude]);
             }
             setLocationChanged(false);
-            
+
+            // Configurar logo preview
+            if (data.logoUrl) {
+                setLogoPreview(data.logoUrl);
+            }
+            setLogoFile(null);
+
             setShowSettingsModal(true);
         } catch (error) {
             console.error('Error loading business data:', error);
@@ -114,8 +124,45 @@ const BusinessLayout = () => {
         });
         setMapPosition([20.6597, -103.3496]);
         setLocationChanged(false);
+        setLogoFile(null);
+        setLogoPreview(null);
         setSettingsError(null);
         setSavingSettings(false);
+    };
+
+    const handleLogoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Validar tipo de archivo
+            if (!file.type.startsWith('image/')) {
+                setSettingsError('Por favor selecciona un archivo de imagen válido');
+                return;
+            }
+
+            // Validar tamaño (5MB máximo)
+            if (file.size > 5 * 1024 * 1024) {
+                setSettingsError('La imagen debe ser menor a 5MB');
+                return;
+            }
+
+            setLogoFile(file);
+
+            // Crear preview
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setLogoPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+            setSettingsError(null);
+        }
+    };
+
+    const handleRemoveLogo = () => {
+        setLogoFile(null);
+        setLogoPreview(businessData?.logoUrl || null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
 
     const handleMapPositionChange = (newPosition) => {
@@ -140,22 +187,34 @@ const BusinessLayout = () => {
             }
 
             // Llamar al servicio para actualizar información básica
-            const updatedBusiness = await businessService.updateBusinessInfo(updates);
-            
+            let updatedBusiness = await businessService.updateBusinessInfo(updates);
+
+            // Si hay un nuevo logo, subirlo
+            if (logoFile) {
+                setUploadingLogo(true);
+                try {
+                    const logoResult = await businessService.uploadLogo(logoFile);
+                    updatedBusiness = logoResult;
+                } catch (logoError) {
+                    console.error('Error uploading logo:', logoError);
+                    setSettingsError('Logo actualizado, pero hubo un error al subir la imagen');
+                } finally {
+                    setUploadingLogo(false);
+                }
+            }
+
             // Si la ubicación cambió, actualizarla también
             if (locationChanged) {
                 await businessService.updateCoordinates({
                     latitude: mapPosition[0],
                     longitude: mapPosition[1]
                 });
-                // Recargar datos del negocio para obtener la ubicación actualizada
-                const finalData = await businessService.getMyBusiness();
-                setBusinessData(finalData);
-            } else {
-                // Actualizar datos locales con la respuesta
-                setBusinessData(updatedBusiness);
             }
-            
+
+            // Recargar datos del negocio para obtener todos los cambios
+            const finalData = await businessService.getMyBusiness();
+            setBusinessData(finalData);
+
             // Cerrar modal
             handleCloseSettingsModal();
         } catch (error) {
@@ -428,6 +487,11 @@ const BusinessLayout = () => {
                     mapPosition={mapPosition}
                     onMapPositionChange={handleMapPositionChange}
                     locationChanged={locationChanged}
+                    logoPreview={logoPreview}
+                    onLogoChange={handleLogoChange}
+                    onRemoveLogo={handleRemoveLogo}
+                    fileInputRef={fileInputRef}
+                    uploadingLogo={uploadingLogo}
                     saving={savingSettings}
                     error={settingsError}
                     onClose={handleCloseSettingsModal}
@@ -440,7 +504,7 @@ const BusinessLayout = () => {
 };
 
 // Settings Modal Component
-function SettingsModal({ formData, setFormData, businessData, mapPosition, onMapPositionChange, locationChanged, saving, error, onClose, onSubmit, navigate }) {
+function SettingsModal({ formData, setFormData, businessData, mapPosition, onMapPositionChange, locationChanged, logoPreview, onLogoChange, onRemoveLogo, fileInputRef, uploadingLogo, saving, error, onClose, onSubmit, navigate }) {
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-white rounded-xl shadow-popover max-w-2xl w-full max-h-[90vh] overflow-y-auto my-8">
@@ -508,6 +572,73 @@ function SettingsModal({ formData, setFormData, businessData, mapPosition, onMap
                         <p className="text-xs text-gray-500 mt-1">Información adicional sobre tu negocio (opcional)</p>
                     </div>
 
+                    {/* Business Logo */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Logo del Negocio
+                        </label>
+                        <div className="flex items-start gap-4">
+                            {/* Logo Preview */}
+                            <div className="flex-shrink-0">
+                                <div className="w-24 h-24 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                                    {logoPreview ? (
+                                        <img
+                                            src={logoPreview}
+                                            alt="Logo preview"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Upload Controls */}
+                            <div className="flex-1">
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={onLogoChange}
+                                    className="hidden"
+                                    id="logo-upload"
+                                />
+                                <label
+                                    htmlFor="logo-upload"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                    </svg>
+                                    {logoPreview ? 'Cambiar logo' : 'Subir logo'}
+                                </label>
+                                {logoPreview && (
+                                    <button
+                                        type="button"
+                                        onClick={onRemoveLogo}
+                                        className="ml-2 inline-flex items-center gap-2 px-4 py-2 bg-white border border-red-300 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Quitar
+                                    </button>
+                                )}
+                                <p className="text-xs text-gray-500 mt-2">
+                                    Formatos: JPG, PNG, GIF. Tamaño máximo: 5MB
+                                </p>
+                                {uploadingLogo && (
+                                    <p className="text-xs text-brand-primary mt-2 flex items-center gap-2">
+                                        <div className="animate-spin rounded-full h-3 w-3 border-2 border-brand-primary border-t-transparent"></div>
+                                        Subiendo logo...
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Business Location Map */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -571,8 +702,8 @@ function SettingsModal({ formData, setFormData, businessData, mapPosition, onMap
                             </div>
                         )}
                         <p className="text-xs text-gray-500 mt-1">
-                            {mapPosition && businessData?.location ? 
-                                'Arrastra el marcador o haz clic en el mapa para cambiar la ubicación' : 
+                            {mapPosition && businessData?.location ?
+                                'Arrastra el marcador o haz clic en el mapa para cambiar la ubicación' :
                                 'Tu ubicación será visible para los clientes en el mapa'
                             }
                         </p>

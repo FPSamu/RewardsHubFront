@@ -46,13 +46,70 @@ const userIcon = L.divIcon({
 });
 
 // Custom icons for businesses based on status
-const createBusinessIcon = (color, hasRewards = false) => {
+const createBusinessIcon = (color, hasRewards = false, logoUrl = null) => {
     const colorMap = {
         green: '#10b981',
         yellow: '#f59e0b',
         blue: '#3b82f6',
     };
 
+    // If logo exists, show logo in a circular marker
+    if (logoUrl) {
+        return L.divIcon({
+            className: 'custom-business-marker',
+            html: `
+                <div style="
+                    background-color: white;
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 50% 50% 50% 0;
+                    transform: rotate(-45deg);
+                    border: 3px solid ${colorMap[color] || colorMap.blue};
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    position: relative;
+                    overflow: hidden;
+                ">
+                    <img 
+                        src="${logoUrl}" 
+                        alt="Logo"
+                        style="
+                            width: 32px;
+                            height: 32px;
+                            object-fit: cover;
+                            transform: rotate(45deg);
+                            border-radius: 4px;
+                        "
+                    />
+                    ${hasRewards ? `
+                        <div style="
+                            position: absolute;
+                            top: -8px;
+                            right: -8px;
+                            background-color: #ef4444;
+                            border-radius: 50%;
+                            width: 18px;
+                            height: 18px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            border: 2px solid white;
+                            transform: rotate(45deg);
+                        ">
+                            <span style="font-size: 12px;">🎁</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `,
+            iconSize: [44, 44],
+            iconAnchor: [22, 44],
+            popupAnchor: [0, -44],
+        });
+    }
+
+    // Default marker without logo
     return L.divIcon({
         className: 'custom-business-marker',
         html: `
@@ -527,12 +584,13 @@ const ClientMap = () => {
                             }
 
                             const hasRewards = availableRewardsCount > 0;
+                            const logoUrl = business.logoUrl || null;
 
                             return (
                                 <Marker
                                     key={business.id}
                                     position={[business.location.latitude, business.location.longitude]}
-                                    icon={createBusinessIcon(markerColor, hasRewards)}
+                                    icon={createBusinessIcon(markerColor, hasRewards, logoUrl)}
                                 >
                                     <Popup>
                                         <div className="min-w-[200px]">

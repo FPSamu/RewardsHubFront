@@ -75,6 +75,23 @@ export const businessService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Upload business logo
+  uploadLogo: async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append("logo", file);
+
+      const response = await api.post("/business/logo", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default businessService;
