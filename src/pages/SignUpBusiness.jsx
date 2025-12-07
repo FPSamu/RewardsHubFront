@@ -374,7 +374,7 @@ function SignUpBusiness() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="group relative w-full flex justify-center h-11 px-4 border border-transparent text-[16px] leading-6 font-semibold rounded-full text-white bg-[#74D680] hover:opacity-95 focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-180 shadow-[0_10px_24px_-10px_rgba(2,6,23,0.15)]"
+                                className="group relative w-full flex items-center justify-center h-11 px-4 border border-transparent text-[16px] leading-6 font-semibold rounded-full text-white bg-[#74D680] hover:opacity-95 focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-180 shadow-[0_10px_24px_-10px_rgba(2,6,23,0.15)]"
                             >
                                 {loading ? 'Creando cuenta...' : 'Crear Cuenta de Negocio'}
                             </button>
