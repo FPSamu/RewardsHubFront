@@ -30,7 +30,6 @@ const ClientPoints = () => {
                 } else if (transactionsData && Array.isArray(transactionsData.transactions)) {
                     transactionsList = transactionsData.transactions;
                 } else {
-                    console.log('Transactions data:', transactionsData);
                     transactionsList = [];
                 }
                 setTransactions(transactionsList);

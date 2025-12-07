@@ -255,8 +255,6 @@ const ClientMap = () => {
                     50 // 50km radius
                 );
 
-                console.log('Nearby businesses:', nearbyData);
-
                 // Create a map of visited businesses with points/stamps
                 const visitedMap = {};
                 if (pointsData && pointsData.businessPoints) {
@@ -486,8 +484,6 @@ const ClientMap = () => {
                             if (!business.location || !business.location.latitude || !business.location.longitude) {
                                 return null;
                             }
-
-                            console.log('business', business);
 
                             // Find business data to get status and rewards
                             const businessData = businesses.find(b => b.id === business.id) || {};

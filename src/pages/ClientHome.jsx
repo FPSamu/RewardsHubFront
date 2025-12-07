@@ -40,8 +40,6 @@ const ClientHome = () => {
 
                 // Fetch user points data
                 const pointsData = await userPointsService.getUserPoints();
-                console.log('Datos de puntos recibidos:', pointsData);
-                console.log('Business points:', pointsData?.businessPoints);
 
                 // Fetch business names for each businessId
                 if (pointsData?.businessPoints && pointsData.businessPoints.length > 0) {
@@ -49,7 +47,6 @@ const ClientHome = () => {
                         pointsData.businessPoints.map(async (bp) => {
                             try {
                                 const business = await businessService.getBusinessById(bp.businessId);
-                                console.log(`business: ${business.logoUrl}`);
                                 return {
                                     ...bp,
                                     businessName: business.name || 'Negocio',
