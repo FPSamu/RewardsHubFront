@@ -48,7 +48,7 @@ function SignUpBusiness() {
             }
 
             setLogoFile(file);
-            
+
             // Crear preview
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -220,7 +220,7 @@ function SignUpBusiness() {
                                             </button>
                                         </div>
                                     )}
-                                    
+
                                     {/* Botón de subir */}
                                     <div>
                                         <input

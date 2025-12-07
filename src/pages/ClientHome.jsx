@@ -30,10 +30,12 @@ const ClientHome = () => {
                         pointsData.businessPoints.map(async (bp) => {
                             try {
                                 const business = await businessService.getBusinessById(bp.businessId);
+                                console.log(`business: ${business.logoUrl}`);
                                 return {
                                     ...bp,
                                     businessName: business.name || 'Negocio',
-                                    businessEmail: business.email
+                                    businessEmail: business.email,
+                                    businessLogoUrl: business.logoUrl || undefined
                                 };
                             } catch (error) {
                                 console.error(`Error fetching business ${bp.businessId}:`, error);
@@ -235,9 +237,19 @@ const ClientHome = () => {
                                     className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 cursor-pointer"
                                 >
                                     <div className="flex items-center space-x-4">
-                                        <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex items-center justify-center font-bold shadow-card">
-                                            {(business.businessName || business.name || 'N').charAt(0).toUpperCase()}
-                                        </div>
+                                        {business.businessLogoUrl ? (
+                                            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-brand-primary shadow-card">
+                                                <img
+                                                    src={business.businessLogoUrl}
+                                                    alt={business.businessName || 'Logo del negocio'}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex items-center justify-center font-bold shadow-card">
+                                                {(business.businessName || business.name || 'N').charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
                                         <div>
                                             <h4 className="font-semibold text-gray-800">{business.businessName || business.name || 'Negocio'}</h4>
                                             <p className="text-sm text-gray-500">

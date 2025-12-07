@@ -369,113 +369,8 @@ const ClientMap = () => {
         );
     }
 
-    const dummyBusinesses = [
-        {
-            id: '507f1f77bcf86cd799439012',
-            name: 'Café Central',
-            category: 'Cafetería',
-            address: 'Av. Vallarta 1234, Guadalajara',
-            status: 'visited',
-            points: 45,
-            stamps: 3,
-            distance: '0.5 km',
-        },
-        {
-            id: '507f1f77bcf86cd799439014',
-            name: 'Restaurante El Sabor',
-            category: 'Restaurante',
-            address: 'Calle Juárez 567, Guadalajara',
-            status: 'visited',
-            points: 120,
-            stamps: 0,
-            distance: '1.2 km',
-        },
-        {
-            id: '507f1f77bcf86cd799439016',
-            name: 'Panadería Dulce Aroma',
-            category: 'Panadería',
-            address: 'Av. México 890, Guadalajara',
-            status: 'visited',
-            points: 0,
-            stamps: 7,
-            distance: '0.8 km',
-        },
-        {
-            id: '507f1f77bcf86cd799439018',
-            name: 'Gimnasio FitLife',
-            category: 'Gimnasio',
-            address: 'Av. Américas 345, Guadalajara',
-            status: 'visited',
-            points: 80,
-            stamps: 0,
-            distance: '2.1 km',
-        },
-        {
-            id: '507f1f77bcf86cd799439020',
-            name: 'Librería Páginas',
-            category: 'Librería',
-            address: 'Av. Chapultepec 678, Guadalajara',
-            status: 'visited',
-            points: 30,
-            stamps: 4,
-            distance: '1.5 km',
-        },
-        {
-            id: '507f1f77bcf86cd799439023',
-            name: 'Pizza Napolitana',
-            category: 'Restaurante',
-            address: 'Av. Patria 234, Guadalajara',
-            status: 'rewards_available',
-            points: 0,
-            stamps: 0,
-            distance: '1.8 km',
-            availableRewards: 2,
-        },
-        {
-            id: '507f1f77bcf86cd799439024',
-            name: 'Spa Relax',
-            category: 'Bienestar',
-            address: 'Av. Montevideo 456, Guadalajara',
-            status: 'not_visited',
-            points: 0,
-            stamps: 0,
-            distance: '3.2 km',
-        },
-        {
-            id: '507f1f77bcf86cd799439025',
-            name: 'Cine Metroplex',
-            category: 'Entretenimiento',
-            address: 'Av. Lázaro Cárdenas 789, Guadalajara',
-            status: 'not_visited',
-            points: 0,
-            stamps: 0,
-            distance: '2.5 km',
-        },
-        {
-            id: '507f1f77bcf86cd799439026',
-            name: 'Farmacia Salud+',
-            category: 'Farmacia',
-            address: 'Av. Hidalgo 123, Guadalajara',
-            status: 'rewards_available',
-            points: 0,
-            stamps: 0,
-            distance: '0.9 km',
-            availableRewards: 1,
-        },
-        {
-            id: '507f1f77bcf86cd799439027',
-            name: 'Taller Mecánico Express',
-            category: 'Automotriz',
-            address: 'Av. Federalismo 456, Guadalajara',
-            status: 'not_visited',
-            points: 0,
-            stamps: 0,
-            distance: '4.1 km',
-        },
-    ];
-
     // Use real data if available, fallback to dummy data
-    const allBusinesses = businesses.length > 0 ? businesses : dummyBusinesses;
+    const allBusinesses = businesses.length > 0 ? businesses: 'No businesses registered';
     const visited = allBusinesses.filter((b) => b.status === 'visited');
     const notVisited = allBusinesses.filter((b) => b.status === 'not_visited');
     const rewardsAvailable = allBusinesses.filter((b) => b.status === 'rewards_available');
@@ -566,6 +461,8 @@ const ClientMap = () => {
                             if (!business.location || !business.location.latitude || !business.location.longitude) {
                                 return null;
                             }
+
+                            console.log('business', business);
 
                             // Find business data to get status and rewards
                             const businessData = businesses.find(b => b.id === business.id) || {};
