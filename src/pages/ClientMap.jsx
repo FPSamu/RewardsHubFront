@@ -371,7 +371,7 @@ const ClientMap = () => {
     }
 
     // Use real data if available, fallback to dummy data
-    const allBusinesses = businesses.length > 0 ? businesses: 'No businesses registered';
+    const allBusinesses = businesses.length > 0 ? businesses : 'No businesses registered';
     const visited = allBusinesses.filter((b) => b.status === 'visited');
     const notVisited = allBusinesses.filter((b) => b.status === 'not_visited');
     const rewardsAvailable = allBusinesses.filter((b) => b.status === 'rewards_available');
@@ -640,47 +640,45 @@ const ClientMap = () => {
                 <h3 className="text-2xl font-bold text-gray-800 mb-4 tracking-tight">Lista de Negocios</h3>
 
                 {/* Filters */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                    <button 
-                        onClick={() => setActiveFilter('all')}
-                        className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm ${
-                            activeFilter === 'all' 
-                                ? 'bg-brand-primary text-white hover:opacity-96' 
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                    >
-                        Todos ({allBusinesses.length})
-                    </button>
-                    <button 
-                        onClick={() => setActiveFilter('visited')}
-                        className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm ${
-                            activeFilter === 'visited' 
-                                ? 'bg-brand-primary text-white hover:opacity-96' 
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                    >
-                        Visitados ({visited.length})
-                    </button>
-                    <button 
-                        onClick={() => setActiveFilter('rewards')}
-                        className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm ${
-                            activeFilter === 'rewards' 
-                                ? 'bg-brand-primary text-white hover:opacity-96' 
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                    >
-                        Con Recompensas ({rewardsAvailable.length})
-                    </button>
-                    <button 
-                        onClick={() => setActiveFilter('not_visited')}
-                        className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm ${
-                            activeFilter === 'not_visited' 
-                                ? 'bg-brand-primary text-white hover:opacity-96' 
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                    >
-                        No Visitados ({notVisited.length})
-                    </button>
+                <div className="relative mb-6">
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        <button
+                            onClick={() => setActiveFilter('all')}
+                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'all'
+                                    ? 'bg-brand-primary text-white hover:opacity-96'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                        >
+                            Todos ({allBusinesses.length})
+                        </button>
+                        <button
+                            onClick={() => setActiveFilter('visited')}
+                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'visited'
+                                    ? 'bg-brand-primary text-white hover:opacity-96'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                        >
+                            Visitados ({visited.length})
+                        </button>
+                        <button
+                            onClick={() => setActiveFilter('rewards')}
+                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'rewards'
+                                    ? 'bg-brand-primary text-white hover:opacity-96'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                        >
+                            Con Recompensas ({rewardsAvailable.length})
+                        </button>
+                        <button
+                            onClick={() => setActiveFilter('not_visited')}
+                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'not_visited'
+                                    ? 'bg-brand-primary text-white hover:opacity-96'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                        >
+                            No Visitados ({notVisited.length})
+                        </button>
+                    </div>
                 </div>
 
                 {/* Business Cards Grid */}
@@ -720,7 +718,7 @@ const ClientMap = () => {
                                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                                     />
                                 </svg>
-                                {business.distance} 
+                                {business.distance}
                             </p>
 
                             {/* Points/Stamps Info */}
