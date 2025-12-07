@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import userPointsService from '../services/userPointsService';
 import { transactionService } from '../services/transactionService';
+import businessService from '../services/businessService';
 
 const ClientPoints = () => {
     const [userPointsData, setUserPointsData] = useState(null);
     const [transactions, setTransactions] = useState([]);
+    const [businessLogos, setBusinessLogos] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -22,14 +24,33 @@ const ClientPoints = () => {
                 setUserPointsData(pointsData);
 
                 // Ensure transactions is always an array
+                let transactionsList = [];
                 if (Array.isArray(transactionsData)) {
-                    setTransactions(transactionsData);
+                    transactionsList = transactionsData;
                 } else if (transactionsData && Array.isArray(transactionsData.transactions)) {
-                    setTransactions(transactionsData.transactions);
+                    transactionsList = transactionsData.transactions;
                 } else {
                     console.log('Transactions data:', transactionsData);
-                    setTransactions([]);
+                    transactionsList = [];
                 }
+                setTransactions(transactionsList);
+
+                // Fetch business logos for unique business IDs
+                const uniqueBusinessIds = [...new Set(transactionsList.map(t => t.businessId).filter(Boolean))];
+                const logosMap = {};
+                await Promise.all(
+                    uniqueBusinessIds.map(async (businessId) => {
+                        try {
+                            const business = await businessService.getBusinessById(businessId);
+                            if (business.logoUrl) {
+                                logosMap[businessId] = business.logoUrl;
+                            }
+                        } catch (err) {
+                            console.error(`Error fetching logo for business ${businessId}:`, err);
+                        }
+                    })
+                );
+                setBusinessLogos(logosMap);
 
                 setError(null);
             } catch (err) {
@@ -177,10 +198,25 @@ const ClientPoints = () => {
                                         {/* Left section: Business and type */}
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-2">
-                                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${typeInfo.bgColor} ${typeInfo.textColor}`}>
-                                                    {typeInfo.icon} {typeInfo.label}
-                                                </span>
-                                                <h4 className="font-bold text-gray-800">{transaction.businessName}</h4>
+                                                {businessLogos[transaction.businessId] ? (
+                                                    <div className="w-10 h-10 flex-shrink-0 rounded-full overflow-hidden border-2 border-gray-300 shadow-sm">
+                                                        <img
+                                                            src={businessLogos[transaction.businessId]}
+                                                            alt={transaction.businessName}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className="bg-brand-primary text-white rounded-full w-10 h-10 flex-shrink-0 flex items-center justify-center font-bold text-sm shadow-sm">
+                                                        {(transaction.businessName || 'N').charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${typeInfo.bgColor} ${typeInfo.textColor}`}>
+                                                        {typeInfo.icon} {typeInfo.label}
+                                                    </span>
+                                                    <h4 className="font-bold text-gray-800">{transaction.businessName}</h4>
+                                                </div>
                                             </div>
 
                                             {/* Transaction details */}

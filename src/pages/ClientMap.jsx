@@ -181,6 +181,7 @@ const ClientMap = () => {
     const [userLocation, setUserLocation] = useState(null);
     const [locationError, setLocationError] = useState(null);
     const [gettingLocation, setGettingLocation] = useState(true);
+    const [activeFilter, setActiveFilter] = useState('all');
 
     // Get user location
     useEffect(() => {
@@ -374,6 +375,23 @@ const ClientMap = () => {
     const visited = allBusinesses.filter((b) => b.status === 'visited');
     const notVisited = allBusinesses.filter((b) => b.status === 'not_visited');
     const rewardsAvailable = allBusinesses.filter((b) => b.status === 'rewards_available');
+
+    // Filter businesses based on active filter
+    const getFilteredBusinesses = () => {
+        switch (activeFilter) {
+            case 'visited':
+                return visited;
+            case 'rewards':
+                return rewardsAvailable;
+            case 'not_visited':
+                return notVisited;
+            case 'all':
+            default:
+                return allBusinesses;
+        }
+    };
+
+    const filteredBusinesses = getFilteredBusinesses();
 
     const getStatusBadge = (status) => {
         switch (status) {
@@ -623,23 +641,51 @@ const ClientMap = () => {
 
                 {/* Filters */}
                 <div className="flex flex-wrap gap-2 mb-6">
-                    <button className="px-4 py-2 bg-brand-primary text-white rounded-pill font-medium hover:opacity-96 transition-all duration-180 shadow-sm">
+                    <button 
+                        onClick={() => setActiveFilter('all')}
+                        className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm ${
+                            activeFilter === 'all' 
+                                ? 'bg-brand-primary text-white hover:opacity-96' 
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
                         Todos ({allBusinesses.length})
                     </button>
-                    <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-pill font-medium hover:bg-gray-200 transition-all duration-180">
+                    <button 
+                        onClick={() => setActiveFilter('visited')}
+                        className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm ${
+                            activeFilter === 'visited' 
+                                ? 'bg-brand-primary text-white hover:opacity-96' 
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
                         Visitados ({visited.length})
                     </button>
-                    <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-pill font-medium hover:bg-gray-200 transition-all duration-180">
+                    <button 
+                        onClick={() => setActiveFilter('rewards')}
+                        className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm ${
+                            activeFilter === 'rewards' 
+                                ? 'bg-brand-primary text-white hover:opacity-96' 
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
                         Con Recompensas ({rewardsAvailable.length})
                     </button>
-                    <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-pill font-medium hover:bg-gray-200 transition-all duration-180">
+                    <button 
+                        onClick={() => setActiveFilter('not_visited')}
+                        className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm ${
+                            activeFilter === 'not_visited' 
+                                ? 'bg-brand-primary text-white hover:opacity-96' 
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
                         No Visitados ({notVisited.length})
                     </button>
                 </div>
 
                 {/* Business Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {allBusinesses.map((business) => (
+                    {filteredBusinesses.length > 0 ? filteredBusinesses.map((business) => (
                         <div
                             key={business.id}
                             className="border border-gray-200 rounded-lg p-4 hover:shadow-popover transition-all duration-180 cursor-pointer bg-white"
@@ -654,7 +700,6 @@ const ClientMap = () => {
 
                             {/* Business Info */}
                             <h4 className="text-lg font-bold text-gray-800 mb-1 tracking-tight">{business.name}</h4>
-                            <p className="text-sm text-gray-600 mb-2">{business.category}</p>
                             <p className="text-xs text-gray-500 mb-3 flex items-center">
                                 <svg
                                     className="w-4 h-4 mr-1"
@@ -675,7 +720,7 @@ const ClientMap = () => {
                                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                                     />
                                 </svg>
-                                {business.distance} • {business.address}
+                                {business.distance} 
                             </p>
 
                             {/* Points/Stamps Info */}
@@ -710,7 +755,12 @@ const ClientMap = () => {
                                 </div>
                             )}
                         </div>
-                    ))}
+                    )) : (
+                        <div className="col-span-full text-center py-8 text-gray-500">
+                            <p className="text-lg font-semibold">No hay negocios en esta categoría</p>
+                            <p className="text-sm mt-2">Intenta con otro filtro</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
