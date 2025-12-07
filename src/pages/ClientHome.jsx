@@ -234,11 +234,11 @@ const ClientHome = () => {
                             .map((business) => (
                                 <div
                                     key={business._id}
-                                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 cursor-pointer"
+                                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 cursor-pointer gap-3"
                                 >
-                                    <div className="flex items-center space-x-4">
+                                    <div className="flex items-center space-x-3 min-w-0 flex-1">
                                         {business.businessLogoUrl ? (
-                                            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-brand-primary shadow-card">
+                                            <div className="w-12 h-12 flex-shrink-0 rounded-full overflow-hidden border-2 border-brand-primary shadow-card">
                                                 <img
                                                     src={business.businessLogoUrl}
                                                     alt={business.businessName || 'Logo del negocio'}
@@ -246,29 +246,29 @@ const ClientHome = () => {
                                                 />
                                             </div>
                                         ) : (
-                                            <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex items-center justify-center font-bold shadow-card">
+                                            <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex-shrink-0 flex items-center justify-center font-bold shadow-card">
                                                 {(business.businessName || business.name || 'N').charAt(0).toUpperCase()}
                                             </div>
                                         )}
-                                        <div>
-                                            <h4 className="font-semibold text-gray-800">{business.businessName || business.name || 'Negocio'}</h4>
-                                            <p className="text-sm text-gray-500">
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="font-semibold text-gray-800 truncate">{business.businessName || business.name || 'Negocio'}</h4>
+                                            <p className="text-xs sm:text-sm text-gray-500 truncate">
                                                 {new Date(business.lastVisit).toLocaleDateString('es-ES', {
                                                     year: 'numeric',
-                                                    month: 'long',
+                                                    month: 'short',
                                                     day: 'numeric',
                                                 })}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                         {business.points > 0 && (
-                                            <span className="inline-block px-3 py-1 bg-brand-muted text-brand-onColor text-xs font-semibold rounded-pill mb-1">
+                                            <span className="whitespace-nowrap px-2.5 py-1 bg-brand-muted text-brand-onColor text-xs font-semibold rounded-pill">
                                                 +{business.points} pts
                                             </span>
                                         )}
                                         {business.stamps > 0 && (
-                                            <span className="inline-block px-3 py-1 bg-green-50 text-accent-successOnColor text-xs font-semibold rounded-pill">
+                                            <span className="whitespace-nowrap px-2.5 py-1 bg-green-50 text-accent-successOnColor text-xs font-semibold rounded-pill">
                                                 {business.stamps} sellos
                                             </span>
                                         )}
