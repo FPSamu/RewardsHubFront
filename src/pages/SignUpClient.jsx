@@ -11,6 +11,8 @@ function SignUpClient() {
         confirmPassword: '',
         phone: '',
     });
+    const [profilePicture, setProfilePicture] = useState(null);
+    const [profilePicturePreview, setProfilePicturePreview] = useState(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -20,6 +22,38 @@ function SignUpClient() {
             [e.target.name]: e.target.value,
         });
         setError('');
+    };
+
+    const handleProfilePictureChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Validar tipo de archivo
+            if (!file.type.startsWith('image/')) {
+                setError('Por favor selecciona un archivo de imagen válido');
+                return;
+            }
+
+            // Validar tamaño (5MB máximo)
+            if (file.size > 5 * 1024 * 1024) {
+                setError('La imagen debe ser menor a 5MB');
+                return;
+            }
+
+            setProfilePicture(file);
+            setError('');
+
+            // Crear preview
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfilePicturePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleRemoveProfilePicture = () => {
+        setProfilePicture(null);
+        setProfilePicturePreview(null);
     };
 
     const validateForm = () => {
@@ -55,6 +89,35 @@ function SignUpClient() {
             // Usa la ruta /auth/register
             const response = await authService.signUpClient(userData);
             console.log('Registro exitoso:', response);
+
+            // Upload profile picture if provided
+            if (profilePicture && response.user) {
+                try {
+                    const formData = new FormData();
+                    formData.append('profilePicture', profilePicture);
+
+                    const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+                    const uploadResponse = await fetch(`${API_BASE_URL}/api/auth/profile-picture`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        },
+                        body: formData,
+                    });
+
+                    if (uploadResponse.ok) {
+                        const uploadData = await uploadResponse.json();
+                        // Update user in localStorage with profile picture
+                        const updatedUser = { ...response.user, profilePicture: uploadData.profilePicture };
+                        localStorage.setItem('user', JSON.stringify(updatedUser));
+                        console.log('Foto de perfil subida exitosamente');
+                    }
+                } catch (uploadErr) {
+                    console.error('Error al subir la foto de perfil:', uploadErr);
+                    // Don't block registration if profile picture upload fails
+                }
+            }
+
             navigate('/client/dashboard');
         } catch (err) {
             setError(err.message || 'Error al crear la cuenta. Intenta nuevamente.');
@@ -91,6 +154,59 @@ function SignUpClient() {
                         )}
 
                         <div className="space-y-5">
+                            {/* Foto de Perfil (Opcional) */}
+                            <div>
+                                <label className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
+                                    Foto de Perfil <span className="text-[#6C757D] font-normal">(Opcional)</span>
+                                </label>
+
+                                <div className="flex items-center space-x-4">
+                                    {/* Preview */}
+                                    <div className="relative flex-shrink-0">
+                                        {profilePicturePreview ? (
+                                            <img
+                                                src={profilePicturePreview}
+                                                alt="Profile preview"
+                                                className="w-20 h-20 rounded-full object-cover border-2 border-[#FFB733] shadow-sm"
+                                            />
+                                        ) : (
+                                            <div className="w-20 h-20 rounded-full bg-[#FFE8C6] text-[#FFB733] flex items-center justify-center text-2xl font-bold shadow-sm">
+                                                {formData.username.charAt(0).toUpperCase() || '?'}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Upload/Remove buttons */}
+                                    <div className="flex-1 space-y-2">
+                                        <label className="cursor-pointer">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleProfilePictureChange}
+                                                className="hidden"
+                                                disabled={loading}
+                                            />
+                                            <span className="inline-block px-4 py-2 bg-[#FFB733] text-white rounded-full hover:opacity-95 transition-all duration-180 text-[14px] leading-5 font-semibold shadow-[0_4px_12px_-4px_rgba(2,6,23,0.15)]">
+                                                {profilePicture ? 'Cambiar foto' : 'Subir foto'}
+                                            </span>
+                                        </label>
+
+                                        {profilePicture && (
+                                            <button
+                                                type="button"
+                                                onClick={handleRemoveProfilePicture}
+                                                className="block px-4 py-2 text-[14px] leading-5 text-red-600 hover:text-red-700 font-semibold"
+                                            >
+                                                Quitar foto
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <p className="mt-2 text-[12px] leading-4 font-medium text-[#6C757D]">
+                                    JPG, PNG o GIF. Tamaño máximo 5MB.
+                                </p>
+                            </div>
+
                             {/* Nombre Completo */}
                             <div>
                                 <label htmlFor="username" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">

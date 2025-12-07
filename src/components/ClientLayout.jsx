@@ -1,11 +1,21 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
+import SettingsModal from './SettingsModal';
+import authService from '../services/authService';
 
 const ClientLayout = () => {
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
     const menuRef = useRef(null);
+
+    useEffect(() => {
+        // Get current user from localStorage
+        const user = authService.getCurrentUser();
+        setCurrentUser(user);
+    }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -15,8 +25,11 @@ const ClientLayout = () => {
 
     const handleSettings = () => {
         setIsMenuOpen(false);
-        // TODO: Navigate to settings page
-        console.log('Navigating to settings...');
+        setIsSettingsModalOpen(true);
+    };
+
+    const handleUserUpdate = (updatedUser) => {
+        setCurrentUser(updatedUser);
     };
 
     // Close menu when clicking outside
@@ -124,21 +137,29 @@ const ClientLayout = () => {
                             <div className="relative" ref={menuRef}>
                                 <button
                                     onClick={() => setIsMenuOpen(!isMenuOpen)}
-                                    className="flex items-center justify-center w-10 h-10 rounded-full bg-brand-primary text-white hover:opacity-96 transition-all duration-180 focus:outline-none focus:ring-3 focus:ring-brand-muted focus:ring-offset-2"
+                                    className="flex items-center justify-center w-10 h-10 rounded-full bg-brand-primary text-white hover:opacity-96 transition-all duration-180 focus:outline-none focus:ring-3 focus:ring-brand-muted focus:ring-offset-2 overflow-hidden"
                                 >
-                                    <svg
-                                        className="w-6 h-6"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                    {currentUser?.profilePicture ? (
+                                        <img
+                                            src={currentUser.profilePicture}
+                                            alt="Profile"
+                                            className="w-full h-full object-cover"
                                         />
-                                    </svg>
+                                    ) : (
+                                        <svg
+                                            className="w-6 h-6"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                            />
+                                        </svg>
+                                    )}
                                 </button>
 
                                 {/* Dropdown Menu */}
@@ -245,6 +266,14 @@ const ClientLayout = () => {
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <Outlet />
             </main>
+
+            {/* Settings Modal */}
+            <SettingsModal
+                isOpen={isSettingsModalOpen}
+                onClose={() => setIsSettingsModalOpen(false)}
+                currentUser={currentUser}
+                onUserUpdate={handleUserUpdate}
+            />
         </div>
     );
 };

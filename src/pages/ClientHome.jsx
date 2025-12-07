@@ -10,6 +10,25 @@ const ClientHome = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Listen for user updates
+    useEffect(() => {
+        const handleStorageChange = () => {
+            const currentUser = authService.getCurrentUser();
+            setUser(currentUser);
+        };
+
+        // Listen to storage events
+        window.addEventListener('storage', handleStorageChange);
+
+        // Also listen to a custom event for same-tab updates
+        window.addEventListener('userUpdated', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('userUpdated', handleStorageChange);
+        };
+    }, []);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
