@@ -315,13 +315,12 @@ const ClientMap = () => {
                     const visited = visitedMap[businessId];
                     const availableRewards = rewardsMap[businessId] || [];
 
-                    // Determine status: rewards_available > visited > not_visited
+                    // Determine primary status
+                    // Status logic: visited if has points/stamps, not_visited otherwise
+                    // rewards_available is tracked separately
                     let status = 'not_visited';
                     if (visited && (visited.points > 0 || visited.stamps > 0)) {
                         status = 'visited';
-                    }
-                    if (availableRewards.length > 0) {
-                        status = 'rewards_available';
                     }
 
                     return {
@@ -335,6 +334,7 @@ const ClientMap = () => {
                         stamps: visited ? visited.stamps : 0,
                         distance: business.distance ? `${business.distance.toFixed(1)} km` : '-- km',
                         availableRewards: availableRewards.length,
+                        hasRewards: availableRewards.length > 0, // Track if has rewards separately
                     };
                 });
 
@@ -374,7 +374,7 @@ const ClientMap = () => {
     const allBusinesses = businesses.length > 0 ? businesses : 'No businesses registered';
     const visited = allBusinesses.filter((b) => b.status === 'visited');
     const notVisited = allBusinesses.filter((b) => b.status === 'not_visited');
-    const rewardsAvailable = allBusinesses.filter((b) => b.status === 'rewards_available');
+    const rewardsAvailable = allBusinesses.filter((b) => b.hasRewards === true);
 
     // Filter businesses based on active filter
     const getFilteredBusinesses = () => {
@@ -411,7 +411,7 @@ const ClientMap = () => {
             {/* Header */}
             <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
                 <h2 className="text-3xl font-bold text-gray-800 mb-2 tracking-tight">Mapa de Negocios</h2>
-                <p className="text-gray-600">Explora todos los negocios afiliados a RewardsHub</p>
+                <p className="text-gray-600">Explora todos los negocios afiliados a RewardsHub cerca de tu ubicación</p>
             </div>
 
             {/* Stats Summary */}
@@ -708,7 +708,7 @@ const ClientMap = () => {
                                             {business.name.charAt(0)}
                                         </div>
                                     )}
-                                    {getStatusBadge(business.status)}
+                                    {getStatusBadge(business.status, business.hasRewards)}
                                 </div>
 
                             {/* Business Info */}
