@@ -683,18 +683,33 @@ const ClientMap = () => {
 
                 {/* Business Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredBusinesses.length > 0 ? filteredBusinesses.map((business) => (
-                        <div
-                            key={business.id}
-                            className="border border-gray-200 rounded-lg p-4 hover:shadow-popover transition-all duration-180 cursor-pointer bg-white"
-                        >
-                            {/* Business Icon & Status */}
-                            <div className="flex items-start justify-between mb-3">
-                                <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg shadow-sm">
-                                    {business.name.charAt(0)}
+                    {filteredBusinesses.length > 0 ? filteredBusinesses.map((business) => {
+                        // Find the original business data to get the logo
+                        const businessWithLogo = nearbyBusinesses.find(b => b.id === business.id);
+                        const logoUrl = businessWithLogo?.logoUrl || null;
+
+                        return (
+                            <div
+                                key={business.id}
+                                className="border border-gray-200 rounded-lg p-4 hover:shadow-popover transition-all duration-180 cursor-pointer bg-white"
+                            >
+                                {/* Business Icon & Status */}
+                                <div className="flex items-start justify-between mb-3">
+                                    {logoUrl ? (
+                                        <div className="w-12 h-12 flex-shrink-0 rounded-full overflow-hidden border-2 border-brand-primary shadow-sm">
+                                            <img
+                                                src={logoUrl}
+                                                alt={business.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg shadow-sm">
+                                            {business.name.charAt(0)}
+                                        </div>
+                                    )}
+                                    {getStatusBadge(business.status)}
                                 </div>
-                                {getStatusBadge(business.status)}
-                            </div>
 
                             {/* Business Info */}
                             <h4 className="text-lg font-bold text-gray-800 mb-1 tracking-tight">{business.name}</h4>
@@ -753,7 +768,8 @@ const ClientMap = () => {
                                 </div>
                             )}
                         </div>
-                    )) : (
+                        );
+                    }) : (
                         <div className="col-span-full text-center py-8 text-gray-500">
                             <p className="text-lg font-semibold">No hay negocios en esta categoría</p>
                             <p className="text-sm mt-2">Intenta con otro filtro</p>
