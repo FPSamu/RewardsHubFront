@@ -59,46 +59,51 @@ const createBusinessIcon = (color, hasRewards = false, logoUrl = null) => {
             className: 'custom-business-marker',
             html: `
                 <div style="
-                    background-color: white;
+                    position: relative;
                     width: 44px;
                     height: 44px;
-                    border-radius: 50% 50% 50% 0;
-                    transform: rotate(-45deg);
-                    border: 3px solid ${colorMap[color] || colorMap.blue};
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    position: relative;
-                    overflow: hidden;
                 ">
-                    <img 
-                        src="${logoUrl}" 
-                        alt="Logo"
-                        style="
-                            width: 32px;
-                            height: 32px;
-                            object-fit: cover;
-                            transform: rotate(45deg);
-                            border-radius: 4px;
-                        "
-                    />
+                    <div style="
+                        background-color: white;
+                        width: 44px;
+                        height: 44px;
+                        border-radius: 50% 50% 50% 0;
+                        transform: rotate(-45deg);
+                        border: 3px solid ${colorMap[color] || colorMap.blue};
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        overflow: hidden;
+                    ">
+                        <img 
+                            src="${logoUrl}" 
+                            alt="Logo"
+                            style="
+                                width: 32px;
+                                height: 32px;
+                                object-fit: cover;
+                                transform: rotate(45deg);
+                                border-radius: 4px;
+                            "
+                        />
+                    </div>
                     ${hasRewards ? `
                         <div style="
                             position: absolute;
-                            top: -8px;
-                            right: -8px;
+                            top: -2px;
+                            right: -2px;
                             background-color: #ef4444;
                             border-radius: 50%;
-                            width: 18px;
-                            height: 18px;
+                            width: 20px;
+                            height: 20px;
                             display: flex;
                             align-items: center;
                             justify-content: center;
                             border: 2px solid white;
-                            transform: rotate(45deg);
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
                         ">
-                            <span style="font-size: 12px;">🎁</span>
+                            <span style="font-size: 11px;">🎁</span>
                         </div>
                     ` : ''}
                 </div>
@@ -393,12 +398,14 @@ const ClientMap = () => {
 
     const filteredBusinesses = getFilteredBusinesses();
 
-    const getStatusBadge = (status) => {
+    const getStatusBadge = (status, hasRewards) => {
+        if (hasRewards) {
+            return <span className="px-3 py-1 bg-green-50 text-accent-successOnColor text-xs font-semibold rounded-pill">Recompensas Disponibles</span>;
+        }
+
         switch (status) {
             case 'visited':
                 return <span className="px-3 py-1 bg-brand-muted text-brand-onColor text-xs font-semibold rounded-pill">Visitado</span>;
-            case 'rewards_available':
-                return <span className="px-3 py-1 bg-green-50 text-accent-successOnColor text-xs font-semibold rounded-pill">Recompensas Disponibles</span>;
             case 'not_visited':
                 return <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-pill">No Visitado</span>;
             default:
@@ -645,8 +652,8 @@ const ClientMap = () => {
                         <button
                             onClick={() => setActiveFilter('all')}
                             className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'all'
-                                    ? 'bg-brand-primary text-white hover:opacity-96'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-brand-primary text-white hover:opacity-96'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             Todos ({allBusinesses.length})
@@ -654,8 +661,8 @@ const ClientMap = () => {
                         <button
                             onClick={() => setActiveFilter('visited')}
                             className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'visited'
-                                    ? 'bg-brand-primary text-white hover:opacity-96'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-brand-primary text-white hover:opacity-96'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             Visitados ({visited.length})
@@ -663,8 +670,8 @@ const ClientMap = () => {
                         <button
                             onClick={() => setActiveFilter('rewards')}
                             className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'rewards'
-                                    ? 'bg-brand-primary text-white hover:opacity-96'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-brand-primary text-white hover:opacity-96'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             Con Recompensas ({rewardsAvailable.length})
@@ -672,8 +679,8 @@ const ClientMap = () => {
                         <button
                             onClick={() => setActiveFilter('not_visited')}
                             className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'not_visited'
-                                    ? 'bg-brand-primary text-white hover:opacity-96'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-brand-primary text-white hover:opacity-96'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             No Visitados ({notVisited.length})
@@ -711,63 +718,63 @@ const ClientMap = () => {
                                     {getStatusBadge(business.status, business.hasRewards)}
                                 </div>
 
-                            {/* Business Info */}
-                            <h4 className="text-lg font-bold text-gray-800 mb-1 tracking-tight">{business.name}</h4>
-                            <p className="text-xs text-gray-500 mb-3 flex items-center">
-                                <svg
-                                    className="w-4 h-4 mr-1"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                    />
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                    />
-                                </svg>
-                                {business.distance}
-                            </p>
+                                {/* Business Info */}
+                                <h4 className="text-lg font-bold text-gray-800 mb-1 tracking-tight">{business.name}</h4>
+                                <p className="text-xs text-gray-500 mb-3 flex items-center">
+                                    <svg
+                                        className="w-4 h-4 mr-1"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                        />
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                        />
+                                    </svg>
+                                    {business.distance}
+                                </p>
 
-                            {/* Points/Stamps Info */}
-                            {business.status === 'visited' && (
-                                <div className="flex items-center space-x-3 pt-3 border-t border-gray-200">
-                                    {business.points > 0 && (
-                                        <div className="flex items-center text-sm">
-                                            <span className="font-semibold text-brand-primary">{business.points}</span>
-                                            <span className="text-gray-600 ml-1">puntos</span>
-                                        </div>
-                                    )}
-                                    {business.stamps > 0 && (
-                                        <div className="flex items-center text-sm">
-                                            <span className="font-semibold text-accent-success">{business.stamps}</span>
-                                            <span className="text-gray-600 ml-1">sellos</span>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                {/* Points/Stamps Info */}
+                                {business.status === 'visited' && (
+                                    <div className="flex items-center space-x-3 pt-3 border-t border-gray-200">
+                                        {business.points > 0 && (
+                                            <div className="flex items-center text-sm">
+                                                <span className="font-semibold text-brand-primary">{business.points}</span>
+                                                <span className="text-gray-600 ml-1">puntos</span>
+                                            </div>
+                                        )}
+                                        {business.stamps > 0 && (
+                                            <div className="flex items-center text-sm">
+                                                <span className="font-semibold text-accent-success">{business.stamps}</span>
+                                                <span className="text-gray-600 ml-1">sellos</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
-                            {business.status === 'rewards_available' && (
-                                <div className="pt-3 border-t border-gray-200">
-                                    <p className="text-sm font-semibold text-accent-success">
-                                        🎁 {business.availableRewards} recompensa(s) disponible(s)
-                                    </p>
-                                </div>
-                            )}
+                                {business.status === 'rewards_available' && (
+                                    <div className="pt-3 border-t border-gray-200">
+                                        <p className="text-sm font-semibold text-accent-success">
+                                            🎁 {business.availableRewards} recompensa(s) disponible(s)
+                                        </p>
+                                    </div>
+                                )}
 
-                            {business.status === 'not_visited' && (
-                                <div className="pt-3 border-t border-gray-200">
-                                    <p className="text-sm text-gray-500">¡Visita este negocio y acumula puntos!</p>
-                                </div>
-                            )}
-                        </div>
+                                {business.status === 'not_visited' && (
+                                    <div className="pt-3 border-t border-gray-200">
+                                        <p className="text-sm text-gray-500">¡Visita este negocio y acumula puntos!</p>
+                                    </div>
+                                )}
+                            </div>
                         );
                     }) : (
                         <div className="col-span-full text-center py-8 text-gray-500">
