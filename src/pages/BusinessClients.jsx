@@ -17,7 +17,7 @@ const BusinessClients = () => {
     const [showModal, setShowModal] = useState(false);
     const [rewards, setRewards] = useState([]);
     const [rewardSystems, setRewardSystems] = useState({ points: null, stamps: [] });
-    const [loadingModal, setLoadingModal] = useState(false);
+    // const [loadingModal, setLoadingModal] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -226,9 +226,9 @@ const BusinessClients = () => {
                 <div className="flex items-center justify-between">
                     <div>
                         <div className="flex items-center space-x-3 mb-2">
-                            <img 
-                                src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" 
-                                alt="RewardsHub Logo" 
+                            <img
+                                src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png"
+                                alt="RewardsHub Logo"
                                 className="h-10 w-auto object-contain"
                             />
                             <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
@@ -665,10 +665,10 @@ const BusinessClients = () => {
                                                                 <div className="ml-4">
                                                                     <span
                                                                         className={`px-4 py-2 text-sm font-semibold rounded-full ${status.available
-                                                                                ? 'bg-green-500 text-white'
-                                                                                : status.color === 'amber'
-                                                                                    ? 'bg-amber-100 text-amber-700'
-                                                                                    : 'bg-gray-200 text-gray-600'
+                                                                            ? 'bg-green-500 text-white'
+                                                                            : status.color === 'amber'
+                                                                                ? 'bg-amber-100 text-amber-700'
+                                                                                : 'bg-gray-200 text-gray-600'
                                                                             }`}
                                                                     >
                                                                         {status.label}

@@ -64,6 +64,7 @@ const BusinessLayout = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [businessData, setBusinessData] = useState(null);
+    const [currentBusiness, setCurrentBusiness] = useState(null);
     const [settingsFormData, setSettingsFormData] = useState({
         name: '',
         description: ''
@@ -77,6 +78,19 @@ const BusinessLayout = () => {
     const [settingsError, setSettingsError] = useState(null);
     const menuRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    // Load business data on mount for profile button
+    useEffect(() => {
+        const loadBusinessData = async () => {
+            try {
+                const data = await businessService.getMyBusiness();
+                setCurrentBusiness(data);
+            } catch (error) {
+                console.error('Error loading business data:', error);
+            }
+        };
+        loadBusinessData();
+    }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -187,14 +201,13 @@ const BusinessLayout = () => {
             }
 
             // Llamar al servicio para actualizar información básica
-            let updatedBusiness = await businessService.updateBusinessInfo(updates);
+            await businessService.updateBusinessInfo(updates);
 
             // Si hay un nuevo logo, subirlo
             if (logoFile) {
                 setUploadingLogo(true);
                 try {
-                    const logoResult = await businessService.uploadLogo(logoFile);
-                    updatedBusiness = logoResult;
+                    await businessService.uploadLogo(logoFile);
                 } catch (logoError) {
                     console.error('Error uploading logo:', logoError);
                     setSettingsError('Logo actualizado, pero hubo un error al subir la imagen');
@@ -214,6 +227,7 @@ const BusinessLayout = () => {
             // Recargar datos del negocio para obtener todos los cambios
             const finalData = await businessService.getMyBusiness();
             setBusinessData(finalData);
+            setCurrentBusiness(finalData); // Actualizar también el estado del negocio actual para el botón de perfil
 
             // Cerrar modal
             handleCloseSettingsModal();
@@ -254,53 +268,53 @@ const BusinessLayout = () => {
                             <h1 className="text-xl sm:text-2xl font-bold text-brand-primary">RewardsHub Business</h1>
                         </div>
 
-                        {/* Desktop Navigation Links */
-                            <div className="hidden md:flex space-x-2">
-                                <NavLink
-                                    to="/business/dashboard"
-                                    className={({ isActive }) =>
-                                        `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
-                                            ? 'bg-brand-muted text-brand-onColor'
-                                            : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
-                                        }`
-                                    }
-                                >
-                                    Dashboard
-                                </NavLink>
-                                <NavLink
-                                    to="/business/dashboard/clients"
-                                    className={({ isActive }) =>
-                                        `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
-                                            ? 'bg-brand-muted text-brand-onColor'
-                                            : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
-                                        }`
-                                    }
-                                >
-                                    Clientes
-                                </NavLink>
-                                <NavLink
-                                    to="/business/dashboard/rewards"
-                                    className={({ isActive }) =>
-                                        `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
-                                            ? 'bg-brand-muted text-brand-onColor'
-                                            : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
-                                        }`
-                                    }
-                                >
-                                    Recompensas
-                                </NavLink>
-                                <NavLink
-                                    to="/business/dashboard/scan"
-                                    className={({ isActive }) =>
-                                        `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
-                                            ? 'bg-brand-muted text-brand-onColor'
-                                            : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
-                                        }`
-                                    }
-                                >
-                                    Escanear QR
-                                </NavLink>
-                            </div>
+                        {/* Desktop Navigation Links */}
+                        <div className="hidden md:flex space-x-2">
+                            <NavLink
+                                to="/business/dashboard"
+                                className={({ isActive }) =>
+                                    `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
+                                        ? 'bg-brand-muted text-brand-onColor'
+                                        : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
+                                    }`
+                                }
+                            >
+                                Dashboard
+                            </NavLink>
+                            <NavLink
+                                to="/business/dashboard/clients"
+                                className={({ isActive }) =>
+                                    `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
+                                        ? 'bg-brand-muted text-brand-onColor'
+                                        : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
+                                    }`
+                                }
+                            >
+                                Clientes
+                            </NavLink>
+                            <NavLink
+                                to="/business/dashboard/rewards"
+                                className={({ isActive }) =>
+                                    `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
+                                        ? 'bg-brand-muted text-brand-onColor'
+                                        : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
+                                    }`
+                                }
+                            >
+                                Recompensas
+                            </NavLink>
+                            <NavLink
+                                to="/business/dashboard/scan"
+                                className={({ isActive }) =>
+                                    `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
+                                        ? 'bg-brand-muted text-brand-onColor'
+                                        : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
+                                    }`
+                                }
+                            >
+                                Escanear QR
+                            </NavLink>
+                        </div>
 
                         {/* Right side - Mobile Menu Button + User Menu */}
                         <div className="flex items-center space-x-3">
@@ -347,9 +361,19 @@ const BusinessLayout = () => {
                                     onClick={() => setIsMenuOpen(!isMenuOpen)}
                                     className="flex items-center space-x-2 px-3 py-2 rounded-pill hover:bg-gray-100 transition-all duration-180 focus:outline-none focus:ring-3 focus:ring-brand-muted"
                                 >
-                                    <div className="w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center font-semibold">
-                                        B
-                                    </div>
+                                    {currentBusiness?.logoUrl ? (
+                                        <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-brand-primary flex-shrink-0">
+                                            <img
+                                                src={currentBusiness.logoUrl}
+                                                alt="Business Logo"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center font-semibold">
+                                            {currentBusiness?.name?.charAt(0).toUpperCase() || 'B'}
+                                        </div>
+                                    )}
                                     <svg
                                         className={`w-4 h-4 text-gray-600 transition-transform duration-180 ${isMenuOpen ? 'rotate-180' : ''
                                             }`}

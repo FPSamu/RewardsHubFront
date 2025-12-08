@@ -139,9 +139,9 @@ const ClientHome = () => {
             {/* Welcome Section */}
             <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
                 <div className="flex items-center space-x-3 mb-4">
-                    <img 
-                        src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" 
-                        alt="RewardsHub Logo" 
+                    <img
+                        src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png"
+                        alt="RewardsHub Logo"
                         className="h-12 w-auto object-contain"
                     />
                     <h2 className="text-3xl font-bold text-gray-800 tracking-tight">

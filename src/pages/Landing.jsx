@@ -34,27 +34,27 @@ function Landing() {
             {/* Header */}
             <header className="relative z-10 px-6 py-8">
                 <nav className="max-w-7xl mx-auto flex items-center justify-between">
-                    <div className={`flex items-center space-x-3 transition-all duration-700 transform ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}>
+                    <div className={`flex items-center space-x-2 sm:space-x-3 transition-all duration-700 transform ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}>
                         <img
                             src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png"
                             alt="RewardsHub Logo"
-                            className="h-12 w-auto object-contain"
+                            className="h-10 sm:h-12 w-auto object-contain"
                         />
-                        <span className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                             RewardsHub
                         </span>
                     </div>
 
-                    <div className={`flex items-center space-x-4 transition-all duration-700 delay-200 transform ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0'}`}>
+                    <div className={`flex items-center space-x-2 sm:space-x-4 transition-all duration-700 delay-200 transform ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0'}`}>
                         <Link
                             to="/login"
-                            className="px-6 py-2.5 text-gray-700 font-medium hover:text-gray-900 transition-colors"
+                            className="px-4 sm:px-6 py-2 sm:py-2.5 text-gray-700 font-medium hover:text-gray-900 transition-colors text-sm sm:text-base"
                         >
                             Iniciar Sesión
                         </Link>
                         <Link
                             to="/signup"
-                            className="px-6 py-2.5 bg-brand-primary text-white font-medium rounded-full hover:opacity-90 transition-all hover:shadow-lg hover:scale-105 active:scale-95"
+                            className="hidden sm:inline-block px-6 py-2.5 bg-brand-primary text-white font-medium rounded-full hover:opacity-90 transition-all hover:shadow-lg hover:scale-105 active:scale-95"
                         >
                             Registrarse
                         </Link>
@@ -63,65 +63,65 @@ function Landing() {
             </header>
 
             {/* Hero Section */}
-            <main className="relative z-10 px-6 py-12">
+            <main className="relative z-10 px-4 sm:px-6 py-8 sm:py-12">
                 <div className="max-w-7xl mx-auto">
                     <div className="grid lg:grid-cols-2 gap-12 items-center">
                         {/* Contenido Principal */}
                         <div className={`transition-all duration-1000 delay-300 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-                            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white rounded-full shadow-card mb-8 animate-bounce-slow">
+                            <div className="inline-flex items-center space-x-2 px-3 sm:px-4 py-2 bg-white rounded-full shadow-card mb-6 sm:mb-8 animate-bounce-slow">
                                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                <span className="text-sm font-medium text-gray-700">¡Más de 500 negocios conectados!</span>
+                                <span className="text-xs sm:text-sm font-medium text-gray-700">¡Más de 500 negocios conectados!</span>
                             </div>
 
-                            <h1 className="text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
+                            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
                                 Recompensas que
                                 <span className="block bg-gradient-to-r from-brand-primary via-amber-500 to-orange-500 bg-clip-text text-transparent">
                                     impulsan tu negocio
                                 </span>
                             </h1>
 
-                            <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+                            <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-8 leading-relaxed">
                                 Conecta con tus clientes, fideliza y crece. Un sistema de puntos y recompensas diseñado para pequeños y grandes negocios.
                             </p>
 
-                            <div className="flex flex-col sm:flex-row gap-4 mb-12">
+                            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-12">
                                 <Link
                                     to="/signup/business"
-                                    className="group px-8 py-4 bg-brand-primary text-white font-semibold rounded-full hover:opacity-90 transition-all hover:shadow-xl hover:scale-105 active:scale-95 flex items-center justify-center space-x-2"
+                                    className="group px-6 sm:px-8 py-3 sm:py-4 bg-brand-primary text-white font-semibold rounded-full hover:opacity-90 transition-all hover:shadow-xl hover:scale-105 active:scale-95 flex items-center justify-center space-x-2 text-sm sm:text-base"
                                 >
                                     <span>Soy Negocio</span>
-                                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                     </svg>
                                 </Link>
                                 <Link
                                     to="/signup/client"
-                                    className="group px-8 py-4 bg-white text-gray-800 font-semibold rounded-full hover:shadow-xl transition-all border-2 border-gray-200 hover:border-brand-primary hover:scale-105 active:scale-95 flex items-center justify-center space-x-2"
+                                    className="group px-6 sm:px-8 py-3 sm:py-4 bg-white text-gray-800 font-semibold rounded-full hover:shadow-xl transition-all border-2 border-gray-200 hover:border-brand-primary hover:scale-105 active:scale-95 flex items-center justify-center space-x-2 text-sm sm:text-base"
                                 >
                                     <span>Soy Cliente</span>
-                                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                     </svg>
                                 </Link>
                             </div>
 
                             {/* Stats */}
-                            <div className="grid grid-cols-3 gap-6">
+                            <div className="grid grid-cols-3 gap-3 sm:gap-6">
                                 {[
                                     { value: '500+', label: 'Negocios' },
                                     { value: '10K+', label: 'Clientes' },
                                     { value: '50K+', label: 'Recompensas' }
                                 ].map((stat, index) => (
                                     <div key={index} className={`transition-all duration-700 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`} style={{ transitionDelay: `${600 + index * 100}ms` }}>
-                                        <div className="text-3xl font-bold text-gray-900">{stat.value}</div>
-                                        <div className="text-sm text-gray-600">{stat.label}</div>
+                                        <div className="text-2xl sm:text-3xl font-bold text-gray-900">{stat.value}</div>
+                                        <div className="text-xs sm:text-sm text-gray-600">{stat.label}</div>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
                         {/* Tarjetas Animadas */}
-                        <div className={`relative transition-all duration-1000 delay-500 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                        <div className={`hidden lg:block relative transition-all duration-1000 delay-500 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                             <div className="relative w-full h-[600px]">
                                 {/* Tarjeta de Cliente */}
                                 <div className="absolute top-0 right-0 w-80 bg-white rounded-3xl shadow-xl p-6 transform hover:scale-105 transition-all duration-300 hover:shadow-2xl animate-float">
@@ -207,18 +207,18 @@ function Landing() {
             </main>
 
             {/* Features Section */}
-            <section className="relative z-10 px-6 py-20 mt-20">
+            <section className="relative z-10 px-4 sm:px-6 py-12 sm:py-16 md:py-20 mt-12 sm:mt-16 md:mt-20">
                 <div className="max-w-7xl mx-auto">
-                    <div className={`text-center mb-16 transition-all duration-1000 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-                        <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                    <div className={`text-center mb-10 sm:mb-12 md:mb-16 transition-all duration-1000 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
                             ¿Por qué RewardsHub?
                         </h2>
-                        <p className="text-xl text-gray-600">
+                        <p className="text-base sm:text-lg md:text-xl text-gray-600">
                             La plataforma más completa para gestionar programas de lealtad
                         </p>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-8">
+                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
                         {[
                             {
                                 icon: (
@@ -247,18 +247,18 @@ function Landing() {
                         ].map((feature, index) => (
                             <div
                                 key={index}
-                                className={`bg-white rounded-3xl p-8 shadow-card hover:shadow-popover transition-all duration-500 transform hover:-translate-y-2 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}
+                                className={`bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-card hover:shadow-popover transition-all duration-500 transform hover:-translate-y-2 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}
                                 style={{ transitionDelay: `${900 + index * 150}ms` }}
                             >
-                                <div className={`w-16 h-16 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center mb-6 shadow-lg`}>
-                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className={`w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br ${feature.color} rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-lg`}>
+                                    <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         {feature.icon}
                                     </svg>
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">
                                     {feature.title}
                                 </h3>
-                                <p className="text-gray-600 leading-relaxed">
+                                <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                                     {feature.description}
                                 </p>
                             </div>
@@ -268,21 +268,21 @@ function Landing() {
             </section>
 
             {/* CTA Final */}
-            <section className="relative z-10 px-6 py-20">
+            <section className="relative z-10 px-4 sm:px-6 py-12 sm:py-16 md:py-20">
                 <div className="max-w-4xl mx-auto">
-                    <div className={`bg-gradient-to-r from-brand-primary via-amber-500 to-orange-500 rounded-3xl p-12 text-center shadow-2xl transition-all duration-1000 transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
-                        <h2 className="text-4xl font-bold text-white mb-4">
+                    <div className={`bg-gradient-to-r from-brand-primary via-amber-500 to-orange-500 rounded-2xl sm:rounded-3xl p-6 sm:p-10 md:p-12 text-center shadow-2xl transition-all duration-1000 transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4">
                             ¿Listo para comenzar?
                         </h2>
-                        <p className="text-xl text-white/90 mb-8">
+                        <p className="text-base sm:text-lg md:text-xl text-white/90 mb-6 sm:mb-8">
                             Únete a cientos de negocios que ya están creciendo con RewardsHub
                         </p>
                         <Link
                             to="/signup"
-                            className="inline-flex items-center space-x-2 px-10 py-4 bg-white text-brand-primary font-bold rounded-full hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+                            className="inline-flex items-center space-x-2 px-6 sm:px-8 md:px-10 py-3 sm:py-4 bg-white text-brand-primary font-bold rounded-full hover:shadow-xl transition-all hover:scale-105 active:scale-95 text-sm sm:text-base"
                         >
                             <span>Crear Cuenta Gratis</span>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                             </svg>
                         </Link>
@@ -291,8 +291,8 @@ function Landing() {
             </section>
 
             {/* Footer */}
-            <footer className="relative z-10 px-6 py-8 border-t border-gray-200">
-                <div className="max-w-7xl mx-auto text-center text-gray-600 text-sm">
+            <footer className="relative z-10 px-4 sm:px-6 py-6 sm:py-8 border-t border-gray-200">
+                <div className="max-w-7xl mx-auto text-center text-gray-600 text-xs sm:text-sm">
                     <p>© 2025 RewardsHub. Todos los derechos reservados.</p>
                 </div>
             </footer>
