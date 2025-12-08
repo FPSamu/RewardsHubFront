@@ -245,57 +245,62 @@ const BusinessLayout = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0 flex items-center space-x-2">
+                            <img
+                                src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png"
+                                alt="RewardsHub Logo"
+                                className="h-10 w-auto object-contain"
+                            />
                             <h1 className="text-xl sm:text-2xl font-bold text-brand-primary">RewardsHub Business</h1>
                         </div>
 
-                        {/* Desktop Navigation Links */}
-                        <div className="hidden md:flex space-x-2">
-                            <NavLink
-                                to="/business/dashboard"
-                                className={({ isActive }) =>
-                                    `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
-                                        ? 'bg-brand-muted text-brand-onColor'
-                                        : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
-                                    }`
-                                }
-                            >
-                                Dashboard
-                            </NavLink>
-                            <NavLink
-                                to="/business/dashboard/clients"
-                                className={({ isActive }) =>
-                                    `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
-                                        ? 'bg-brand-muted text-brand-onColor'
-                                        : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
-                                    }`
-                                }
-                            >
-                                Clientes
-                            </NavLink>
-                            <NavLink
-                                to="/business/dashboard/rewards"
-                                className={({ isActive }) =>
-                                    `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
-                                        ? 'bg-brand-muted text-brand-onColor'
-                                        : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
-                                    }`
-                                }
-                            >
-                                Recompensas
-                            </NavLink>
-                            <NavLink
-                                to="/business/dashboard/scan"
-                                className={({ isActive }) =>
-                                    `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
-                                        ? 'bg-brand-muted text-brand-onColor'
-                                        : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
-                                    }`
-                                }
-                            >
-                                Escanear QR
-                            </NavLink>
-                        </div>
+                        {/* Desktop Navigation Links */
+                            <div className="hidden md:flex space-x-2">
+                                <NavLink
+                                    to="/business/dashboard"
+                                    className={({ isActive }) =>
+                                        `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
+                                            ? 'bg-brand-muted text-brand-onColor'
+                                            : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
+                                        }`
+                                    }
+                                >
+                                    Dashboard
+                                </NavLink>
+                                <NavLink
+                                    to="/business/dashboard/clients"
+                                    className={({ isActive }) =>
+                                        `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
+                                            ? 'bg-brand-muted text-brand-onColor'
+                                            : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
+                                        }`
+                                    }
+                                >
+                                    Clientes
+                                </NavLink>
+                                <NavLink
+                                    to="/business/dashboard/rewards"
+                                    className={({ isActive }) =>
+                                        `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
+                                            ? 'bg-brand-muted text-brand-onColor'
+                                            : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
+                                        }`
+                                    }
+                                >
+                                    Recompensas
+                                </NavLink>
+                                <NavLink
+                                    to="/business/dashboard/scan"
+                                    className={({ isActive }) =>
+                                        `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
+                                            ? 'bg-brand-muted text-brand-onColor'
+                                            : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
+                                        }`
+                                    }
+                                >
+                                    Escanear QR
+                                </NavLink>
+                            </div>
 
                         {/* Right side - Mobile Menu Button + User Menu */}
                         <div className="flex items-center space-x-3">

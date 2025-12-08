@@ -138,9 +138,16 @@ const ClientHome = () => {
         <div className="space-y-6">
             {/* Welcome Section */}
             <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                <h2 className="text-3xl font-bold text-gray-800 mb-2 tracking-tight">
-                    ¡Hola, {user?.username || 'Usuario'}! 👋
-                </h2>
+                <div className="flex items-center space-x-3 mb-4">
+                    <img 
+                        src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" 
+                        alt="RewardsHub Logo" 
+                        className="h-12 w-auto object-contain"
+                    />
+                    <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
+                        ¡Hola, {user?.username || 'Usuario'}! 👋
+                    </h2>
+                </div>
                 <p className="text-gray-600 text-base">
                     Bienvenido a tu panel de RewardsHub
                 </p>

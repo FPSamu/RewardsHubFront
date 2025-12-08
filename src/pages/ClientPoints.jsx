@@ -147,7 +147,14 @@ const ClientPoints = () => {
         <div className="space-y-6">
             {/* Header */}
             <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                <h2 className="text-3xl font-bold text-gray-800 mb-2 tracking-tight">Mis Puntos y Recompensas</h2>
+                <div className="flex items-center space-x-3 mb-2">
+                    <img 
+                        src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" 
+                        alt="RewardsHub Logo" 
+                        className="h-10 w-auto object-contain"
+                    />
+                    <h2 className="text-3xl font-bold text-gray-800 tracking-tight">Mis Puntos y Recompensas</h2>
+                </div>
                 <p className="text-gray-600">
                     Administra tus puntos y sellos en todos los negocios afiliados
                 </p>

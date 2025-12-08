@@ -5,6 +5,13 @@ function SignUpChoice() {
         <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA] py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-5xl w-full">
                 <div className="text-center mb-12">
+                    <div className="flex justify-center mb-6">
+                        <img
+                            src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png"
+                            alt="RewardsHub Logo"
+                            className="h-20 w-auto object-contain"
+                        />
+                    </div>
                     <h2 className="text-[32px] leading-[40px] font-extrabold text-[#0F172A] tracking-tight mb-4">
                         Únete a RewardsHub
                     </h2>

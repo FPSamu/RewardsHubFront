@@ -57,6 +57,13 @@ function Login() {
         {/* Card principal */}
         <div className="bg-white rounded-3xl p-8 shadow-[0_10px_24px_-10px_rgba(2,6,23,0.15)] border border-[#E9ECEF]">
           <div>
+            <div className="flex justify-center mb-4">
+              <img
+                src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png"
+                alt="RewardsHub Logo"
+                className="h-16 w-auto object-contain"
+              />
+            </div>
             <h2 className="text-center text-[32px] leading-[40px] font-extrabold text-[#0F172A] tracking-tight">
               RewardsHub
             </h2>
