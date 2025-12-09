@@ -58,7 +58,7 @@ const BusinessSubscription = () => {
     ];
 
     const lifetimePlan = {
-        id: 'lifetime',
+        id: 'lifetime_access',
         name: 'Plan Lifetime',
         price: 0,
         currency: 'MXN',
