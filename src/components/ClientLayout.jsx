@@ -61,6 +61,7 @@ const ClientLayout = () => {
                         <div className="hidden md:flex space-x-2">
                             <NavLink
                                 to="/client/dashboard"
+                                end
                                 className={({ isActive }) =>
                                     `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
                                         ? 'bg-brand-muted text-brand-onColor'
@@ -222,6 +223,7 @@ const ClientLayout = () => {
                             <div className="space-y-1">
                                 <NavLink
                                     to="/client/dashboard"
+                                    end
                                     onClick={() => setIsMobileMenuOpen(false)}
                                     className={({ isActive }) =>
                                         `block px-4 py-2 rounded-lg text-base font-medium transition-all duration-180 ${isActive

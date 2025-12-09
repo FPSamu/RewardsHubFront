@@ -301,7 +301,7 @@ const BusinessLayout = () => {
                         {/* Desktop Navigation Links */}
                         <div className="hidden md:flex space-x-2">
                             <NavLink
-                                to="/business/dashboard"
+                                to="/business/dashboard/home"
                                 className={({ isActive }) =>
                                     `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
                                         ? 'bg-brand-muted text-brand-onColor'
@@ -479,7 +479,7 @@ const BusinessLayout = () => {
                         <div className="md:hidden pb-3 pt-2">
                             <div className="space-y-1">
                                 <NavLink
-                                    to="/business/dashboard"
+                                    to="/business/dashboard/home"
                                     onClick={() => setIsMobileMenuOpen(false)}
                                     className={({ isActive }) =>
                                         `block px-4 py-2 rounded-lg text-sm font-medium transition-all duration-180 ${isActive
