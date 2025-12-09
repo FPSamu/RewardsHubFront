@@ -19,7 +19,7 @@ api.interceptors.request.use(
       // Limpiar el token de comillas si las tiene
       const cleanToken = token.replace(/^["']|["']$/g, "");
       config.headers.Authorization = `Bearer ${cleanToken}`;
-      console.log("Token siendo enviado:", cleanToken.substring(0, 20) + "...");
+      console.log("Token siendo enviado:", cleanToken.substring(0, 20) + "..."); // TODO REMOVE
     } else {
       console.warn("No se encontró token en localStorage");
     }
