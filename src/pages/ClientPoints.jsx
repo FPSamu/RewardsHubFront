@@ -9,6 +9,7 @@ const ClientPoints = () => {
     const [businessLogos, setBusinessLogos] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -20,6 +21,30 @@ const ClientPoints = () => {
                     userPointsService.getUserPoints(),
                     transactionService.getUserTransactions(50, 0),
                 ]);
+
+                // Fetch business names for each businessId in pointsData
+                if (pointsData?.businessPoints && pointsData.businessPoints.length > 0) {
+                    const businessPointsWithNames = await Promise.all(
+                        pointsData.businessPoints.map(async (bp) => {
+                            try {
+                                const business = await businessService.getBusinessById(bp.businessId);
+                                return {
+                                    ...bp,
+                                    businessName: business.name || 'Negocio',
+                                    businessEmail: business.email,
+                                    businessLogoUrl: business.logoUrl || undefined
+                                };
+                            } catch (error) {
+                                console.error(`Error fetching business ${bp.businessId}:`, error);
+                                return {
+                                    ...bp,
+                                    businessName: 'Negocio',
+                                };
+                            }
+                        })
+                    );
+                    pointsData.businessPoints = businessPointsWithNames;
+                }
 
                 setUserPointsData(pointsData);
 
@@ -96,6 +121,10 @@ const ClientPoints = () => {
 
     const totalPoints = userPointsData.businessPoints.reduce((sum, bp) => sum + bp.points, 0);
     const totalStamps = userPointsData.businessPoints.reduce((sum, bp) => sum + bp.stamps, 0);
+
+    const filteredBusinesses = userPointsData.businessPoints.filter(business =>
+        (business.businessName || business.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     // Helper function to format transaction type
     const getTransactionTypeInfo = (type) => {
@@ -176,6 +205,87 @@ const ClientPoints = () => {
                     <p className="text-sm text-white/90 mt-2">
                         Acumulados en {userPointsData.businessPoints.filter((b) => b.stamps > 0).length} negocios
                     </p>
+                </div>
+            </div>
+
+            {/* Search & All Businesses Section */}
+            <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
+                <h3 className="text-xl font-bold text-gray-800 mb-4 tracking-tight">Mis Puntos por Negocio</h3>
+
+                {/* Search Bar */}
+                <div className="relative mb-6">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input
+                        type="text"
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand-primary focus:border-brand-primary sm:text-sm transition-colors duration-200"
+                        placeholder="Buscar negocio por nombre..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+
+                {/* Results List */}
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    {!searchTerm ? (
+                        <div className="text-center py-8 text-gray-400">
+                            <p>Ingresa el nombre del negocio para buscar</p>
+                        </div>
+                    ) : filteredBusinesses.length > 0 ? (
+                        filteredBusinesses.map((business) => (
+                            <div
+                                key={business._id || business.businessId}
+                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 gap-3"
+                            >
+                                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                                    {business.businessLogoUrl ? (
+                                        <div className="w-10 h-10 flex-shrink-0 rounded-full overflow-hidden border border-gray-200">
+                                            <img
+                                                src={business.businessLogoUrl}
+                                                alt={business.businessName || 'Logo'}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="bg-brand-primary text-white rounded-full w-10 h-10 flex-shrink-0 flex items-center justify-center font-bold text-sm">
+                                            {(business.businessName || business.name || 'N').charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                        <h4 className="font-semibold text-gray-800 truncate text-sm sm:text-base">
+                                            {business.businessName || business.name || 'Negocio'}
+                                        </h4>
+                                        <p className="text-xs text-gray-500 truncate">
+                                            Última visita: {new Date(business.lastVisit).toLocaleDateString('es-ES', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                            })}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-bold text-brand-primary">
+                                            {business.points} pts
+                                        </span>
+                                    </div>
+                                    {business.stamps > 0 && (
+                                        <span className="text-xs font-medium text-accent-success bg-green-50 px-2 py-0.5 rounded-full">
+                                            {business.stamps} sellos
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">
+                            <p>No se encontraron negocios que coincidan con "{searchTerm}"</p>
+                        </div>
+                    )}
                 </div>
             </div>
 

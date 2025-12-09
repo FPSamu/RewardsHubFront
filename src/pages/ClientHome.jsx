@@ -326,7 +326,7 @@ const ClientHome = () => {
                         ))
                     ) : (
                         <div className="text-center py-8 text-gray-500">
-                            <p>No se encontraron negocios que coincidan con "{searchTerm}"</p>
+                            <p>No se encontraron negocios que coincidan con &quot{searchTerm}&quot</p>
                         </div>
                     )}
                 </div>
