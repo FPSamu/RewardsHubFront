@@ -55,10 +55,16 @@ function BusinessProtectedRoute({ children }) {
     }
 
     // Check if subscription is inactive or cancelled
-    // Allow access to subscription page itself
+    // Allow access to subscription page and location setup page without subscription check
     const isSubscriptionPage = location.pathname === '/business/subscription';
+    const isLocationSetupPage = location.pathname === '/business/location-setup';
     const needsSubscription = subscriptionStatus &&
         (subscriptionStatus.status === 'inactive' || subscriptionStatus.status === 'cancelled');
+
+    // Allow access to location setup page always (for new businesses)
+    if (isLocationSetupPage) {
+        return children;
+    }
 
     if (needsSubscription && !isSubscriptionPage) {
         return <Navigate to="/business/subscription" replace />;

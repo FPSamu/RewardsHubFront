@@ -98,8 +98,8 @@ export default function BusinessLocationSetup() {
         longitude: position[1]
       });
 
-      // Navigate to dashboard after successful save
-      navigate('/business/dashboard/home');
+      // Navigate to subscription page after successful save
+      navigate('/business/subscription');
     } catch (err) {
       console.error('Error saving coordinates:', err);
       setError('Error al guardar la ubicación. Por favor, intenta de nuevo.');
@@ -108,7 +108,7 @@ export default function BusinessLocationSetup() {
   };
 
   const handleSkip = () => {
-    navigate('/business/dashboard/home');
+    navigate('/business/subscription');
   };
 
   if (loading) {

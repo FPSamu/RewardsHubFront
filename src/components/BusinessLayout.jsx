@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import businessService from '../services/businessService';
+import subscriptionService from '../services/subscriptionService';
 
 // Fix default marker icon issue with Leaflet + Webpack
 delete L.Icon.Default.prototype._getIconUrl;
@@ -76,6 +77,9 @@ const BusinessLayout = () => {
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [savingSettings, setSavingSettings] = useState(false);
     const [settingsError, setSettingsError] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showSubscriptionWarning, setShowSubscriptionWarning] = useState(false);
+    const [deletingAccount, setDeletingAccount] = useState(false);
     const menuRef = useRef(null);
     const fileInputRef = useRef(null);
 
@@ -142,6 +146,32 @@ const BusinessLayout = () => {
         setLogoPreview(null);
         setSettingsError(null);
         setSavingSettings(false);
+    };
+
+    const handleDeleteAccount = async () => {
+        setDeletingAccount(true);
+        try {
+            // Try to cancel subscription first if exists
+            try {
+                await subscriptionService.cancelSubscription();
+            } catch (error) {
+                console.log('No subscription to cancel or already cancelled');
+            }
+
+            // Delete the account
+            await businessService.deleteAccount();
+
+            // Clear local storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+
+            // Redirect to landing page
+            navigate('/');
+        } catch (error) {
+            console.error('Error deleting account:', error);
+            setSettingsError('Error al eliminar la cuenta. Por favor intenta de nuevo.');
+            setDeletingAccount(false);
+        }
     };
 
     const handleLogoChange = (e) => {
@@ -526,6 +556,43 @@ const BusinessLayout = () => {
                     onClose={handleCloseSettingsModal}
                     onSubmit={handleSaveSettings}
                     navigate={navigate}
+                    onDeleteAccount={() => setShowDeleteConfirm(true)}
+                />
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <DeleteConfirmModal
+                    onConfirm={async () => {
+                        setShowDeleteConfirm(false);
+                        try {
+                            // Check if business has active subscription
+                            const status = await subscriptionService.getSubscriptionStatus();
+                            if (status.status === 'active') {
+                                setShowSubscriptionWarning(true);
+                            } else {
+                                // No active subscription, proceed with deletion
+                                await handleDeleteAccount();
+                            }
+                        } catch (error) {
+                            console.error('Error checking subscription:', error);
+                            // If we can't check, show warning to be safe
+                            setShowSubscriptionWarning(true);
+                        }
+                    }}
+                    onCancel={() => setShowDeleteConfirm(false)}
+                />
+            )}
+
+            {/* Subscription Warning Modal */}
+            {showSubscriptionWarning && (
+                <SubscriptionWarningModal
+                    onConfirm={async () => {
+                        setShowSubscriptionWarning(false);
+                        await handleDeleteAccount();
+                    }}
+                    onCancel={() => setShowSubscriptionWarning(false)}
+                    deleting={deletingAccount}
                 />
             )}
         </div>
@@ -533,7 +600,9 @@ const BusinessLayout = () => {
 };
 
 // Settings Modal Component
-function SettingsModal({ formData, setFormData, businessData, mapPosition, onMapPositionChange, locationChanged, logoPreview, onLogoChange, onRemoveLogo, fileInputRef, uploadingLogo, saving, error, onClose, onSubmit, navigate }) {
+function SettingsModal({ formData, setFormData, businessData, mapPosition, onMapPositionChange, locationChanged, logoPreview, onLogoChange, onRemoveLogo, fileInputRef, uploadingLogo, saving, error, onClose, onSubmit, navigate, onDeleteAccount }) {
+    const [showAccountOptions, setShowAccountOptions] = useState(false);
+
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-white rounded-xl shadow-popover max-w-2xl w-full max-h-[90vh] overflow-y-auto my-8">
@@ -746,36 +815,174 @@ function SettingsModal({ formData, setFormData, businessData, mapPosition, onMap
                     )}
 
                     {/* Action Buttons */}
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            disabled={saving}
-                            className="px-6 py-2 text-gray-700 font-semibold hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="px-6 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity shadow-card flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {saving ? (
-                                <>
-                                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                                    Guardando...
-                                </>
-                            ) : (
-                                <>
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    Guardar Cambios
-                                </>
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setShowAccountOptions(!showAccountOptions)}
+                                className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+                            >
+                                Gestión de cuenta
+                                <svg
+                                    className={`w-3 h-3 transition-transform ${showAccountOptions ? 'rotate-180' : ''}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {showAccountOptions && (
+                                <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[180px] z-10">
+                                    <button
+                                        type="button"
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                                    >
+                                        <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                        </svg>
+                                        Cancelar suscripción
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={onDeleteAccount}
+                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Eliminar cuenta
+                                    </button>
+                                </div>
                             )}
-                        </button>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                disabled={saving}
+                                className="px-6 py-2 text-gray-700 font-semibold hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={saving}
+                                className="px-6 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity shadow-card flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {saving ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                                        Guardando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Guardar Cambios
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </form>
+            </div>
+        </div>
+    );
+}
+
+// Delete Confirmation Modal Component
+function DeleteConfirmModal({ onConfirm, onCancel }) {
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-xl shadow-popover max-w-md w-full p-6">
+                <div className="flex items-start gap-4 mb-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">¿Eliminar cuenta?</h3>
+                        <p className="text-sm text-gray-600">
+                            Esta acción eliminará permanentemente tu cuenta y todos los datos asociados.
+                            Esta operación no se puede deshacer.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex gap-3 justify-end mt-6">
+                    <button
+                        onClick={onCancel}
+                        className="px-4 py-2 text-gray-700 font-semibold hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className="px-4 py-2 bg-red-600 text-white font-semibold hover:bg-red-700 rounded-lg transition-colors"
+                    >
+                        Sí, eliminar cuenta
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Subscription Warning Modal Component
+function SubscriptionWarningModal({ onConfirm, onCancel, deleting }) {
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-xl shadow-popover max-w-md w-full p-6">
+                <div className="flex items-start gap-4 mb-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">Suscripción activa detectada</h3>
+                        <p className="text-sm text-gray-600 mb-3">
+                            Tu cuenta tiene una suscripción activa. Si continúas:
+                        </p>
+                        <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside mb-3">
+                            <li>Se cancelará tu suscripción automáticamente</li>
+                            <li>Se eliminará tu cuenta permanentemente</li>
+                            <li>No se realizarán más cobros</li>
+                            <li>Perderás acceso a todos los datos</li>
+                        </ul>
+                        <p className="text-sm font-semibold text-gray-800">
+                            ¿Estás seguro de que deseas continuar?
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex gap-3 justify-end mt-6">
+                    <button
+                        onClick={onCancel}
+                        disabled={deleting}
+                        className="px-4 py-2 text-gray-700 font-semibold hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={deleting}
+                        className="px-4 py-2 bg-red-600 text-white font-semibold hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {deleting ? (
+                            <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                Eliminando...
+                            </>
+                        ) : (
+                            'Sí, eliminar todo'
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
     );

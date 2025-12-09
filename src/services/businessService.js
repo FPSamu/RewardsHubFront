@@ -92,6 +92,16 @@ export const businessService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Delete business account
+  deleteAccount: async () => {
+    try {
+      const response = await api.delete("/business/me");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default businessService;

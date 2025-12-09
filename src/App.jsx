@@ -58,7 +58,7 @@ function App() {
                         }
                     />
 
-                    {/* Business Location Setup - Protected by subscription */}
+                    {/* Business Location Setup - No subscription required */}
                     <Route
                         path="/business/location-setup"
                         element={
