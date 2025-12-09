@@ -396,49 +396,60 @@ const BusinessClients = () => {
                             return (
                                 <div
                                     key={client.id || client._id}
-                                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 border border-gray-200"
+                                    className="bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 border border-gray-200 p-4"
                                 >
-                                    <div className="flex items-center space-x-4 flex-1">
-                                        <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex items-center justify-center font-bold shadow-card">
+                                    {/* Header: Avatar + Name/Email */}
+                                    <div className="flex items-start gap-3 mb-3">
+                                        <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex-shrink-0 flex items-center justify-center font-bold shadow-card">
                                             {(client.username || 'U').charAt(0).toUpperCase()}
                                         </div>
-                                        <div className="flex-1">
-                                            <h4 className="font-semibold text-gray-800">{client.username || 'Usuario'}</h4>
-                                            <p className="text-sm text-gray-600">{client.email || 'Sin email'}</p>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-semibold text-gray-800 truncate">{client.username || 'Usuario'}</h4>
+                                            <p className="text-sm text-gray-600 truncate">{client.email || 'Sin email'}</p>
                                             {client.lastVisit && (
                                                 <p className="text-xs text-gray-500 mt-1">
                                                     Última visita: {new Date(client.lastVisit).toLocaleDateString('es-ES', {
                                                         year: 'numeric',
-                                                        month: 'long',
+                                                        month: 'short',
                                                         day: 'numeric',
                                                     })}
                                                 </p>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center space-x-4">
-                                        <div className="text-right">
-                                            <div className="flex items-center space-x-2 mb-1">
-                                                <span className="px-3 py-1 bg-brand-muted text-brand-onColor text-xs font-semibold rounded-pill">
-                                                    {client.points || 0} pts
-                                                </span>
-                                                <span className="px-3 py-1 bg-green-50 text-accent-successOnColor text-xs font-semibold rounded-pill">
-                                                    {client.stamps || 0} sellos
-                                                </span>
-                                            </div>
-                                            {availableRewards > 0 && (
-                                                <span className="inline-block px-3 py-1 bg-accent-gold text-white text-xs font-semibold rounded-pill">
-                                                    🎁 {availableRewards} recompensa{availableRewards > 1 ? 's' : ''} disponible{availableRewards > 1 ? 's' : ''}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <button
-                                            onClick={() => handleViewDetails(client)}
-                                            className="px-4 py-2 bg-brand-primary text-white rounded-pill text-sm font-semibold hover:opacity-90 transition-opacity duration-180"
-                                        >
-                                            Ver detalles
-                                        </button>
+
+                                    {/* Points and Stamps Badges - Responsive Grid */}
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        <span className="inline-flex items-center px-3 py-1.5 bg-brand-muted text-brand-onColor text-xs font-semibold rounded-pill">
+                                            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            {client.points || 0} pts
+                                        </span>
+                                        <span className="inline-flex items-center px-3 py-1.5 bg-green-50 text-accent-successOnColor text-xs font-semibold rounded-pill">
+                                            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            {client.stamps || 0} sellos
+                                        </span>
+                                        {availableRewards > 0 && (
+                                            <span className="inline-flex items-center px-3 py-1.5 bg-accent-gold text-white text-xs font-semibold rounded-pill">
+                                                🎁 {availableRewards} disponible{availableRewards > 1 ? 's' : ''}
+                                            </span>
+                                        )}
                                     </div>
+
+                                    {/* View Details Button - Full Width on Mobile */}
+                                    <button
+                                        onClick={() => handleViewDetails(client)}
+                                        className="w-full sm:w-auto px-4 py-2.5 bg-brand-primary text-white rounded-pill text-sm font-semibold hover:opacity-90 transition-opacity duration-180 flex items-center justify-center gap-2"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        Ver detalles
+                                    </button>
                                 </div>
                             );
                         })}

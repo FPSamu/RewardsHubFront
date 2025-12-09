@@ -359,29 +359,19 @@ const BusinessScan = () => {
         <div className="space-y-6">
             {/* Header */}
             <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <div className="flex items-center space-x-3 mb-2">
-                            <img 
-                                src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" 
-                                alt="RewardsHub Logo" 
-                                className="h-10 w-auto object-contain"
-                            />
-                            <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
-                                Escanear Código QR
-                            </h2>
-                        </div>
-                        <p className="text-gray-600 text-base">
-                            Registra una compra y otorga puntos/sellos a tus clientes
-                        </p>
-                    </div>
-                    <button
-                        onClick={handleGoBack}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-pill font-semibold hover:bg-gray-300 transition-colors duration-180"
-                    >
-                        ← Volver
-                    </button>
+                <div className="flex items-center space-x-3 mb-2">
+                    <img 
+                        src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" 
+                        alt="RewardsHub Logo" 
+                        className="h-10 w-auto object-contain"
+                    />
+                    <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
+                        Escanear Código QR
+                    </h2>
                 </div>
+                <p className="text-gray-600 text-base">
+                    Registra una compra y otorga puntos/sellos a tus clientes
+                </p>
             </div>
 
             {/* Form Step */}

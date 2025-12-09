@@ -142,7 +142,8 @@ const BusinessRewards = () => {
         <div className="space-y-6">
             {/* Header */}
             <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4">
+                    {/* Title Section */}
                     <div>
                         <div className="flex items-center space-x-3 mb-2">
                             <img
@@ -150,31 +151,37 @@ const BusinessRewards = () => {
                                 alt="RewardsHub Logo"
                                 className="h-10 w-auto object-contain"
                             />
-                            <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
+                            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">
                                 Gestión de Recompensas
                             </h2>
                         </div>
-                        <p className="text-gray-600 text-base">
+                        <p className="text-gray-600 text-sm sm:text-base">
                             Administra las recompensas de {business?.name}
                         </p>
                     </div>
-                    <div className="flex items-center gap-3">
+
+                    {/* Buttons Section */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                         {!hasPointsSystem && (
                             <button
                                 onClick={() => setShowPointsSystemModal(true)}
-                                className="px-6 py-3 bg-accent-gold text-white rounded-pill font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card flex items-center gap-2"
+                                className="w-full sm:w-auto px-6 py-3 bg-accent-gold text-white rounded-pill font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card flex items-center justify-center gap-2"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                Configurar Sistema de Puntos
+                                <span className="hidden sm:inline">Configurar Sistema de Puntos</span>
+                                <span className="sm:hidden">Configurar Puntos</span>
                             </button>
                         )}
                         <button
                             onClick={() => setShowCreateModal(true)}
-                            className="px-6 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card"
+                            className="w-full sm:w-auto px-6 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card flex items-center justify-center gap-2"
                         >
-                            + Nueva Recompensa
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Nueva Recompensa
                         </button>
                     </div>
                 </div>
@@ -263,10 +270,11 @@ const BusinessRewards = () => {
                         {activeRewards.map((reward) => (
                             <div
                                 key={reward.id}
-                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 border border-gray-200"
+                                className="bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 border border-gray-200 p-4"
                             >
-                                <div className="flex items-center space-x-4 flex-1">
-                                    <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex items-center justify-center font-bold shadow-card">
+                                {/* Header: Icon + Title/Description */}
+                                <div className="flex items-start gap-3 mb-3">
+                                    <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex-shrink-0 flex items-center justify-center font-bold shadow-card">
                                         {reward.pointsRequired ? (
                                             <svg
                                                 className="w-6 h-6"
@@ -297,38 +305,57 @@ const BusinessRewards = () => {
                                             </svg>
                                         )}
                                     </div>
-                                    <div className="flex-1">
+                                    <div className="flex-1 min-w-0">
                                         <h4 className="font-semibold text-gray-800">{reward.name}</h4>
                                         <p className="text-sm text-gray-600">{reward.description}</p>
-                                        <div className="flex items-center space-x-4 mt-2">
-                                            {reward.pointsRequired ? (
-                                                <span className="text-xs font-semibold text-brand-primary">
-                                                    {reward.pointsRequired} puntos requeridos
-                                                </span>
-                                            ) : reward.stampsRequired ? (
-                                                <span className="text-xs font-semibold text-accent-success">
-                                                    {reward.stampsRequired} sellos requeridos
-                                                </span>
-                                            ) : null}
-                                            {reward.discount && (
-                                                <span className="text-xs font-semibold text-accent-gold">
-                                                    {reward.discount}% descuento
-                                                </span>
-                                            )}
-                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center space-x-2">
+
+                                {/* Badges */}
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {reward.pointsRequired ? (
+                                        <span className="inline-flex items-center px-3 py-1.5 bg-brand-muted text-brand-primary text-xs font-semibold rounded-pill">
+                                            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            {reward.pointsRequired} puntos
+                                        </span>
+                                    ) : reward.stampsRequired ? (
+                                        <span className="inline-flex items-center px-3 py-1.5 bg-green-50 text-accent-success text-xs font-semibold rounded-pill">
+                                            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            {reward.stampsRequired} sellos
+                                        </span>
+                                    ) : null}
+                                    {reward.discount && (
+                                        <span className="inline-flex items-center px-3 py-1.5 bg-yellow-50 text-accent-gold text-xs font-semibold rounded-pill">
+                                            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                                            </svg>
+                                            {reward.discount}% descuento
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Action Buttons - Responsive Grid */}
+                                <div className="grid grid-cols-2 gap-2">
                                     <button
                                         onClick={() => handleOpenEditModal(reward)}
-                                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-pill text-sm font-semibold hover:bg-gray-300 transition-colors duration-180"
+                                        className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-pill text-sm font-semibold hover:bg-gray-300 transition-colors duration-180 flex items-center justify-center gap-2"
                                     >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
                                         Editar
                                     </button>
                                     <button
                                         onClick={() => handleDeactivateReward(reward.id)}
-                                        className="px-4 py-2 bg-red-50 text-red-600 rounded-pill text-sm font-semibold hover:bg-red-100 transition-colors duration-180"
+                                        className="px-4 py-2.5 bg-red-50 text-red-600 rounded-pill text-sm font-semibold hover:bg-red-100 transition-colors duration-180 flex items-center justify-center gap-2"
                                     >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                        </svg>
                                         Desactivar
                                     </button>
                                 </div>
