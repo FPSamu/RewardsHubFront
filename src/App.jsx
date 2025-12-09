@@ -14,7 +14,9 @@ import BusinessClients from './pages/BusinessClients'
 import BusinessRewards from './pages/BusinessRewards'
 import BusinessScan from './pages/BusinessScan'
 import BusinessLocationSetup from './pages/BusinessLocationSetup'
+import BusinessSubscription from './pages/BusinessSubscription'
 import ProtectedRoute from './components/ProtectedRoute'
+import BusinessProtectedRoute from './components/BusinessProtectedRoute'
 import './App.css'
 
 function App() {
@@ -45,20 +47,34 @@ function App() {
 
                     {/* Business Dashboard Routes */}
                     <Route path="/business" element={<Navigate to="/business/dashboard" replace />} />
+
+                    {/* Business Subscription Route */}
+                    <Route
+                        path="/business/subscription"
+                        element={
+                            <BusinessProtectedRoute>
+                                <BusinessSubscription />
+                            </BusinessProtectedRoute>
+                        }
+                    />
+
+                    {/* Business Location Setup - Protected by subscription */}
                     <Route
                         path="/business/location-setup"
                         element={
-                            <ProtectedRoute>
+                            <BusinessProtectedRoute>
                                 <BusinessLocationSetup />
-                            </ProtectedRoute>
+                            </BusinessProtectedRoute>
                         }
                     />
+
+                    {/* Business Dashboard - Protected by subscription */}
                     <Route
                         path="/business/dashboard"
                         element={
-                            <ProtectedRoute>
+                            <BusinessProtectedRoute>
                                 <BusinessLayout />
-                            </ProtectedRoute>
+                            </BusinessProtectedRoute>
                         }
                     >
                         <Route index element={<Navigate to="/business/dashboard/home" replace />} />
