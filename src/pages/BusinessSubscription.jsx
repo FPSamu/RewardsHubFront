@@ -17,7 +17,7 @@ const BusinessSubscription = () => {
     // Opción 3: Por verificación con el backend (usuario elegible)
     const showLifetimeParam = searchParams.get('show_lifetime') === 'true';
     const lifetimeCode = searchParams.get('code');
-    const hasLifetimeAccess = showLifetimeParam || lifetimeCode === 'LIFETIME2024';
+    const hasLifetimeAccess = showLifetimeParam || lifetimeCode === 'FREE4LIFE';
 
     const basePlans = [
         {
