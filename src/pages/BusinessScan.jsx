@@ -117,8 +117,11 @@ const BusinessScan = () => {
             console.log('Available rewards found:', available.length, available);
             setAvailableRewards(available);
 
-            // Show rewards preview if there are available rewards
-            if (available.length > 0) {
+            // If in redeem-only mode, always show rewards preview (even if no rewards available)
+            if (rewardType === 'redeem') {
+                setStep('rewards-preview');
+            } else if (available.length > 0) {
+                // Show rewards preview if there are available rewards
                 console.log('Showing rewards preview modal');
                 setStep('rewards-preview');
             } else {
@@ -128,8 +131,13 @@ const BusinessScan = () => {
             }
         } catch (err) {
             console.error('Error checking rewards:', err);
-            // If error checking rewards, proceed anyway
-            await processTransaction(userId);
+            // If error checking rewards and not in redeem mode, proceed anyway
+            if (rewardType !== 'redeem') {
+                await processTransaction(userId);
+            } else {
+                setError('Error al obtener información del cliente');
+                setStep('error');
+            }
         }
     };
 
@@ -232,6 +240,13 @@ const BusinessScan = () => {
     }, [step, processTransaction]);
 
     const handleStartScan = () => {
+        // If redeem only mode, skip validation and go straight to scanning
+        if (rewardType === 'redeem') {
+            setError(null);
+            setStep('scanning');
+            return;
+        }
+
         // Validate points
         if (rewardType === 'points' || rewardType === 'both') {
             if (!rewardSystems.points) {
@@ -360,9 +375,9 @@ const BusinessScan = () => {
             {/* Header */}
             <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
                 <div className="flex items-center space-x-3 mb-2">
-                    <img 
-                        src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" 
-                        alt="RewardsHub Logo" 
+                    <img
+                        src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png"
+                        alt="RewardsHub Logo"
                         className="h-10 w-auto object-contain"
                     />
                     <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
@@ -385,9 +400,9 @@ const BusinessScan = () => {
                         {/* Reward Type Selection */}
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-gray-700 mb-3">
-                                Tipo de Recompensa
+                                Tipo de Transacción
                             </label>
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <button
                                     onClick={() => setRewardType('points')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'points'
@@ -474,8 +489,54 @@ const BusinessScan = () => {
                                         </span>
                                     </div>
                                 </button>
+
+                                <button
+                                    onClick={() => setRewardType('redeem')}
+                                    className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'redeem'
+                                        ? 'border-purple-500 bg-purple-50'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <div className="flex flex-col items-center">
+                                        <svg
+                                            className={`w-8 h-8 mb-2 ${rewardType === 'redeem' ? 'text-purple-600' : 'text-gray-400'
+                                                }`}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                            strokeWidth={1.75}
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                                            />
+                                        </svg>
+                                        <span className={`text-sm font-semibold ${rewardType === 'redeem' ? 'text-purple-600' : 'text-gray-600'
+                                            }`}>
+                                            Canjear
+                                        </span>
+                                    </div>
+                                </button>
                             </div>
                         </div>
+
+                        {/* Redeem Only Message */}
+                        {rewardType === 'redeem' && (
+                            <div className="mb-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                <div className="flex items-start">
+                                    <svg className="w-5 h-5 text-purple-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <div>
+                                        <p className="text-sm font-semibold text-purple-800 mb-1">Modo: Solo Canjear Recompensa</p>
+                                        <p className="text-xs text-purple-700">
+                                            Escanea el código QR del cliente para ver y canjear sus recompensas disponibles. No se agregarán puntos ni sellos.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Purchase Amount */}
                         {(rewardType === 'points' || rewardType === 'both') && (
@@ -732,7 +793,7 @@ const BusinessScan = () => {
                 <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
                     <div className="max-w-3xl mx-auto">
                         <h3 className="text-xl font-bold text-gray-800 mb-4 tracking-tight text-center">
-                            ¡El Cliente Tiene Recompensas Disponibles!
+                            Recompensas del cliente
                         </h3>
                         <p className="text-gray-600 text-center mb-6">
                             Antes de agregar los puntos, el cliente puede canjear las siguientes recompensas
@@ -811,45 +872,85 @@ const BusinessScan = () => {
                         </div>
 
                         {/* Info message */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                            <div className="flex items-start">
-                                <svg
-                                    className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                    />
-                                </svg>
-                                <div className="text-sm text-blue-800">
-                                    <p className="font-semibold mb-1">Información importante:</p>
-                                    <p className="text-blue-700">
-                                        El cliente puede canjear estas recompensas antes de agregar los nuevos puntos/sellos.
-                                        Presiona "Continuar" para procesar la transacción y agregar los puntos.
-                                    </p>
+                        {availableRewards.length === 0 ? (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                                <div className="flex items-start">
+                                    <svg
+                                        className="w-5 h-5 text-amber-600 mt-0.5 mr-3 flex-shrink-0"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
+                                    </svg>
+                                    <div className="text-sm text-amber-800">
+                                        <p className="font-semibold mb-1">Sin recompensas disponibles</p>
+                                        <p className="text-amber-700">
+                                            {rewardType === 'redeem' 
+                                                ? 'Este cliente no tiene recompensas disponibles para canjear en este momento.'
+                                                : 'El cliente no tiene recompensas disponibles. Presiona "Continuar" para procesar la transacción.'}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                                <div className="flex items-start">
+                                    <svg
+                                        className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
+                                    </svg>
+                                    <div className="text-sm text-blue-800">
+                                        <p className="font-semibold mb-1">Información importante:</p>
+                                        <p className="text-blue-700">
+                                            {rewardType === 'redeem'
+                                                ? 'El cliente puede canjear cualquiera de las recompensas disponibles. Presiona "Canjear" en la recompensa deseada.'
+                                                : 'El cliente puede canjear estas recompensas antes de agregar los nuevos puntos/sellos. Presiona "Continuar" para procesar la transacción y agregar los puntos.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Action buttons */}
                         <div className="flex gap-4">
-                            <button
-                                onClick={handleContinueTransaction}
-                                className="flex-1 px-6 py-4 bg-brand-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card text-lg"
-                            >
-                                Continuar con Transacción
-                            </button>
-                            <button
-                                onClick={handleReset}
-                                className="px-6 py-4 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors duration-180"
-                            >
-                                Cancelar
-                            </button>
+                            {rewardType !== 'redeem' ? (
+                                <>
+                                    <button
+                                        onClick={handleContinueTransaction}
+                                        className="flex-1 px-6 py-4 bg-brand-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card text-lg"
+                                    >
+                                        Continuar con Transacción
+                                    </button>
+                                    <button
+                                        onClick={handleReset}
+                                        className="px-6 py-4 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors duration-180"
+                                    >
+                                        Cancelar
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    onClick={handleReset}
+                                    className="flex-1 px-6 py-4 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors duration-180"
+                                >
+                                    {availableRewards.length > 0 ? 'Finalizar' : 'Volver'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
