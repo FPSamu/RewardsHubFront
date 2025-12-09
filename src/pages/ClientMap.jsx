@@ -373,8 +373,8 @@ const ClientMap = () => {
         );
     }
 
-    // Use real data if available, fallback to dummy data
-    const allBusinesses = businesses.length > 0 ? businesses : 'No businesses registered';
+    // Use real data if available
+    const allBusinesses = businesses || [];
     const visited = allBusinesses.filter((b) => b.status === 'visited');
     const notVisited = allBusinesses.filter((b) => b.status === 'not_visited');
     const rewardsAvailable = allBusinesses.filter((b) => b.hasRewards === true);
