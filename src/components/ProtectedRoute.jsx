@@ -12,7 +12,7 @@ function ProtectedRoute({ children, allowedUserTypes }) {
         return <Navigate to="/login" replace />;
     }
 
-    if (user && user.isVerified === false) {
+    if (user && !user.isVerified) {
         return <Navigate to="/verify-pending" replace />;
     }
 
