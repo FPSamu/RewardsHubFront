@@ -1,7 +1,6 @@
 import api from "./api";
 
 export const authService = {
-  // Get user by ID
   getUserById: async (userId) => {
     try {
       const response = await api.get(`/auth/${userId}`);
@@ -12,27 +11,19 @@ export const authService = {
     }
   },
 
-  // Login - Cliente (usa /auth/login)
   loginClient: async (email, password) => {
     try {
       const response = await api.post("/auth/login", { email, password });
       console.log("Respuesta del login:", response.data);
       const token = response.data.accessToken || response.data.token;
       if (token) {
-        // Limpiar el token de comillas si las tiene
         const cleanToken = String(token).replace(/^["']|["']$/g, "");
-        console.log(
-          "Token guardado (primeros 20 chars):",
-          cleanToken.substring(0, 20) + "..."
-        );
         localStorage.setItem("token", cleanToken);
         localStorage.setItem("user", JSON.stringify(response.data.user));
         localStorage.setItem("userType", "client");
         if (response.data.refreshToken) {
           localStorage.setItem("refreshToken", response.data.refreshToken);
         }
-      } else {
-        console.error("No se recibió token en la respuesta");
       }
       return response.data;
     } catch (error) {
@@ -41,24 +32,16 @@ export const authService = {
     }
   },
 
-  // Login - Negocio (usa /business/login)
   loginBusiness: async (email, password) => {
     try {
       const response = await api.post("/business/login", { email, password });
       console.log("Respuesta del login business:", response.data);
       const token = response.data.accessToken || response.data.token;
       if (token) {
-        // Limpiar el token de comillas si las tiene
         const cleanToken = String(token).replace(/^["']|["']$/g, "");
-        console.log(
-          "Token guardado (primeros 20 chars):",
-          cleanToken.substring(0, 20) + "..."
-        );
         localStorage.setItem("token", cleanToken);
         localStorage.setItem("user", JSON.stringify(response.data.user));
         localStorage.setItem("userType", "business");
-      } else {
-        console.error("No se recibió token en la respuesta");
       }
       return response.data;
     } catch (error) {
@@ -67,7 +50,6 @@ export const authService = {
     }
   },
 
-  // Login genérico (detecta el tipo de usuario y usa la ruta correcta)
   login: async (email, password, userType = "client") => {
     if (userType === "business") {
       return authService.loginBusiness(email, password);
@@ -75,24 +57,15 @@ export const authService = {
     return authService.loginClient(email, password);
   },
 
-  // Sign Up - Cliente (usa /auth/register)
   signUpClient: async (userData) => {
     try {
       const response = await api.post("/auth/register", userData);
-      console.log("Respuesta del registro:", response.data);
       const token = response.data.accessToken || response.data.token;
       if (token) {
-        // Limpiar el token de comillas si las tiene
         const cleanToken = String(token).replace(/^["']|["']$/g, "");
-        console.log(
-          "Token guardado (primeros 20 chars):",
-          cleanToken.substring(0, 20) + "..."
-        );
         localStorage.setItem("token", cleanToken);
         localStorage.setItem("user", JSON.stringify(response.data.user));
         localStorage.setItem("userType", "client");
-      } else {
-        console.error("No se recibió token en la respuesta");
       }
       return response.data;
     } catch (error) {
@@ -101,24 +74,15 @@ export const authService = {
     }
   },
 
-  // Sign Up - Negocio (usa /business/register)
   signUpBusiness: async (userData) => {
     try {
       const response = await api.post("/business/register", userData);
-      console.log("Respuesta del registro business:", response.data);
       const token = response.data.accessToken || response.data.token;
       if (token) {
-        // Limpiar el token de comillas si las tiene
         const cleanToken = String(token).replace(/^["']|["']$/g, "");
-        console.log(
-          "Token guardado (primeros 20 chars):",
-          cleanToken.substring(0, 20) + "..."
-        );
         localStorage.setItem("token", cleanToken);
         localStorage.setItem("user", JSON.stringify(response.data.user));
         localStorage.setItem("userType", "business");
-      } else {
-        console.error("No se recibió token en la respuesta");
       }
       return response.data;
     } catch (error) {
@@ -127,7 +91,6 @@ export const authService = {
     }
   },
 
-  // Sign Up genérico (detecta el tipo y usa la ruta correcta)
   signUp: async (userData) => {
     if (userData.userType === "business") {
       return authService.signUpBusiness(userData);
@@ -135,7 +98,32 @@ export const authService = {
     return authService.signUpClient(userData);
   },
 
-  // Refresh Token - Cliente
+  resendVerificationClient: async () => {
+    try {
+      const response = await api.post("/auth/resend-verification");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  resendVerificationBusiness: async () => {
+    try {
+      const response = await api.post("/business/resend-verification");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  resendVerification: async () => {
+    const userType = localStorage.getItem("userType");
+    if (userType === "business") {
+      return authService.resendVerificationBusiness();
+    }
+    return authService.resendVerificationClient();
+  },
+
   refreshClient: async (refreshToken) => {
     try {
       const response = await api.post("/auth/refresh", { refreshToken });
@@ -149,7 +137,6 @@ export const authService = {
     }
   },
 
-  // Refresh Token - Negocio
   refreshBusiness: async (refreshToken) => {
     try {
       const response = await api.post("/business/refresh", { refreshToken });
@@ -163,7 +150,6 @@ export const authService = {
     }
   },
 
-  // Logout - Cliente
   logoutClient: async () => {
     try {
       await api.post("/auth/logout");
@@ -174,7 +160,6 @@ export const authService = {
     }
   },
 
-  // Logout - Negocio
   logoutBusiness: async () => {
     try {
       await api.post("/business/logout");
@@ -185,7 +170,6 @@ export const authService = {
     }
   },
 
-  // Logout genérico
   logout: async () => {
     const userType = localStorage.getItem("userType");
     if (userType === "business") {
@@ -194,14 +178,13 @@ export const authService = {
     return authService.logoutClient();
   },
 
-  // Limpiar storage
   clearStorage: () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("userType");
+    localStorage.removeItem("refreshToken");
   },
 
-  // Get current user
   getCurrentUser: () => {
     const userStr = localStorage.getItem("user");
     if (!userStr || userStr === "undefined" || userStr === "null") {
@@ -215,7 +198,6 @@ export const authService = {
     }
   },
 
-  // Get user type
   getUserType: () => {
     const userType = localStorage.getItem("userType");
     if (!userType || userType === "undefined" || userType === "null") {
@@ -224,37 +206,41 @@ export const authService = {
     return userType;
   },
 
-  // Get token
   getToken: () => {
     return localStorage.getItem("token");
   },
 
-  // Check if user is authenticated
   isAuthenticated: () => {
     return !!localStorage.getItem("token");
   },
 
-  // Get current user info (desde el backend)
   getMeClient: async () => {
     try {
       const response = await api.get("/auth/me");
+      if (response.data) {
+        localStorage.setItem("user", JSON.stringify(response.data));
+      }
+      
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
 
-  // Get current business info (desde el backend)
   getMeBusiness: async () => {
     try {
       const response = await api.get("/business/me");
+      
+      if (response.data) {
+        localStorage.setItem("user", JSON.stringify(response.data));
+      }
+
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
 
-  // Get Me genérico
   getMe: async () => {
     const userType = authService.getUserType();
     if (userType === "business") {
