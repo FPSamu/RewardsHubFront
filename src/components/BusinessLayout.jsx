@@ -68,7 +68,8 @@ const BusinessLayout = () => {
     const [currentBusiness, setCurrentBusiness] = useState(null);
     const [settingsFormData, setSettingsFormData] = useState({
         name: '',
-        description: ''
+        description: '',
+        category: 'food'
     });
     const [mapPosition, setMapPosition] = useState([20.6597, -103.3496]); // Guadalajara default
     const [locationChanged, setLocationChanged] = useState(false);
@@ -111,7 +112,8 @@ const BusinessLayout = () => {
             setBusinessData(data);
             setSettingsFormData({
                 name: data.name || '',
-                description: data.description || ''
+                description: data.description || '',
+                category: data.category || 'food'
             });
 
             // Configurar posición del mapa
@@ -138,7 +140,8 @@ const BusinessLayout = () => {
         setShowSettingsModal(false);
         setSettingsFormData({
             name: '',
-            description: ''
+            description: '',
+            category: 'food'
         });
         setMapPosition([20.6597, -103.3496]);
         setLocationChanged(false);
@@ -222,7 +225,8 @@ const BusinessLayout = () => {
         try {
             // Preparar datos para actualizar
             const updates = {
-                name: settingsFormData.name.trim()
+                name: settingsFormData.name.trim(),
+                category: settingsFormData.category
             };
 
             // Solo incluir descripción si tiene contenido
@@ -668,6 +672,22 @@ function SettingsModal({ formData, setFormData, businessData, mapPosition, onMap
                             placeholder="Describe tu negocio y los servicios que ofreces"
                         />
                         <p className="text-xs text-gray-500 mt-1">Información adicional sobre tu negocio (opcional)</p>
+                    </div>
+
+                    {/* Business Category */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Categoría del Negocio <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                            required
+                            value={formData.category}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent bg-white"
+                        >
+                            <option value="food">🍔 Comida</option>
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">Selecciona la categoría que mejor describa tu negocio</p>
                     </div>
 
                     {/* Business Logo */}

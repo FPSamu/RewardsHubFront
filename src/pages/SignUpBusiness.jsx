@@ -18,6 +18,7 @@ function SignUpBusiness() {
         city: '',
         state: '',
         description: '',
+        category: 'food', // Categoría del negocio
     });
     const [logoFile, setLogoFile] = useState(null);
     const [logoPreview, setLogoPreview] = useState(null);
@@ -112,6 +113,7 @@ function SignUpBusiness() {
                 password: formData.password,
                 phone: formData.phone,
                 description: formData.description,
+                category: formData.category,
             };
 
             // Agregar contactName solo si se proporcionó
@@ -252,6 +254,26 @@ function SignUpBusiness() {
                                         </p>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Categoría del Negocio */}
+                            <div>
+                                <label htmlFor="category" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
+                                    Categoría del Negocio <span className="text-[#F87171]">*</span>
+                                </label>
+                                <select
+                                    id="category"
+                                    name="category"
+                                    required
+                                    value={formData.category}
+                                    onChange={handleChange}
+                                    className="appearance-none relative block w-full h-11 px-4 border border-[#DEE2E6] text-[#0F172A] text-[16px] leading-6 font-medium rounded-[14px] focus:outline-none focus:ring-[3px] focus:ring-[#E6F7E8] focus:border-[#74D680] transition-all duration-180 bg-white"
+                                >
+                                    <option value="food">🍔 Comida</option>
+                                </select>
+                                <p className="mt-2 text-[12px] leading-4 font-medium text-[#6C757D]">
+                                    Selecciona la categoría que mejor describa tu negocio
+                                </p>
                             </div>
 
                             {/* Email */}

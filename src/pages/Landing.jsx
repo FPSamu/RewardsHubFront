@@ -73,7 +73,7 @@ function Landing() {
                                 <span className="text-xs sm:text-sm font-medium text-gray-700">¡Más de 500 negocios conectados!</span>
                             </div>
 
-                            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
+                            <h1 className="text-3xl sm:text-4xl md:text-5xAl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
                                 Recompensas que
                                 <span className="block bg-gradient-to-r from-brand-primary via-amber-500 to-orange-500 bg-clip-text text-transparent">
                                     impulsan tu negocio

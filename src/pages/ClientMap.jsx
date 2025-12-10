@@ -187,6 +187,7 @@ const ClientMap = () => {
     const [locationError, setLocationError] = useState(null);
     const [gettingLocation, setGettingLocation] = useState(true);
     const [activeFilter, setActiveFilter] = useState('all');
+    const [categoryFilter, setCategoryFilter] = useState('all');
 
     // Get user location
     useEffect(() => {
@@ -381,20 +382,37 @@ const ClientMap = () => {
 
     // Filter businesses based on active filter
     const getFilteredBusinesses = () => {
+        let filtered = [];
+
+        // First, filter by status
         switch (activeFilter) {
             case 'visited':
-                return visited;
+                filtered = visited;
+                break;
             case 'rewards':
-                return rewardsAvailable;
+                filtered = rewardsAvailable;
+                break;
             case 'not_visited':
-                return notVisited;
+                filtered = notVisited;
+                break;
             case 'all':
             default:
-                return allBusinesses;
+                filtered = allBusinesses;
+                break;
         }
+
+        // Then, filter by category if a specific category is selected
+        if (categoryFilter !== 'all') {
+            filtered = filtered.filter(b => b.category === categoryFilter);
+        }
+
+        return filtered;
     };
 
     const filteredBusinesses = getFilteredBusinesses();
+
+    // Get count of businesses by category for filter buttons
+    const foodCount = allBusinesses.filter(b => b.category === 'food').length;
 
     const getStatusBadge = (status, hasRewards) => {
         if (hasRewards) {
@@ -494,6 +512,12 @@ const ClientMap = () => {
 
                             // Find business data to get status and rewards
                             const businessData = businesses.find(b => b.id === business.id) || {};
+
+                            // Filter by category if a specific category is selected
+                            if (categoryFilter !== 'all' && businessData.category !== categoryFilter) {
+                                return null;
+                            }
+
                             const status = businessData.status || 'not_visited';
                             const availableRewardsCount = businessData.availableRewards || 0;
                             const userPoints = userPointsData?.businessPoints?.find(bp => bp.businessId === business.id);
@@ -665,8 +689,9 @@ const ClientMap = () => {
             <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
                 <h3 className="text-2xl font-bold text-gray-800 mb-4 tracking-tight">Lista de Negocios</h3>
 
-                {/* Filters */}
-                <div className="relative mb-6">
+                {/* Status Filters */}
+                <div className="mb-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Filtrar por Estado</h4>
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                         <button
                             onClick={() => setActiveFilter('all')}
@@ -703,6 +728,40 @@ const ClientMap = () => {
                                 }`}
                         >
                             No Visitados ({notVisited.length})
+                        </button>
+                    </div>
+                </div>
+
+                {/* Category Filters */}
+                <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Filtrar por Categoría</h4>
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        <button
+                            onClick={() => setCategoryFilter('all')}
+                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${categoryFilter === 'all'
+                                ? 'bg-purple-600 text-white hover:opacity-96'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                        >
+                            Todas las Categorías
+                        </button>
+                        <button
+                            onClick={() => setCategoryFilter('food')}
+                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${categoryFilter === 'food'
+                                ? 'bg-purple-600 text-white hover:opacity-96'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                        >
+                            🍔 Comida ({foodCount})
+                        </button>
+                        <button
+                            onClick={() => setCategoryFilter('test')}
+                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${categoryFilter === 'test'
+                                ? 'bg-purple-600 text-white hover:opacity-96'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                        >
+                            🍔 test ({foodCount})
                         </button>
                     </div>
                 </div>
