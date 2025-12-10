@@ -40,7 +40,15 @@ export const authService = {
       if (token) {
         const cleanToken = String(token).replace(/^["']|["']$/g, "");
         localStorage.setItem("token", cleanToken);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+
+        const accountData = response.data.user || response.data.business;
+
+        if (accountData) {
+            localStorage.setItem("user", JSON.stringify(accountData));
+        } else {
+            console.warn("Advertencia: No se encontraron datos de cuenta en la respuesta");
+        }
+
         localStorage.setItem("userType", "business");
       }
       return response.data;
@@ -81,7 +89,13 @@ export const authService = {
       if (token) {
         const cleanToken = String(token).replace(/^["']|["']$/g, "");
         localStorage.setItem("token", cleanToken);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+
+        const accountData = response.data.user || response.data.business;
+
+        if (accountData) {
+            localStorage.setItem("user", JSON.stringify(accountData));
+        }
+
         localStorage.setItem("userType", "business");
       }
       return response.data;
@@ -230,12 +244,13 @@ export const authService = {
   getMeBusiness: async () => {
     try {
       const response = await api.get("/business/me");
-      
-      if (response.data) {
-        localStorage.setItem("user", JSON.stringify(response.data));
-      }
 
-      return response.data;
+      const data = response.data.business || response.data;
+      
+      if (data) {
+        localStorage.setItem("user", JSON.stringify(data));
+      }
+      return data;
     } catch (error) {
       throw error.response?.data || error.message;
     }

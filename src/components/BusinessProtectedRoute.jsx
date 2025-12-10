@@ -7,12 +7,16 @@ function BusinessProtectedRoute({ children }) {
     const location = useLocation();
     const [loading, setLoading] = useState(true);
     const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+
     const isAuthenticated = authService.isAuthenticated();
     const userType = authService.getUserType();
 
+    const userString = localStorage.getItem('user');
+    const user = userString ? JSON.parse(userString) : null;
+
     useEffect(() => {
         const checkSubscription = async () => {
-            if (!isAuthenticated || userType !== 'business') {
+            if (!isAuthenticated || userType !== 'business' || (user && !user.isVerified)) {
                 setLoading(false);
                 return;
             }
@@ -22,7 +26,6 @@ function BusinessProtectedRoute({ children }) {
                 setSubscriptionStatus(status);
             } catch (error) {
                 console.error('Error checking subscription:', error);
-                // If there's an error checking subscription, assume it needs to be set up
                 setSubscriptionStatus({ status: 'inactive' });
             } finally {
                 setLoading(false);
@@ -30,7 +33,7 @@ function BusinessProtectedRoute({ children }) {
         };
 
         checkSubscription();
-    }, [isAuthenticated, userType]);
+    }, [isAuthenticated, userType, user]);
 
     // Not authenticated
     if (!isAuthenticated) {
@@ -40,6 +43,21 @@ function BusinessProtectedRoute({ children }) {
     // Not a business user
     if (userType !== 'business') {
         return <Navigate to="/client/dashboard" replace />;
+    }
+
+    if (user && !user.isVerified) {
+        return <Navigate to="/verify-pending" replace />;
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
+                    <p className="text-gray-600">Cargando información del negocio...</p>
+                </div>
+            </div>
+        );
     }
 
     // Loading subscription status
@@ -56,8 +74,8 @@ function BusinessProtectedRoute({ children }) {
 
     // Check if subscription is inactive or cancelled
     // Allow access to subscription page and location setup page without subscription check
-    const isSubscriptionPage = location.pathname === '/business/subscription';
     const isLocationSetupPage = location.pathname === '/business/location-setup';
+    const isSubscriptionPage = location.pathname === '/business/subscription';
     const needsSubscription = subscriptionStatus &&
         (subscriptionStatus.status === 'inactive' || subscriptionStatus.status === 'cancelled');
 
