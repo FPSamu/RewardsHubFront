@@ -20,6 +20,8 @@ import BusinessLocationSetup from './pages/BusinessLocationSetup'
 import BusinessSubscription from './pages/BusinessSubscription'
 import ProtectedRoute from './components/ProtectedRoute'
 import BusinessProtectedRoute from './components/BusinessProtectedRoute'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import './App.css'
 
 function App() {
@@ -32,6 +34,13 @@ function App() {
                     <Route path="/signup" element={<SignUpChoice />} />
                     <Route path="/signup/client" element={<SignUpClient />} />
                     <Route path="/signup/business" element={<SignUpBusiness />} />
+
+                    {/* RUTAS DE RECUPERACIÓN DE CONTRASEÑA */}
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    
+                    {/* Cubrimos ambos casos (User y Business) con el mismo componente */}
+                    <Route path="/user/reset-password" element={<ResetPassword />} />
+                    <Route path="/business/reset-password" element={<ResetPassword />} />
 
                     {/* 2. AGREGAR RUTAS DE VERIFICACIÓN (Públicas) */}
                     <Route path="/user/verify-email" element={<VerifyEmail />} />

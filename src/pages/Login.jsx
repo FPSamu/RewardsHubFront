@@ -177,9 +177,15 @@ function Login() {
               </div>
 
               <div className="text-[14px] leading-5">
-                <a href="#" className="font-semibold text-[#FFB733] hover:text-[#EAB000] transition-colors duration-180">
+                <Link
+                  to="/forgot-password"
+                  className="font-semibold text-[#FFB733] hover:text-[#EAB000] transition-colors duration-180"
+                >
                   ¿Olvidaste tu contraseña?
-                </a>
+                  {/* <a href="#" className="font-semibold text-[#FFB733] hover:text-[#EAB000] transition-colors duration-180">
+                    ¿Olvidaste tu contraseña?
+                  </a> */}
+                </Link>
               </div>
             </div>
 
