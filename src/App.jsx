@@ -4,6 +4,9 @@ import Login from './pages/Login'
 import SignUpChoice from './pages/SignUpChoice'
 import SignUpClient from './pages/SignUpClient'
 import SignUpBusiness from './pages/SignUpBusiness'
+// 1. IMPORTAR EL COMPONENTE DE VERIFICACIÓN
+import VerifyEmail from './pages/VerifyEmail' 
+
 import ClientLayout from './components/ClientLayout'
 import ClientHome from './pages/ClientHome'
 import ClientPoints from './pages/ClientPoints'
@@ -29,6 +32,10 @@ function App() {
                     <Route path="/signup" element={<SignUpChoice />} />
                     <Route path="/signup/client" element={<SignUpClient />} />
                     <Route path="/signup/business" element={<SignUpBusiness />} />
+
+                    {/* 2. AGREGAR RUTAS DE VERIFICACIÓN (Públicas) */}
+                    <Route path="/user/verify-email" element={<VerifyEmail />} />
+                    <Route path="/business/verify-email" element={<VerifyEmail />} />
 
                     {/* Client Dashboard Routes */}
                     <Route path="/client" element={<Navigate to="/client/dashboard" replace />} />

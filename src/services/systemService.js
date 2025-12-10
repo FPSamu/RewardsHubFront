@@ -72,6 +72,16 @@ export const systemService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Verify email
+  verifyEmail: async (token) => {
+    try {
+      const response = await api.post("/auth/verify-email", { token });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default systemService;
