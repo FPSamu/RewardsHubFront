@@ -25,7 +25,7 @@ const VerifyEmail = () => {
         // Si tienes configurado un "baseURL" en axios, solo usa '/verify-email'
         const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'; 
         
-        await axios.get(`${backendUrl}/verify-email?token=${token}`);
+        await axios.get(`${backendUrl}/auth/verify-email?token=${token}`);
         
         setStatus('success');
         setMessage('¡Tu correo ha sido verificado correctamente!');
