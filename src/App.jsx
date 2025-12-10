@@ -22,6 +22,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import BusinessProtectedRoute from './components/BusinessProtectedRoute'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import VerifyPending from './pages/VerifyPending'
 import './App.css'
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
                     <Route path="/signup" element={<SignUpChoice />} />
                     <Route path="/signup/client" element={<SignUpClient />} />
                     <Route path="/signup/business" element={<SignUpBusiness />} />
+                    <Route path="/verify-pending" element={<VerifyPending />} />
 
                     {/* RUTAS DE RECUPERACIÓN DE CONTRASEÑA */}
                     <Route path="/forgot-password" element={<ForgotPassword />} />
