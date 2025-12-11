@@ -10,6 +10,7 @@ const BusinessRewards = () => {
     const [error, setError] = useState(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showPointsSystemModal, setShowPointsSystemModal] = useState(false);
+    const [isEditingPointsSystem, setIsEditingPointsSystem] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingReward, setEditingReward] = useState(null);
     const [rewardType, setRewardType] = useState(null); // 'points' or 'stamps'
@@ -138,6 +139,57 @@ const BusinessRewards = () => {
     const activeRewards = rewards.filter(r => r.isActive);
     const inactiveRewards = rewards.filter(r => !r.isActive);
 
+    // Handler to open modal for create or edit
+    function handleOpenPointsSystemModal(editMode = false) {
+        setIsEditingPointsSystem(editMode);
+        if (editMode && pointsSystem) {
+            setPointsSystemForm({
+                amount: pointsSystem.pointsConversion?.amount?.toString() || '',
+                currency: pointsSystem.pointsConversion?.currency || 'MXN',
+                points: pointsSystem.pointsConversion?.points?.toString() || ''
+            });
+        } else {
+            setPointsSystemForm({ amount: '', currency: 'MXN', points: '' });
+        }
+        setCreateError(null);
+        setShowPointsSystemModal(true);
+    }
+
+    // Handler for saving (create or update)
+    async function handleSavePointsSystem(e) {
+        e.preventDefault();
+        setCreating(true);
+        setCreateError(null);
+
+        try {
+            const payload = {
+                name: 'Sistema de Puntos',
+                description: 'Sistema de acumulación de puntos',
+                pointsConversion: {
+                    amount: parseFloat(pointsSystemForm.amount),
+                    currency: pointsSystemForm.currency,
+                    points: parseInt(pointsSystemForm.points)
+                }
+            };
+
+            if (isEditingPointsSystem && pointsSystem) {
+                await systemService.updatePointsSystem(pointsSystem.id, payload);
+            } else {
+                await systemService.createPointsSystem(payload);
+            }
+            await fetchData();
+
+            setShowPointsSystemModal(false);
+            setPointsSystemForm({ amount: '', currency: 'MXN', points: '' });
+            setCreateError(null);
+        } catch (err) {
+            console.error('Error saving points system:', err);
+            setCreateError(err.message || 'Error al configurar el sistema de puntos');
+        } finally {
+            setCreating(false);
+        }
+    }
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -164,7 +216,7 @@ const BusinessRewards = () => {
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                         {!hasPointsSystem && (
                             <button
-                                onClick={() => setShowPointsSystemModal(true)}
+                                onClick={() => handleOpenPointsSystemModal(false)}
                                 className="w-full sm:w-auto px-6 py-3 bg-accent-gold text-white rounded-pill font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card flex items-center justify-center gap-2"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -172,6 +224,18 @@ const BusinessRewards = () => {
                                 </svg>
                                 <span className="hidden sm:inline">Configurar Sistema de Puntos</span>
                                 <span className="sm:hidden">Configurar Puntos</span>
+                            </button>
+                        )}
+                        {hasPointsSystem && (
+                            <button
+                                onClick={() => handleOpenPointsSystemModal(true)}
+                                className="w-full sm:w-auto px-6 py-3 bg-accent-gold text-white rounded-pill font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card flex items-center justify-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="hidden sm:inline">Editar Sistema de Puntos</span>
+                                <span className="sm:hidden">Editar Puntos</span>
                             </button>
                         )}
                         <button
@@ -480,12 +544,13 @@ const BusinessRewards = () => {
                     setFormData={setPointsSystemForm}
                     creating={creating}
                     error={createError}
+                    isEditing={isEditingPointsSystem}
                     onClose={() => {
                         setShowPointsSystemModal(false);
                         setPointsSystemForm({ amount: '', currency: 'MXN', points: '' });
                         setCreateError(null);
                     }}
-                    onSubmit={handleCreatePointsSystem}
+                    onSubmit={handleSavePointsSystem}
                 />
             )}
 
@@ -722,14 +787,14 @@ const BusinessRewards = () => {
 };
 
 // Points System Configuration Modal Component
-function PointsSystemConfigModal({ formData, setFormData, creating, error, onClose, onSubmit }) {
+function PointsSystemConfigModal({ formData, setFormData, creating, error, isEditing, onClose, onSubmit }) {
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-white rounded-xl shadow-popover max-w-lg w-full my-8">
                 <div className="p-6 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h3 className="text-2xl font-bold text-gray-800">Configurar Sistema de Puntos</h3>
+                            <h3 className="text-2xl font-bold text-gray-800">{isEditing ? 'Editar Sistema de Puntos' : 'Configurar Sistema de Puntos'}</h3>
                             <p className="text-sm text-gray-600 mt-1">Define cómo los clientes acumulan puntos</p>
                         </div>
                         <button
@@ -752,8 +817,12 @@ function PointsSystemConfigModal({ formData, setFormData, creating, error, onClo
                             <div>
                                 <p className="text-sm font-semibold text-blue-800">¿Qué es esto?</p>
                                 <p className="text-xs text-blue-700 mt-1">
-                                    Esta configuración establece la equivalencia entre dinero gastado y puntos ganados.
-                                    Solo necesitas configurarlo una vez.
+                                    Esta configuración establece la equivalencia entre dinero gastado y puntos ganados.<br />
+                                    {isEditing ? (
+                                        <span className="font-bold text-red-700">Editar la configuración afectará cómo se acumulan puntos a partir de ahora.</span>
+                                    ) : (
+                                        <>Solo necesitas configurarlo una vez.</>
+                                    )}
                                 </p>
                             </div>
                         </div>
@@ -847,14 +916,14 @@ function PointsSystemConfigModal({ formData, setFormData, creating, error, onClo
                             {creating ? (
                                 <>
                                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                    Configurando...
+                                    {isEditing ? 'Guardando...' : 'Configurando...'}
                                 </>
                             ) : (
                                 <>
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>
-                                    Guardar Configuración
+                                    {isEditing ? 'Guardar Cambios' : 'Guardar Configuración'}
                                 </>
                             )}
                         </button>
