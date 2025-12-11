@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios'; // Asegúrate de tener axios instalado
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Estados: 'loading', 'success', 'error'
   const [status, setStatus] = useState('loading');
@@ -21,11 +22,15 @@ const VerifyEmail = () => {
 
     const verifyToken = async () => {
       try {
-        // Asegúrate de que esta URL coincida con tu backend
-        // Si tienes configurado un "baseURL" en axios, solo usa '/verify-email'
         const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'; 
         
-        await axios.get(`${backendUrl}/auth/verify-email?token=${token}`);
+        const isBusiness = location.pathname.includes('/business/');
+        
+        const endpoint = isBusiness 
+          ? `${backendUrl}/business/verify-email?token=${token}`
+          : `${backendUrl}/auth/verify-email?token=${token}`;
+
+        await axios.get(endpoint);
         
         setStatus('success');
         setMessage('¡Tu correo ha sido verificado correctamente!');
@@ -41,7 +46,7 @@ const VerifyEmail = () => {
 
     // Ejecutamos la verificación solo una vez al montar
     verifyToken();
-  }, [token]);
+  }, [token, navigate, location]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
