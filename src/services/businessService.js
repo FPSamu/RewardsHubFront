@@ -43,30 +43,37 @@ export const businessService = {
     }
   },
 
-  // Update business location
-  updateBusinessLocation: async (address) => {
+  // Agregar nueva sucursal
+  addLocation: async (data) => {
     try {
-      const response = await api.put("/business/location", { address });
+      const response = await api.post("/business/locations", data);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
 
-  // Update business coordinates
-  updateCoordinates: async ({ latitude, longitude }) => {
+  // Editar sucursal existente
+  updateLocation: async (locationId, data) => {
     try {
-      const response = await api.put("/business/coordinates", {
-        latitude,
-        longitude,
-      });
+      const response = await api.put(`/business/locations/${locationId}`, data);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
 
-  // Update business information
+  // Eliminar sucursal
+  deleteLocation: async (locationId) => {
+    try {
+      const response = await api.delete(`/business/locations/${locationId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Update business information (Nombre, Categoría, Descripción)
   updateBusinessInfo: async (updates) => {
     try {
       const response = await api.put("/business/me", updates);

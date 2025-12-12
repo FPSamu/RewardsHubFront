@@ -99,13 +99,10 @@ function SignUpBusiness() {
         setError('');
 
         try {
-            // Construir la dirección en el formato requerido
-            // Reemplazar espacios en street con guiones
             const formattedStreet = formData.street.replace(/\s+/g, '-');
             const formattedCity = formData.city.replace(/\s+/g, '-');
-            // const formattedNeighborhood = formData.neighborhood.replace(/\s+/g, '-');
             const formattedState = formData.state.replace(/\s+/g, '-');
-            const address = `${formattedStreet}-${formattedCity}-${formattedState}`;
+            const addressString = `${formattedStreet}-${formattedCity}-${formattedState}`;
 
             const userData = {
                 name: formData.name, // Nombre del negocio (campo principal)
@@ -129,23 +126,22 @@ function SignUpBusiness() {
             if (logoFile) {
                 try {
                     await businessService.uploadLogo(logoFile);
-                    console.log('Logo subido exitosamente');
                 } catch (logoErr) {
                     console.error('Error al subir logo:', logoErr);
-                    // Continuar aunque falle la subida del logo
                 }
             }
 
-            // Paso 3: Actualizar la ubicación del negocio
+            // Paso 3: Agregar la PRIMERA sucursal (usando el nuevo método addLocation)
             try {
-                await businessService.updateBusinessLocation(address);
-                console.log('Ubicación actualizada exitosamente');
+                await businessService.addLocation({
+                    address: addressString,
+                    name: 'Sucursal Principal' // Nombre por defecto
+                });
+                console.log('Sucursal principal creada exitosamente');
             } catch (locationErr) {
-                console.error('Error al actualizar ubicación:', locationErr);
-                // Continuar aunque falle la actualización de ubicación
+                console.error('Error al crear sucursal principal:', locationErr);
             }
 
-            // Redirigir a la página de configuración de ubicación
             navigate('/business/location-setup');
         } catch (err) {
             setError(err.message || 'Error al crear la cuenta. Intenta nuevamente.');

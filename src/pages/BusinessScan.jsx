@@ -360,52 +360,52 @@ const BusinessScan = () => {
     };
 
 
-    const handleStartScan = () => {
-        // If redeem only mode, skip validation and go straight to scanning
-        if (rewardType === 'redeem') {
-            setError(null);
-            setStep('scanning');
-            return;
-        }
+    // const handleStartScan = () => {
+    //     // If redeem only mode, skip validation and go straight to scanning
+    //     if (rewardType === 'redeem') {
+    //         setError(null);
+    //         setStep('scanning');
+    //         return;
+    //     }
 
-        // Validate points
-        if (rewardType === 'points' || rewardType === 'both') {
-            if (!rewardSystems.points) {
-                setError('No hay un sistema de puntos activo');
-                return;
-            }
-            if (!purchaseAmount) {
-                setError('Por favor ingresa el monto de la compra');
-                return;
-            }
-        }
+    //     // Validate points
+    //     if (rewardType === 'points' || rewardType === 'both') {
+    //         if (!rewardSystems.points) {
+    //             setError('No hay un sistema de puntos activo');
+    //             return;
+    //         }
+    //         if (!purchaseAmount) {
+    //             setError('Por favor ingresa el monto de la compra');
+    //             return;
+    //         }
+    //     }
 
-        // Validate stamps
-        if (rewardType === 'stamps' || rewardType === 'both') {
-            if (rewardSystems.stamps.length === 0) {
-                setError('No hay sistemas de sellos activos');
-                return;
-            }
-            if (!selectedStampSystem) {
-                setError('Por favor selecciona un sistema de sellos');
-                return;
-            }
-            if (!stampQuantity) {
-                setError('Por favor ingresa la cantidad de sellos');
-                return;
-            }
+    //     // Validate stamps
+    //     if (rewardType === 'stamps' || rewardType === 'both') {
+    //         if (rewardSystems.stamps.length === 0) {
+    //             setError('No hay sistemas de sellos activos');
+    //             return;
+    //         }
+    //         if (!selectedStampSystem) {
+    //             setError('Por favor selecciona un sistema de sellos');
+    //             return;
+    //         }
+    //         if (!stampQuantity) {
+    //             setError('Por favor ingresa la cantidad de sellos');
+    //             return;
+    //         }
 
-            // Validate product identifier for specific product types
-            const selectedSystem = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
-            if (selectedSystem?.productType === 'specific' && !productIdentifier) {
-                setError('Por favor ingresa el identificador del producto');
-                return;
-            }
-        }
+    //         // Validate product identifier for specific product types
+    //         const selectedSystem = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
+    //         if (selectedSystem?.productType === 'specific' && !productIdentifier) {
+    //             setError('Por favor ingresa el identificador del producto');
+    //             return;
+    //         }
+    //     }
 
-        setError(null);
-        setStep('scanning');
-    };
+    //     setError(null);
+    //     setStep('scanning');
+    // };
 
     const handleContinueTransaction = async () => {
         if (scannedUserId)

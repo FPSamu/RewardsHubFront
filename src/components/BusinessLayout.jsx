@@ -1,63 +1,8 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import 'leaflet/dist/leaflet.css'; // Leaflet css might still be needed if used elsewhere, otherwise remove
 import businessService from '../services/businessService';
 import subscriptionService from '../services/subscriptionService';
-
-// Fix default marker icon issue with Leaflet + Webpack
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-// Custom gold marker icon
-const goldIcon = new L.Icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-});
-
-// Component to handle marker dragging
-function DraggableMarker({ position, setPosition }) {
-    const markerRef = useRef(null);
-
-    const eventHandlers = {
-        dragend() {
-            const marker = markerRef.current;
-            if (marker != null) {
-                const newPos = marker.getLatLng();
-                setPosition([newPos.lat, newPos.lng]);
-            }
-        },
-    };
-
-    return (
-        <Marker
-            draggable={true}
-            eventHandlers={eventHandlers}
-            position={position}
-            ref={markerRef}
-            icon={goldIcon}
-        />
-    );
-}
-
-// Component to handle map clicks
-function MapClickHandler({ setPosition }) {
-    useMapEvents({
-        click(e) {
-            setPosition([e.latlng.lat, e.latlng.lng]);
-        },
-    });
-    return null;
-}
 
 const BusinessLayout = () => {
     const navigate = useNavigate();
@@ -71,8 +16,7 @@ const BusinessLayout = () => {
         description: '',
         category: 'food'
     });
-    const [mapPosition, setMapPosition] = useState([20.6597, -103.3496]); // Guadalajara default
-    const [locationChanged, setLocationChanged] = useState(false);
+    // Removed legacy map states
     const [logoFile, setLogoFile] = useState(null);
     const [logoPreview, setLogoPreview] = useState(null);
     const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -105,22 +49,15 @@ const BusinessLayout = () => {
 
     const handleSettings = async () => {
         setIsMenuOpen(false);
-
-        // Cargar datos del negocio
         try {
             const data = await businessService.getMyBusiness();
+            console.log("Business Data loaded:", data); // DEBUG
             setBusinessData(data);
             setSettingsFormData({
                 name: data.name || '',
                 description: data.description || '',
                 category: data.category || 'food'
             });
-
-            // Configurar posición del mapa
-            if (data.location && data.location.latitude && data.location.longitude) {
-                setMapPosition([data.location.latitude, data.location.longitude]);
-            }
-            setLocationChanged(false);
 
             // Configurar logo preview
             if (data.logoUrl) {
@@ -143,8 +80,7 @@ const BusinessLayout = () => {
             description: '',
             category: 'food'
         });
-        setMapPosition([20.6597, -103.3496]);
-        setLocationChanged(false);
+        // Removed legacy map reset
         setLogoFile(null);
         setLogoPreview(null);
         setSettingsError(null);
@@ -212,10 +148,7 @@ const BusinessLayout = () => {
         }
     };
 
-    const handleMapPositionChange = (newPosition) => {
-        setMapPosition(newPosition);
-        setLocationChanged(true);
-    };
+    // Removed handleMapPositionChange
 
     const handleSaveSettings = async (e) => {
         e.preventDefault();
@@ -250,13 +183,8 @@ const BusinessLayout = () => {
                 }
             }
 
-            // Si la ubicación cambió, actualizarla también
-            if (locationChanged) {
-                await businessService.updateCoordinates({
-                    latitude: mapPosition[0],
-                    longitude: mapPosition[1]
-                });
-            }
+            // REMOVED: Legacy location update logic
+            // The location management is now handled in a separate view
 
             // Recargar datos del negocio para obtener todos los cambios
             const finalData = await businessService.getMyBusiness();
@@ -348,6 +276,18 @@ const BusinessLayout = () => {
                             >
                                 Escanear QR
                             </NavLink>
+                             {/* Added link to delivery/orders */}
+                            <NavLink
+                                to="/business/dashboard/delivery"
+                                className={({ isActive }) =>
+                                    `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
+                                        ? 'bg-brand-muted text-brand-onColor'
+                                        : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
+                                    }`
+                                }
+                            >
+                                Delivery
+                            </NavLink>
                         </div>
 
                         {/* Right side - Mobile Menu Button + User Menu */}
@@ -431,44 +371,32 @@ const BusinessLayout = () => {
                                             onClick={handleSettings}
                                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-180 flex items-center space-x-2"
                                         >
-                                            <svg
-                                                className="w-5 h-5 text-gray-500"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                                                />
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                />
+                                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                             </svg>
                                             <span>Configuración</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setIsMenuOpen(false);
+                                                navigate('/business/location-setup');
+                                            }}
+                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-180 flex items-center space-x-2"
+                                        >
+                                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            <span>Sucursales</span>
                                         </button>
                                         <div className="border-t border-gray-200 my-1"></div>
                                         <button
                                             onClick={handleLogout}
                                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors duration-180 flex items-center space-x-2"
                                         >
-                                            <svg
-                                                className="w-5 h-5"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                                                />
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                             </svg>
                                             <span>Cerrar Sesión</span>
                                         </button>
@@ -530,6 +458,18 @@ const BusinessLayout = () => {
                                 >
                                     Escanear QR
                                 </NavLink>
+                                <NavLink
+                                    to="/business/dashboard/delivery"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className={({ isActive }) =>
+                                        `block px-4 py-2 rounded-lg text-sm font-medium transition-all duration-180 ${isActive
+                                            ? 'bg-brand-muted text-brand-onColor'
+                                            : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
+                                        }`
+                                    }
+                                >
+                                    Delivery
+                                </NavLink>
                             </div>
                         </div>
                     )}
@@ -547,9 +487,7 @@ const BusinessLayout = () => {
                     formData={settingsFormData}
                     setFormData={setSettingsFormData}
                     businessData={businessData}
-                    mapPosition={mapPosition}
-                    onMapPositionChange={handleMapPositionChange}
-                    locationChanged={locationChanged}
+                    // Removed map props
                     logoPreview={logoPreview}
                     onLogoChange={handleLogoChange}
                     onRemoveLogo={handleRemoveLogo}
@@ -604,7 +542,7 @@ const BusinessLayout = () => {
 };
 
 // Settings Modal Component
-function SettingsModal({ formData, setFormData, businessData, mapPosition, onMapPositionChange, locationChanged, logoPreview, onLogoChange, onRemoveLogo, fileInputRef, uploadingLogo, saving, error, onClose, onSubmit, navigate, onDeleteAccount }) {
+function SettingsModal({ formData, setFormData, businessData, logoPreview, onLogoChange, onRemoveLogo, fileInputRef, uploadingLogo, saving, error, onClose, onSubmit, navigate, onDeleteAccount }) {
     const [showAccountOptions, setShowAccountOptions] = useState(false);
 
     return (
@@ -757,79 +695,42 @@ function SettingsModal({ formData, setFormData, businessData, mapPosition, onMap
                         </div>
                     </div>
 
-                    {/* Business Location Map */}
+                    {/* Manage Locations Link (Replaces the map) */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Ubicación en el Mapa
+                            Ubicación y Sucursales
                         </label>
-                        {mapPosition ? (
-                            <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                <div style={{ height: '300px', width: '100%' }}>
-                                    <MapContainer
-                                        center={mapPosition}
-                                        zoom={15}
-                                        style={{ height: '100%', width: '100%' }}
-                                        scrollWheelZoom={true}
-                                        zoomControl={true}
-                                    >
-                                        <TileLayer
-                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                        />
-                                        <DraggableMarker position={mapPosition} setPosition={onMapPositionChange} />
-                                        <MapClickHandler setPosition={onMapPositionChange} />
-                                    </MapContainer>
+                        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-white p-2 rounded-full border border-gray-200">
+                                    <svg className="w-6 h-6 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
                                 </div>
-                                <div className={`p-3 border-t border-gray-200 ${locationChanged ? 'bg-amber-50' : 'bg-gray-50'}`}>
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex-1">
-                                            <p className="text-xs text-gray-600 mb-1">
-                                                📍 Lat: {mapPosition[0].toFixed(6)}, Lng: {mapPosition[1].toFixed(6)}
-                                            </p>
-                                            {locationChanged && (
-                                                <p className="text-xs text-amber-600 font-semibold flex items-center gap-1">
-                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                                    </svg>
-                                                    Ubicación modificada - Guarda los cambios
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="text-xs text-gray-500 text-right">
-                                            <p>💡 Arrastra el marcador</p>
-                                            <p>o haz clic en el mapa</p>
-                                        </div>
-                                    </div>
+                                <div>
+                                    <p className="text-sm font-medium text-gray-800">
+                                        {(businessData?.locations || []).length} sucursales configuradas
+                                    </p>
+                                    <p className="text-xs text-gray-500">Gestiona tus direcciones y horarios</p>
                                 </div>
                             </div>
-                        ) : (
-                            <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
-                                <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                <p className="text-sm font-semibold text-gray-700 mb-1">No hay ubicación configurada</p>
-                                <p className="text-xs text-gray-500 mb-3">Configura la ubicación de tu negocio para que los clientes puedan encontrarte</p>
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/business/dashboard/location-setup')}
-                                    className="text-sm text-brand-primary hover:underline font-semibold"
-                                >
-                                    Configurar ubicación →
-                                </button>
-                            </div>
-                        )}
-                        <p className="text-xs text-gray-500 mt-1">
-                            {mapPosition && businessData?.location ?
-                                'Arrastra el marcador o haz clic en el mapa para cambiar la ubicación' :
-                                'Tu ubicación será visible para los clientes en el mapa'
-                            }
-                        </p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onClose(); // Close modal first
+                                    navigate('/business/location-setup');
+                                }}
+                                className="text-sm font-semibold text-brand-primary hover:text-brand-onColor hover:underline"
+                            >
+                                Gestionar →
+                            </button>
+                        </div>
                     </div>
 
                     {/* Error Message */}
                     {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
                             {error}
                         </div>
                     )}
@@ -913,7 +814,7 @@ function SettingsModal({ formData, setFormData, businessData, mapPosition, onMap
     );
 }
 
-// Delete Confirmation Modal Component
+// ... DeleteConfirmModal and SubscriptionWarningModal (same as before) ...
 function DeleteConfirmModal({ onConfirm, onCancel }) {
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
@@ -952,7 +853,6 @@ function DeleteConfirmModal({ onConfirm, onCancel }) {
     );
 }
 
-// Subscription Warning Modal Component
 function SubscriptionWarningModal({ onConfirm, onCancel, deleting }) {
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
@@ -1009,3 +909,4 @@ function SubscriptionWarningModal({ onConfirm, onCancel, deleting }) {
 }
 
 export default BusinessLayout;
+
