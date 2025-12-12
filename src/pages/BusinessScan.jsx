@@ -243,18 +243,64 @@ const BusinessScan = () => {
     }, [step, processTransaction]);
 
     const handleGenerateDeliveryCode = async () => {
-        if (!purchaseAmount) {
-            setError('Por favor ingresa el monto de la compra');
+        // Validaciones dinámicas
+        if (!purchaseAmount && !stampQuantity) {
+            setError('Ingresa el monto, la cantidad de sellos, o ambos');
             return;
+        }
+        if (purchaseAmount && isNaN(parseFloat(purchaseAmount))) {
+            setError('El monto debe ser un número válido');
+            return;
+        }
+        if (stampQuantity && (isNaN(parseInt(stampQuantity)) || parseInt(stampQuantity) < 1)) {
+            setError('La cantidad de sellos debe ser un número válido');
+            return;
+        }
+        if (stampQuantity && !selectedStampSystem) {
+            setError('Selecciona un sistema de sellos');
+            return;
+        }
+        // Validar identificador de producto si aplica
+        if (stampQuantity && selectedStampSystem) {
+            const selectedSystem = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
+            if (selectedSystem?.productType === 'specific' && !productIdentifier) {
+                setError('Por favor ingresa el identificador del producto');
+                return;
+            }
         }
 
         setStep('processing');
         setError(null);
 
         try {
-            const data = await deliveryService.generateCode(parseFloat(purchaseAmount));
+            // Construir payload dinámico
+            const payload = {};
+            if (purchaseAmount) {
+                const amountVal = parseFloat(purchaseAmount);
+                if (amountVal > 0) {
+                    payload.amount = amountVal;
+                }
+            }
+            
+            if (stampQuantity) {
+                const stampsVal = parseInt(stampQuantity);
+                if (stampsVal > 0 && selectedStampSystem) {
+                    payload.stamps = [{
+                        systemId: selectedStampSystem,
+                        count: stampsVal
+                    }];
+                }
+            }
+
+            if (!payload.amount && (!payload.stamps || payload.stamps.length === 0)) {
+                setError('Ingresa un monto válido o sellos válidos');
+                setStep('form');
+                return;
+            }
+
+            const data = await deliveryService.generateCode(payload);
             setDeliveryCodeData(data);
-            setStep('delivery-success'); // Vamos al nuevo paso de éxito
+            setStep('delivery-success');
         } catch (err) {
             console.error('Error generating code:', err);
             setError(err.message || 'Error al generar código');
@@ -264,7 +310,7 @@ const BusinessScan = () => {
 
     const handleStartAction = () => {
         // Lógica unificada para el botón principal
-        
+
         // 1. Caso Delivery (Generar código)
         if (rewardType === 'delivery') {
             handleGenerateDeliveryCode();
@@ -361,14 +407,14 @@ const BusinessScan = () => {
         setStep('scanning');
     };
 
-    const handleContinueTransaction = async () => { 
-        if (scannedUserId) 
-            await processTransaction(scannedUserId); 
+    const handleContinueTransaction = async () => {
+        if (scannedUserId)
+            await processTransaction(scannedUserId);
     };
 
-    const handleRedeemClick = (reward) => { 
-        setRedeemingReward(reward); 
-        setShowRedeemModal(true); 
+    const handleRedeemClick = (reward) => {
+        setRedeemingReward(reward);
+        setShowRedeemModal(true);
     };
 
     const handleConfirmRedeem = async () => {
@@ -421,9 +467,9 @@ const BusinessScan = () => {
         }
     };
 
-    const handleCancelRedeem = () => { 
-        setShowRedeemModal(false); 
-        setRedeemingReward(null); 
+    const handleCancelRedeem = () => {
+        setShowRedeemModal(false);
+        setRedeemingReward(null);
     };
 
     const handleReset = () => {
@@ -436,14 +482,14 @@ const BusinessScan = () => {
         setUserPoints(null);
         setAvailableRewards([]);
         setScannedUserId(null);
-        setDeliveryCodeData(null); 
+        setDeliveryCodeData(null);
 
         // Reset to default stamp system if only one exists
         if (rewardSystems.stamps.length === 1) {
             setSelectedStampSystem(rewardSystems.stamps[0].id);
         }
-    }; 
-    
+    };
+
     const handleGoBack = () => {
         navigate('/business/dashboard');
     };
@@ -469,8 +515,8 @@ const BusinessScan = () => {
                     </h2>
                 </div>
                 <p className="text-gray-600 text-base">
-                    {rewardType === 'delivery' 
-                        ? 'Genera un código único para enviar en pedidos a domicilio' 
+                    {rewardType === 'delivery'
+                        ? 'Genera un código único para enviar en pedidos a domicilio'
                         : 'Registra una compra y otorga puntos/sellos a tus clientes'}
                 </p>
             </div>
@@ -603,33 +649,33 @@ const BusinessScan = () => {
                                     </div>
                                 </button>
 
-                                <button 
-                                    onClick={() => setRewardType('delivery')} 
+                                <button
+                                    onClick={() => setRewardType('delivery')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 flex flex-col items-center ${rewardType === 'delivery'
-                                    ? 'border-blue-500 bg-blue-50' 
-                                    : 'border-gray-200 hover:border-gray-300'
-                                    }`}
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
                                 >
-                                    <svg 
-                                        className={`w-8 h-8 mb-2 ${rewardType === 'delivery' ? 'text-blue-600' : 'text-gray-400'}`} 
-                                        fill="none" stroke="currentColor" 
-                                        viewBox="0 0 24 24" 
-                                        strokeWidth={1.75}><path 
-                                        strokeLinecap="round" 
-                                        strokeLinejoin="round" 
-                                        d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                                    <svg
+                                        className={`w-8 h-8 mb-2 ${rewardType === 'delivery' ? 'text-blue-600' : 'text-gray-400'}`}
+                                        fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        strokeWidth={1.75}><path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
                                     </svg>
-                                    <span 
-                                        className={`text-sm font-semibold ${rewardType === 'delivery' 
-                                        ? 'text-blue-600' 
-                                        : 'text-gray-600'}`}
-                                        >
-                                            Delivery
-                                        </span>
+                                    <span
+                                        className={`text-sm font-semibold ${rewardType === 'delivery'
+                                            ? 'text-blue-600'
+                                            : 'text-gray-600'}`}
+                                    >
+                                        Delivery
+                                    </span>
                                 </button>
                             </div>
                         </div>
-                        
+
                         {/* Delivery Message */}
                         {rewardType === 'delivery' && (
                             <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -681,6 +727,59 @@ const BusinessScan = () => {
                             </div>
                         )}
 
+                        {/* Stamp Quantity Input for Delivery Mode */}
+                        {rewardType === 'delivery' && rewardSystems.stamps.length > 0 && (
+                            <div className="mb-6">
+                                {selectedStampSystem && (() => {
+                                    const system = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
+                                    return system?.stampsRequired && (
+                                        <p className="mt-2 text-sm text-brand-primary font-semibold">
+                                            Requiere {system.stampsRequired} sellos para recompensa
+                                        </p>
+                                    );
+                                })()}
+                                {/* Product Identifier (if required) */}
+                                {selectedStampSystem && (() => {
+                                    const selectedSystem = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
+                                    return selectedSystem?.productType === 'specific' && (
+                                        <div className="mt-4">
+                                            <label htmlFor="productIdentifier" className="block text-sm font-medium text-gray-700 mb-2">
+                                                Identificador del Producto
+                                            </label>
+                                            <input
+                                                id="productIdentifier"
+                                                type="text"
+                                                value={productIdentifier}
+                                                onChange={(e) => setProductIdentifier(e.target.value)}
+                                                placeholder={selectedSystem.productIdentifier || "Ej: SKU-12345"}
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
+                                            />
+                                            <p className="mt-2 text-sm text-gray-500">
+                                                Este sistema requiere un producto específico: {selectedSystem.productIdentifier}
+                                            </p>
+                                        </div>
+                                    );
+                                })()}
+                                <div className="mt-4">
+                                    <label htmlFor="stampQuantity" className="block text-sm font-medium text-gray-700 mb-2">
+                                        Cantidad de Sellos
+                                    </label>
+                                    <input
+                                        id="stampQuantity"
+                                        type="number"
+                                        min="1"
+                                        value={stampQuantity}
+                                        onChange={(e) => setStampQuantity(e.target.value)}
+                                        placeholder="1"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
+                                    />
+                                    <p className="mt-2 text-sm text-gray-500">
+                                        Ingresa cuántos sellos deseas otorgar al cliente
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Stamp System Selection */}
                         {(rewardType === 'stamps' || rewardType === 'both') && (
                             <>
@@ -708,19 +807,6 @@ const BusinessScan = () => {
                                         <label htmlFor="stampSystem" className="block text-sm font-medium text-gray-700 mb-2">
                                             Selecciona Sistema de Sellos
                                         </label>
-                                        <select
-                                            id="stampSystem"
-                                            value={selectedStampSystem || ''}
-                                            onChange={(e) => setSelectedStampSystem(e.target.value)}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
-                                        >
-                                            <option value="">Selecciona un sistema...</option>
-                                            {rewardSystems.stamps.map(system => (
-                                                <option key={system.id} value={system.id}>
-                                                    {system.name} - {system.description}
-                                                </option>
-                                            ))}
-                                        </select>
                                         {selectedStampSystem && (() => {
                                             const system = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
                                             return system?.stampsRequired && (
@@ -788,14 +874,13 @@ const BusinessScan = () => {
                         {/* Start Scan Button */}
                         <button
                             onClick={handleStartAction} // Cambiado a la función unificada
-                            className={`w-full px-6 py-4 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card text-lg ${
-                                rewardType === 'delivery' ? 'bg-blue-600' : 'bg-brand-primary'
-                            }`}
+                            className={`w-full px-6 py-4 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card text-lg ${rewardType === 'delivery' ? 'bg-blue-600' : 'bg-brand-primary'
+                                }`}
                         >
-                            {rewardType === 'delivery' 
-                                ? 'Generar Código de Puntos' 
-                                : rewardType === 'redeem' 
-                                    ? 'Escanear para Canjear' 
+                            {rewardType === 'delivery'
+                                ? 'Generar Código de Puntos'
+                                : rewardType === 'redeem'
+                                    ? 'Escanear para Canjear'
                                     : 'Escanear Código QR'}
                         </button>
                     </div>
@@ -809,25 +894,34 @@ const BusinessScan = () => {
                         <h3 className="font-bold text-lg">Código Generado Exitosamente</h3>
                         <p className="text-blue-100 text-sm">Anota este código en el ticket de compra</p>
                     </div>
-                    
                     <div className="p-8 text-center space-y-6">
                         <div className="bg-gray-100 p-6 rounded-2xl border-2 border-dashed border-gray-300 inline-block">
                             <p className="text-5xl md:text-6xl font-black text-gray-800 tracking-widest font-mono select-all">
                                 {deliveryCodeData.code}
                             </p>
                         </div>
-
                         <div className="flex justify-center gap-8 border-t border-b border-gray-100 py-4">
-                            <div>
-                                <p className="text-sm text-gray-500 uppercase font-semibold">Valor</p>
-                                <p className="text-2xl font-bold text-accent-success">+{deliveryCodeData.points} pts</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500 uppercase font-semibold">Monto</p>
-                                <p className="text-2xl font-bold text-gray-800">${deliveryCodeData.amount}</p>
-                            </div>
+                            {deliveryCodeData.points !== undefined && (
+                                <div>
+                                    <p className="text-sm text-gray-500 uppercase font-semibold">Puntos</p>
+                                    <p className="text-2xl font-bold text-accent-success">+{deliveryCodeData.points} pts</p>
+                                </div>
+                            )}
+                            {deliveryCodeData.amount !== undefined && (
+                                <div>
+                                    <p className="text-sm text-gray-500 uppercase font-semibold">Monto</p>
+                                    <p className="text-2xl font-bold text-gray-800">${deliveryCodeData.amount}</p>
+                                </div>
+                            )}
+                            {deliveryCodeData.stamps && deliveryCodeData.stamps.length > 0 && (
+                                <div>
+                                    <p className="text-sm text-gray-500 uppercase font-semibold">Sellos</p>
+                                    <p className="text-2xl font-bold text-green-700">
+                                        +{deliveryCodeData.stamps.reduce((total, s) => total + s.count, 0)}
+                                    </p>
+                                </div>
+                            )}
                         </div>
-
                         <div className="space-y-3">
                             <button
                                 onClick={handleCopyCode}
@@ -843,7 +937,6 @@ const BusinessScan = () => {
                                 Generar Otro Pedido
                             </button>
                         </div>
-                        
                         <p className="text-xs text-gray-400">
                             Este código expira en 7 días. El cliente debe canjearlo en su app.
                         </p>
@@ -1050,7 +1143,7 @@ const BusinessScan = () => {
                                     <div className="text-sm text-amber-800">
                                         <p className="font-semibold mb-1">Sin recompensas disponibles</p>
                                         <p className="text-amber-700">
-                                            {rewardType === 'redeem' 
+                                            {rewardType === 'redeem'
                                                 ? 'Este cliente no tiene recompensas disponibles para canjear en este momento.'
                                                 : 'El cliente no tiene recompensas disponibles. Presiona "Continuar" para procesar la transacción.'}
                                         </p>
