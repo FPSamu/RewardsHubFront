@@ -37,51 +37,51 @@ const ClientHome = () => {
         };
     }, []);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
+    const fetchData = async () => {
+        try {
+            setLoading(true);
 
-                // Get current user from localStorage
-                const currentUser = authService.getCurrentUser();
-                setUser(currentUser);
+            // Get current user from localStorage
+            const currentUser = authService.getCurrentUser();
+            setUser(currentUser);
 
-                // Fetch user points data
-                const pointsData = await userPointsService.getUserPoints();
+            // Fetch user points data
+            const pointsData = await userPointsService.getUserPoints();
 
-                // Fetch business names for each businessId
-                if (pointsData?.businessPoints && pointsData.businessPoints.length > 0) {
-                    const businessPointsWithNames = await Promise.all(
-                        pointsData.businessPoints.map(async (bp) => {
-                            try {
-                                const business = await businessService.getBusinessById(bp.businessId);
-                                return {
-                                    ...bp,
-                                    businessName: business.name || 'Negocio',
-                                    businessEmail: business.email,
-                                    businessLogoUrl: business.logoUrl || undefined
-                                };
-                            } catch (error) {
-                                console.error(`Error fetching business ${bp.businessId}:`, error);
-                                return {
-                                    ...bp,
-                                    businessName: 'Negocio',
-                                };
-                            }
-                        })
-                    );
-                    pointsData.businessPoints = businessPointsWithNames;
-                }
-
-                setUserPointsData(pointsData);
-                setError(null);
-            } catch (err) {
-                console.error('Error fetching data:', err);
-                setError(err.message || 'Error al cargar los datos');
-            } finally {
-                setLoading(false);
+            // Fetch business names for each businessId
+            if (pointsData?.businessPoints && pointsData.businessPoints.length > 0) {
+                const businessPointsWithNames = await Promise.all(
+                    pointsData.businessPoints.map(async (bp) => {
+                        try {
+                            const business = await businessService.getBusinessById(bp.businessId);
+                            return {
+                                ...bp,
+                                businessName: business.name || 'Negocio',
+                                businessEmail: business.email,
+                                businessLogoUrl: business.logoUrl || undefined
+                            };
+                        } catch (error) {
+                            console.error(`Error fetching business ${bp.businessId}:`, error);
+                            return {
+                                ...bp,
+                                businessName: 'Negocio',
+                            };
+                        }
+                    })
+                );
+                pointsData.businessPoints = businessPointsWithNames;
             }
-        };
+
+            setUserPointsData(pointsData);
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching data:', err);
+            setError(err.message || 'Error al cargar los datos');
+        } finally {
+            setLoading(false);
+        }
+    };
+    useEffect(() => {
 
         fetchData();
     }, []);
