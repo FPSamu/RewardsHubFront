@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import authService from '../services/authService';
 import userPointsService from '../services/userPointsService';
 import businessService from '../services/businessService';
+import deliveryService from '../services/deliveryService'; // <--- 1. Importar servicio
 
 const ClientHome = () => {
     const [user, setUser] = useState(null);
@@ -10,6 +11,12 @@ const ClientHome = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    const [showRedeemModal, setShowRedeemModal] = useState(false);
+    const [redeemCode, setRedeemCode] = useState('');
+    const [redeemStatus, setRedeemStatus] = useState('idle'); // 'idle', 'loading', 'success', 'error'
+    const [redeemResult, setRedeemResult] = useState(null);
+    const [redeemError, setRedeemError] = useState('');
 
     // Listen for user updates
     useEffect(() => {
@@ -78,6 +85,39 @@ const ClientHome = () => {
 
         fetchData();
     }, []);
+
+    const handleRedeemSubmit = async (e) => {
+        e.preventDefault();
+        if (!redeemCode.trim()) return;
+
+        setRedeemStatus('loading');
+        setRedeemError('');
+
+        try {
+            const data = await deliveryService.claimCode(redeemCode.trim());
+            setRedeemResult(data);
+            setRedeemStatus('success');
+            setRedeemCode(''); // Limpiar input
+            
+            // Recargar datos para que se actualicen los puntos en el fondo
+            await fetchData(); 
+        } catch (err) {
+            console.error(err);
+            setRedeemStatus('error');
+            setRedeemError(err.message || 'Código inválido o expirado');
+        }
+    };
+    
+    const closeRedeemModal = () => {
+        setShowRedeemModal(false);
+        // Resetear estados del modal después de un momento para que la animación de cierre se vea bien
+        setTimeout(() => {
+            setRedeemStatus('idle');
+            setRedeemResult(null);
+            setRedeemError('');
+            setRedeemCode('');
+        }, 300);
+    };
 
     if (loading) {
         return (
@@ -166,9 +206,9 @@ const ClientHome = () => {
                         <p className="text-white/90 mb-4">
                             Muestra este código en los negocios afiliados para acumular puntos
                         </p>
-                        <div className="text-sm text-white/80 font-mono">
+                        {/* <div className="text-sm text-white/80 font-mono">
                             ID: {user?.id || userPointsData?.userId || 'no-id'}
-                        </div>
+                        </div> */}
                     </div>
                     <div className="bg-white p-4 rounded-xl shadow-popover">
                         <QRCodeSVG value={user?.id || userPointsData?.userId || 'no-id'} size={200} />
@@ -407,6 +447,102 @@ const ClientHome = () => {
                     </div>
                 )}
             </div>
+
+            <button
+                onClick={() => setShowRedeemModal(true)}
+                className="fixed bottom-6 right-6 bg-brand-primary text-white p-4 rounded-full shadow-lg hover:shadow-xl hover:bg-brand-onColor transition-all duration-300 z-40 group flex items-center gap-2 pr-6"
+            >
+                <div className="bg-white/20 p-2 rounded-full">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                    </svg>
+                </div>
+                <span className="font-bold hidden sm:block">Canjear Código</span>
+                <span className="font-bold sm:hidden">Canjear</span>
+            </button>
+
+            {showRedeemModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-slideUp">
+                        {/* Header del Modal */}
+                        <div className="bg-brand-primary p-6 text-center text-white relative">
+                            <button 
+                                onClick={closeRedeemModal}
+                                className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                            </div>
+                            <h2 className="text-2xl font-bold">Canjear Código</h2>
+                            <p className="text-brand-muted text-sm mt-1">Ingresa el código de tu ticket</p>
+                        </div>
+
+                        <div className="p-8">
+                            {redeemStatus === 'success' ? (
+                                <div className="text-center animate-fade-in">
+                                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-2">¡Puntos Canjeados!</h3>
+                                    <p className="text-gray-600 mb-6">
+                                        Has recibido <span className="font-bold text-brand-primary text-xl">+{redeemResult?.pointsAdded} puntos</span>
+                                    </p>
+                                    <button 
+                                        onClick={closeRedeemModal}
+                                        className="w-full py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+                                    >
+                                        Cerrar
+                                    </button>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleRedeemSubmit} className="space-y-6">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2 text-center">
+                                            Código del Ticket
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={redeemCode}
+                                            onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
+                                            className="w-full px-4 py-4 text-center text-2xl font-mono tracking-widest border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary uppercase placeholder:text-gray-300 transition-all"
+                                            placeholder="XXX-XXX"
+                                            maxLength={10}
+                                            disabled={redeemStatus === 'loading'}
+                                            autoFocus
+                                        />
+                                    </div>
+
+                                    {redeemStatus === 'error' && (
+                                        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center border border-red-200 flex items-center justify-center gap-2">
+                                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            {redeemError}
+                                        </div>
+                                    )}
+
+                                    <button
+                                        type="submit"
+                                        disabled={redeemStatus === 'loading' || !redeemCode}
+                                        className="w-full py-4 bg-brand-primary text-white rounded-xl font-bold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-md flex items-center justify-center gap-2"
+                                    >
+                                        {redeemStatus === 'loading' ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                                                Verificando...
+                                            </>
+                                        ) : 'Canjear Puntos'}
+                                    </button>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

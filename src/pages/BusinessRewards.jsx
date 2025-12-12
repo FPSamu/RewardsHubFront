@@ -596,35 +596,35 @@ const BusinessRewards = () => {
         });
     }
 
-    async function handleCreatePointsSystem(e) {
-        e.preventDefault();
-        setCreating(true);
-        setCreateError(null);
+    // async function handleCreatePointsSystem(e) {
+    //     e.preventDefault();
+    //     setCreating(true);
+    //     setCreateError(null);
 
-        try {
-            const payload = {
-                name: 'Sistema de Puntos',
-                description: 'Sistema de acumulación de puntos',
-                pointsConversion: {
-                    amount: parseFloat(pointsSystemForm.amount),
-                    currency: pointsSystemForm.currency,
-                    points: parseInt(pointsSystemForm.points)
-                }
-            };
+    //     try {
+    //         const payload = {
+    //             name: 'Sistema de Puntos',
+    //             description: 'Sistema de acumulación de puntos',
+    //             pointsConversion: {
+    //                 amount: parseFloat(pointsSystemForm.amount),
+    //                 currency: pointsSystemForm.currency,
+    //                 points: parseInt(pointsSystemForm.points)
+    //             }
+    //         };
 
-            await systemService.createPointsSystem(payload);
-            await fetchData();
+    //         await systemService.createPointsSystem(payload);
+    //         await fetchData();
 
-            setShowPointsSystemModal(false);
-            setPointsSystemForm({ amount: '', currency: 'MXN', points: '' });
-            setCreateError(null);
-        } catch (err) {
-            console.error('Error creating points system:', err);
-            setCreateError(err.message || 'Error al configurar el sistema de puntos');
-        } finally {
-            setCreating(false);
-        }
-    }
+    //         setShowPointsSystemModal(false);
+    //         setPointsSystemForm({ amount: '', currency: 'MXN', points: '' });
+    //         setCreateError(null);
+    //     } catch (err) {
+    //         console.error('Error creating points system:', err);
+    //         setCreateError(err.message || 'Error al configurar el sistema de puntos');
+    //     } finally {
+    //         setCreating(false);
+    //     }
+    // }
 
     async function handleCreateReward(e) {
         e.preventDefault();

@@ -5,6 +5,7 @@ import businessService from '../services/businessService';
 import userPointsService from '../services/userPointsService';
 import systemService from '../services/systemService';
 import rewardService from '../services/rewardService';
+import deliveryService from '../services/deliveryService';
 
 const BusinessScan = () => {
     const navigate = useNavigate();
@@ -23,6 +24,8 @@ const BusinessScan = () => {
     const [scannedUserId, setScannedUserId] = useState(null);
     const [redeemingReward, setRedeemingReward] = useState(null); // Reward being redeemed
     const [showRedeemModal, setShowRedeemModal] = useState(false);
+    const [deliveryCodeData, setDeliveryCodeData] = useState(null);
+
     const scannerRef = useRef(null);
     const qrReaderRef = useRef(null);
 
@@ -239,6 +242,78 @@ const BusinessScan = () => {
         };
     }, [step, processTransaction]);
 
+    const handleGenerateDeliveryCode = async () => {
+        if (!purchaseAmount) {
+            setError('Por favor ingresa el monto de la compra');
+            return;
+        }
+
+        setStep('processing');
+        setError(null);
+
+        try {
+            const data = await deliveryService.generateCode(parseFloat(purchaseAmount));
+            setDeliveryCodeData(data);
+            setStep('delivery-success'); // Vamos al nuevo paso de éxito
+        } catch (err) {
+            console.error('Error generating code:', err);
+            setError(err.message || 'Error al generar código');
+            setStep('error');
+        }
+    };
+
+    const handleStartAction = () => {
+        // Lógica unificada para el botón principal
+        
+        // 1. Caso Delivery (Generar código)
+        if (rewardType === 'delivery') {
+            handleGenerateDeliveryCode();
+            return;
+        }
+
+        // 2. Casos de Escaneo (Validaciones)
+        if (rewardType === 'redeem') {
+            setError(null);
+            setStep('scanning');
+            return;
+        }
+
+        if (rewardType === 'points' || rewardType === 'both') {
+            if (!rewardSystems.points) {
+                setError('No hay un sistema de puntos activo');
+                return;
+            }
+            if (!purchaseAmount) {
+                setError('Por favor ingresa el monto de la compra');
+                return;
+            }
+        }
+
+        if (rewardType === 'stamps' || rewardType === 'both') {
+            if (rewardSystems.stamps.length === 0) {
+                setError('No hay sistemas de sellos activos');
+                return;
+            }
+            if (!selectedStampSystem) {
+                setError('Por favor selecciona un sistema de sellos');
+                return;
+            }
+            if (!stampQuantity) {
+                setError('Por favor ingresa la cantidad de sellos');
+                return;
+            }
+            const selectedSystem = rewardSystems.stamps.find(s => s.id === selectedStampSystem);
+            if (selectedSystem?.productType === 'specific' && !productIdentifier) {
+                setError('Por favor ingresa el identificador del producto');
+                return;
+            }
+        }
+
+        setError(null);
+        setStep('scanning');
+    };
+
+
     const handleStartScan = () => {
         // If redeem only mode, skip validation and go straight to scanning
         if (rewardType === 'redeem') {
@@ -286,15 +361,14 @@ const BusinessScan = () => {
         setStep('scanning');
     };
 
-    const handleContinueTransaction = async () => {
-        if (scannedUserId) {
-            await processTransaction(scannedUserId);
-        }
+    const handleContinueTransaction = async () => { 
+        if (scannedUserId) 
+            await processTransaction(scannedUserId); 
     };
 
-    const handleRedeemClick = (reward) => {
-        setRedeemingReward(reward);
-        setShowRedeemModal(true);
+    const handleRedeemClick = (reward) => { 
+        setRedeemingReward(reward); 
+        setShowRedeemModal(true); 
     };
 
     const handleConfirmRedeem = async () => {
@@ -335,6 +409,7 @@ const BusinessScan = () => {
             // Call API to subtract points/stamps
             await userPointsService.subtractPoints(requestData);
 
+            setShowRedeemModal(false);
             setStep('success');
             setError(null);
             setRedeemingReward(null);
@@ -346,9 +421,9 @@ const BusinessScan = () => {
         }
     };
 
-    const handleCancelRedeem = () => {
-        setShowRedeemModal(false);
-        setRedeemingReward(null);
+    const handleCancelRedeem = () => { 
+        setShowRedeemModal(false); 
+        setRedeemingReward(null); 
     };
 
     const handleReset = () => {
@@ -361,13 +436,22 @@ const BusinessScan = () => {
         setUserPoints(null);
         setAvailableRewards([]);
         setScannedUserId(null);
+        setDeliveryCodeData(null); 
 
         // Reset to default stamp system if only one exists
         if (rewardSystems.stamps.length === 1) {
             setSelectedStampSystem(rewardSystems.stamps[0].id);
         }
-    }; const handleGoBack = () => {
+    }; 
+    
+    const handleGoBack = () => {
         navigate('/business/dashboard');
+    };
+
+    const handleCopyCode = () => {
+        if (deliveryCodeData?.code) {
+            navigator.clipboard.writeText(deliveryCodeData.code);
+        }
     };
 
     return (
@@ -381,11 +465,13 @@ const BusinessScan = () => {
                         className="h-10 w-auto object-contain"
                     />
                     <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
-                        Escanear Código QR
+                        {rewardType === 'delivery' ? 'Generar Código Delivery' : 'Escanear Código QR'}
                     </h2>
                 </div>
                 <p className="text-gray-600 text-base">
-                    Registra una compra y otorga puntos/sellos a tus clientes
+                    {rewardType === 'delivery' 
+                        ? 'Genera un código único para enviar en pedidos a domicilio' 
+                        : 'Registra una compra y otorga puntos/sellos a tus clientes'}
                 </p>
             </div>
 
@@ -399,9 +485,7 @@ const BusinessScan = () => {
 
                         {/* Reward Type Selection */}
                         <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-3">
-                                Tipo de Transacción
-                            </label>
+                            <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de Transacción</label>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <button
                                     onClick={() => setRewardType('points')}
@@ -518,8 +602,46 @@ const BusinessScan = () => {
                                         </span>
                                     </div>
                                 </button>
+
+                                <button 
+                                    onClick={() => setRewardType('delivery')} 
+                                    className={`p-4 rounded-lg border-2 transition-all duration-180 flex flex-col items-center ${rewardType === 'delivery'
+                                    ? 'border-blue-500 bg-blue-50' 
+                                    : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <svg 
+                                        className={`w-8 h-8 mb-2 ${rewardType === 'delivery' ? 'text-blue-600' : 'text-gray-400'}`} 
+                                        fill="none" stroke="currentColor" 
+                                        viewBox="0 0 24 24" 
+                                        strokeWidth={1.75}><path 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                                    </svg>
+                                    <span 
+                                        className={`text-sm font-semibold ${rewardType === 'delivery' 
+                                        ? 'text-blue-600' 
+                                        : 'text-gray-600'}`}
+                                        >
+                                            Delivery
+                                        </span>
+                                </button>
                             </div>
                         </div>
+                        
+                        {/* Delivery Message */}
+                        {rewardType === 'delivery' && (
+                            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="flex items-start">
+                                    <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    <div>
+                                        <p className="text-sm font-semibold text-blue-800 mb-1">Modo Delivery</p>
+                                        <p className="text-xs text-blue-700">Genera un código que puedes escribir en el ticket. El cliente podrá canjear los puntos desde su aplicación.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Redeem Only Message */}
                         {rewardType === 'redeem' && (
@@ -538,26 +660,13 @@ const BusinessScan = () => {
                             </div>
                         )}
 
-                        {/* Purchase Amount */}
-                        {(rewardType === 'points' || rewardType === 'both') && (
+                        {/* Purchase Amount Input (Used for Points, Both, and Delivery) */}
+                        {(rewardType === 'points' || rewardType === 'both' || rewardType === 'delivery') && (
                             <div className="mb-6">
-                                <label htmlFor="purchaseAmount" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Monto de la Compra (MXN)
-                                </label>
+                                <label htmlFor="purchaseAmount" className="block text-sm font-medium text-gray-700 mb-2">Monto de la Compra (MXN)</label>
                                 <div className="relative">
-                                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold">
-                                        $
-                                    </span>
-                                    <input
-                                        id="purchaseAmount"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={purchaseAmount}
-                                        onChange={(e) => setPurchaseAmount(e.target.value)}
-                                        placeholder="0.00"
-                                        className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
-                                    />
+                                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold">$</span>
+                                    <input id="purchaseAmount" type="number" step="0.01" min="0" value={purchaseAmount} onChange={(e) => setPurchaseAmount(e.target.value)} placeholder="0.00" className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg" />
                                 </div>
                                 {purchaseAmount && rewardSystems.points && rewardSystems.points.pointsConversion && (() => {
                                     const amount = parseFloat(purchaseAmount);
@@ -565,15 +674,10 @@ const BusinessScan = () => {
                                     const pointsToEarn = Math.floor(amount * conversionRate);
                                     return (
                                         <p className="mt-2 text-sm text-brand-primary font-semibold">
-                                            Se otorgarán {pointsToEarn} puntos (${amount.toFixed(2)} × {conversionRate.toFixed(2)})
+                                            Se otorgarán {pointsToEarn} puntos
                                         </p>
                                     );
                                 })()}
-                                {!rewardSystems.points && (
-                                    <p className="mt-2 text-sm text-yellow-600 font-semibold">
-                                        No hay un sistema de puntos activo
-                                    </p>
-                                )}
                             </div>
                         )}
 
@@ -683,11 +787,66 @@ const BusinessScan = () => {
 
                         {/* Start Scan Button */}
                         <button
-                            onClick={handleStartScan}
-                            className="w-full px-6 py-4 bg-brand-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card text-lg"
+                            onClick={handleStartAction} // Cambiado a la función unificada
+                            className={`w-full px-6 py-4 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card text-lg ${
+                                rewardType === 'delivery' ? 'bg-blue-600' : 'bg-brand-primary'
+                            }`}
                         >
-                            Escanear Código QR del Cliente
+                            {rewardType === 'delivery' 
+                                ? 'Generar Código de Puntos' 
+                                : rewardType === 'redeem' 
+                                    ? 'Escanear para Canjear' 
+                                    : 'Escanear Código QR'}
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Delivery Success Step (New View) */}
+            {step === 'delivery-success' && deliveryCodeData && (
+                <div className="bg-white rounded-xl shadow-card border-2 border-blue-500 overflow-hidden animate-fade-in max-w-2xl mx-auto">
+                    <div className="bg-blue-600 p-4 text-white text-center">
+                        <h3 className="font-bold text-lg">Código Generado Exitosamente</h3>
+                        <p className="text-blue-100 text-sm">Anota este código en el ticket de compra</p>
+                    </div>
+                    
+                    <div className="p-8 text-center space-y-6">
+                        <div className="bg-gray-100 p-6 rounded-2xl border-2 border-dashed border-gray-300 inline-block">
+                            <p className="text-5xl md:text-6xl font-black text-gray-800 tracking-widest font-mono select-all">
+                                {deliveryCodeData.code}
+                            </p>
+                        </div>
+
+                        <div className="flex justify-center gap-8 border-t border-b border-gray-100 py-4">
+                            <div>
+                                <p className="text-sm text-gray-500 uppercase font-semibold">Valor</p>
+                                <p className="text-2xl font-bold text-accent-success">+{deliveryCodeData.points} pts</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500 uppercase font-semibold">Monto</p>
+                                <p className="text-2xl font-bold text-gray-800">${deliveryCodeData.amount}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <button
+                                onClick={handleCopyCode}
+                                className="w-full py-3 bg-blue-50 text-blue-700 rounded-lg font-semibold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                Copiar al portapapeles
+                            </button>
+                            <button
+                                onClick={handleReset}
+                                className="w-full py-3 bg-gray-800 text-white rounded-lg font-semibold hover:bg-gray-900 transition-colors"
+                            >
+                                Generar Otro Pedido
+                            </button>
+                        </div>
+                        
+                        <p className="text-xs text-gray-400">
+                            Este código expira en 7 días. El cliente debe canjearlo en su app.
+                        </p>
                     </div>
                 </div>
             )}
