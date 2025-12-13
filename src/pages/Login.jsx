@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
+import SEO from '../components/SEO';
 
 function Login() {
-  const [rememberMe, setRememberMe] = useState(false); 
+  const [rememberMe, setRememberMe] = useState(false);
   // const [email, setEmail] = useState('');
   // const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -56,6 +57,13 @@ function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA] py-12 px-4 sm:px-6 lg:px-8">
+      {/* SEO Meta Tags */}
+      <SEO
+        title="Iniciar Sesión - RewardsHub"
+        description="Inicia sesión en RewardsHub para acceder a tu cuenta de cliente o negocio. Gestiona tus puntos, recompensas y programa de fidelización."
+        keywords="login, iniciar sesión, rewardsHub, acceso, cuenta, cliente, negocio"
+        type="website"
+      />
       <div className="max-w-md w-full">
         {/* Card principal */}
         <div className="bg-white rounded-3xl p-8 shadow-[0_10px_24px_-10px_rgba(2,6,23,0.15)] border border-[#E9ECEF]">
@@ -171,7 +179,7 @@ function Login() {
                 <input
                   id="remember-me"
                   name="remember-me"
-                  type="checkbox" 
+                  type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 text-[#FFB733] focus:ring-[#FFE8C6] border-[#CED4DA] rounded"

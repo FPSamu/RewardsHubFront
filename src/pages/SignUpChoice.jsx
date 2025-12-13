@@ -1,8 +1,16 @@
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 
 function SignUpChoice() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA] py-12 px-4 sm:px-6 lg:px-8">
+            {/* SEO Meta Tags */}
+            <SEO
+                title="Registro - Elige tu Tipo de Cuenta | RewardsHub"
+                description="Únete a RewardsHub como cliente para acumular puntos y canjear recompensas, o como negocio para fidelizar a tus clientes con un sistema de recompensas personalizado."
+                keywords="registro, sign up, crear cuenta, cliente, negocio, rewardsHub, fidelización"
+                type="website"
+            />
             <div className="max-w-5xl w-full">
                 <div className="text-center mb-12">
                     <div className="flex justify-center mb-6">

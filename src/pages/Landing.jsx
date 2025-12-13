@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
+import SEO from '../components/SEO';
+
 
 function Landing() {
     const navigate = useNavigate();
@@ -24,6 +26,54 @@ function Landing() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-white via-amber-50 to-orange-100 overflow-hidden">
+            {/* SEO Meta Tags */}
+            <SEO
+                title="RewardsHub - Plataforma de Recompensas y Fidelización para Negocios"
+                description="Conecta con tus clientes y fideliza con RewardsHub. Sistema de puntos y recompensas diseñado para pequeños y grandes negocios. Más de 500 negocios y 10K clientes conectados."
+                keywords="recompensas, fidelización, puntos, lealtad, negocios, clientes, QR, programa de puntos, descuentos, premios, loyalty program, programa de lealtad"
+                image="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png"
+                type="website"
+                structuredData={{
+                    "@context": "https://schema.org",
+                    "@graph": [
+                        {
+                            "@type": "Organization",
+                            "name": "RewardsHub",
+                            "url": "https://rewards-hub-opal.vercel.app/",
+                            "logo": "https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png",
+                            "description": "Plataforma universal para programas de lealtad y fidelización entre negocios y clientes",
+                            "foundingDate": "2024",
+                            "contactPoint": {
+                                "@type": "ContactPoint",
+                                "contactType": "Customer Service",
+                                "availableLanguage": ["Spanish", "English"]
+                            }
+                        },
+                        {
+                            "@type": "WebSite",
+                            "name": "RewardsHub",
+                            "url": "https://rewards-hub-opal.vercel.app/",
+                            "potentialAction": {
+                                "@type": "SearchAction",
+                                "target": "https://rewards-hub-opal.vercel.app/client/dashboard/map?search={search_term_string}",
+                                "query-input": "required name=search_term_string"
+                            }
+                        },
+                        {
+                            "@type": "BreadcrumbList",
+                            "itemListElement": [
+                                {
+                                    "@type": "ListItem",
+                                    "position": 1,
+                                    "name": "Inicio",
+                                    "item": "https://rewards-hub-opal.vercel.app/"
+                                }
+                            ]
+                        }
+                    ]
+                }}
+            />
+
             {/* Elementos decorativos animados */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute -top-40 -right-40 w-96 h-96 bg-brand-primary opacity-10 rounded-full blur-3xl animate-blob"></div>

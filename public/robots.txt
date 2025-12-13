@@ -1,0 +1,39 @@
+# robots.txt para RewardsHub
+# https://rewards-hub-opal.vercel.app/robots.txt
+
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /signup
+Allow: /signup/client
+Allow: /signup/business
+
+# Bloquear rutas protegidas de clientes
+Disallow: /client/
+Disallow: /client/dashboard
+Disallow: /client/dashboard/points
+Disallow: /client/dashboard/map
+
+# Bloquear rutas protegidas de negocios
+Disallow: /business/
+Disallow: /business/dashboard
+Disallow: /business/dashboard/home
+Disallow: /business/dashboard/clients
+Disallow: /business/dashboard/rewards
+Disallow: /business/dashboard/scan
+Disallow: /business/location-setup
+Disallow: /business/subscription
+
+# Bloquear rutas de autenticación sensibles
+Disallow: /forgot-password
+Disallow: /user/reset-password
+Disallow: /business/reset-password
+Disallow: /user/verify-email
+Disallow: /business/verify-email
+Disallow: /verify-pending
+
+# Sitemap
+Sitemap: https://rewards-hub-opal.vercel.app/sitemap.xml
+
+# Crawl-delay (opcional, para ser amigable con los servidores)
+Crawl-delay: 1

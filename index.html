@@ -2,18 +2,89 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RewardsHub - Plataforma de Recompensas</title>
+    
+    <!-- Primary Meta Tags -->
+    <title>RewardsHub - Plataforma de Recompensas y Fidelización</title>
+    <meta name="title" content="RewardsHub - Plataforma de Recompensas y Fidelización" />
+    <meta name="description" content="RewardsHub es la plataforma universal para programas de lealtad entre negocios y clientes. Acumula puntos, canjea recompensas y descubre negocios cerca de ti." />
+    <meta name="keywords" content="recompensas, fidelización, puntos, lealtad, negocios, clientes, QR, programa de puntos, descuentos, premios, loyalty program" />
+    <meta name="author" content="RewardsHub" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="Spanish" />
+    <meta name="revisit-after" content="7 days" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#FFB733" />
+    <meta name="msapplication-TileColor" content="#FFB733" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" />
+    <link rel="apple-touch-icon" href="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://rewards-hub-opal.vercel.app/" />
+    <meta property="og:title" content="RewardsHub - Plataforma de Recompensas y Fidelización" />
+    <meta property="og:description" content="RewardsHub es la plataforma universal para programas de lealtad entre negocios y clientes. Acumula puntos, canjea recompensas y descubre negocios cerca de ti." />
+    <meta property="og:image" content="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" />
+    <meta property="og:site_name" content="RewardsHub" />
+    <meta property="og:locale" content="es_MX" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://rewards-hub-opal.vercel.app/" />
+    <meta name="twitter:title" content="RewardsHub - Plataforma de Recompensas y Fidelización" />
+    <meta name="twitter:description" content="RewardsHub es la plataforma universal para programas de lealtad entre negocios y clientes. Acumula puntos, canjea recompensas y descubre negocios cerca de ti." />
+    <meta name="twitter:image" content="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://rewards-hub-opal.vercel.app/" />
+    
+    <!-- Preconnect to external resources for performance -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+    <link rel="preconnect" href="https://rewards-hub-app.s3.us-east-2.amazonaws.com" />
+    <link rel="dns-prefetch" href="https://rewardshub-vvaj.onrender.com" />
+    
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-R46MPPM6VW"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-R46MPPM6VW');
+    </script>
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "RewardsHub",
+      "description": "Plataforma universal para programas de lealtad y fidelización entre negocios y clientes",
+      "url": "https://rewards-hub-opal.vercel.app/",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "MXN"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "500"
+      },
+      "provider": {
+        "@type": "Organization",
+        "name": "RewardsHub",
+        "url": "https://rewards-hub-opal.vercel.app/",
+        "logo": "https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png",
+        "sameAs": []
+      }
+    }
+    </script>
   </head>
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-R46MPPM6VW"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-R46MPPM6VW');
-  </script>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
