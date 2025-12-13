@@ -14,12 +14,11 @@ const api = axios.create({
 // Interceptor para agregar el token a las peticiones
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    
     if (token) {
-      // Limpiar el token de comillas si las tiene
-      const cleanToken = token.replace(/^["']|["']$/g, "");
-      config.headers.Authorization = `Bearer ${cleanToken}`;
-      console.log("Token siendo enviado:", cleanToken.substring(0, 20) + "..."); // TODO REMOVE
+      config.headers.Authorization = `Bearer ${token}`;
+      // console.log("Token siendo enviado:", token.substring(0, 20) + "..."); // TODO REMOVE
     } else {
       console.warn("No se encontró token en localStorage");
     }

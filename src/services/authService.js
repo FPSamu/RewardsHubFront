@@ -11,19 +11,52 @@ export const authService = {
     }
   },
 
-  loginClient: async (email, password) => {
+  // Helper interno para guardar sesión
+  _saveSession: (token, user, userType, refreshToken, rememberMe) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    const otherStorage = rememberMe ? sessionStorage : localStorage;
+
+    otherStorage.removeItem("token");
+    otherStorage.removeItem("user");
+    otherStorage.removeItem("userType");
+    otherStorage.removeItem("refreshToken");
+
+    if (token) {
+      const cleanToken = String(token).replace(/^["']|["']$/g, "");
+      storage.setItem("token", cleanToken);
+    }
+    if (user) storage.setItem("user", JSON.stringify(user));
+    if (userType) storage.setItem("userType", userType);
+    if (refreshToken) storage.setItem("refreshToken", refreshToken);
+  },
+
+  getToken: () => {
+    return localStorage.getItem("token") || sessionStorage.getItem("token");
+  },
+
+  getCurrentUser: () => {
+    const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
+    if (!userStr || userStr === "undefined" || userStr === "null") return null;
+    try {
+      return JSON.parse(userStr);
+    } catch (error) {
+      return null;
+    }
+  },
+
+  loginClient: async (email, password, rememberMe = false) => {
     try {
       const response = await api.post("/auth/login", { email, password });
-      console.log("Respuesta del login:", response.data);
       const token = response.data.accessToken || response.data.token;
+      
       if (token) {
-        const cleanToken = String(token).replace(/^["']|["']$/g, "");
-        localStorage.setItem("token", cleanToken);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-        localStorage.setItem("userType", "client");
-        if (response.data.refreshToken) {
-          localStorage.setItem("refreshToken", response.data.refreshToken);
-        }
+        authService._saveSession(
+          token, 
+          response.data.user, 
+          "client", 
+          response.data.refreshToken, 
+          rememberMe
+        );
       }
       return response.data;
     } catch (error) {
@@ -32,24 +65,20 @@ export const authService = {
     }
   },
 
-  loginBusiness: async (email, password) => {
+  loginBusiness: async (email, password, rememberMe = false) => {
     try {
       const response = await api.post("/business/login", { email, password });
-      console.log("Respuesta del login business:", response.data);
       const token = response.data.accessToken || response.data.token;
+      
       if (token) {
-        const cleanToken = String(token).replace(/^["']|["']$/g, "");
-        localStorage.setItem("token", cleanToken);
-
         const accountData = response.data.user || response.data.business;
-
-        if (accountData) {
-            localStorage.setItem("user", JSON.stringify(accountData));
-        } else {
-            console.warn("Advertencia: No se encontraron datos de cuenta en la respuesta");
-        }
-
-        localStorage.setItem("userType", "business");
+        authService._saveSession(
+          token, 
+          accountData, 
+          "business", 
+          null, 
+          rememberMe
+        );
       }
       return response.data;
     } catch (error) {
@@ -58,11 +87,30 @@ export const authService = {
     }
   },
 
-  login: async (email, password, userType = "client") => {
-    if (userType === "business") {
-      return authService.loginBusiness(email, password);
+  login: async (email, password, rememberMe = false, userType = "client") => {
+    const endpoint = userType === "business" ? "/business/login" : "/auth/login";
+    
+    try {
+      const response = await api.post(endpoint, { email, password });
+      const token = response.data.accessToken || response.data.token;
+      
+      if (token) {
+        const userData = userType === "business" 
+          ? (response.data.user || response.data.business) 
+          : response.data.user;
+
+        authService._saveSession(
+          token, 
+          userData, 
+          userType, 
+          response.data.refreshToken, 
+          rememberMe 
+        );
+      }
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
     }
-    return authService.loginClient(email, password);
   },
 
   signUpClient: async (userData) => {
@@ -70,10 +118,8 @@ export const authService = {
       const response = await api.post("/auth/register", userData);
       const token = response.data.accessToken || response.data.token;
       if (token) {
-        const cleanToken = String(token).replace(/^["']|["']$/g, "");
-        localStorage.setItem("token", cleanToken);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-        localStorage.setItem("userType", "client");
+        // Registro por defecto siempre usa localStorage (true)
+        authService._saveSession(token, response.data.user, "client", null, true);
       }
       return response.data;
     } catch (error) {
@@ -87,16 +133,8 @@ export const authService = {
       const response = await api.post("/business/register", userData);
       const token = response.data.accessToken || response.data.token;
       if (token) {
-        const cleanToken = String(token).replace(/^["']|["']$/g, "");
-        localStorage.setItem("token", cleanToken);
-
         const accountData = response.data.user || response.data.business;
-
-        if (accountData) {
-            localStorage.setItem("user", JSON.stringify(accountData));
-        }
-
-        localStorage.setItem("userType", "business");
+        authService._saveSession(token, accountData, "business", null, true);
       }
       return response.data;
     } catch (error) {
@@ -131,7 +169,7 @@ export const authService = {
   },
 
   resendVerification: async () => {
-    const userType = localStorage.getItem("userType");
+    const userType = authService.getUserType();
     if (userType === "business") {
       return authService.resendVerificationBusiness();
     }
@@ -143,7 +181,9 @@ export const authService = {
       const response = await api.post("/auth/refresh", { refreshToken });
       const token = response.data.accessToken || response.data.token;
       if (token) {
-        localStorage.setItem("token", token);
+        // Actualizar donde exista
+        const storage = localStorage.getItem("token") ? localStorage : sessionStorage;
+        storage.setItem("token", token);
       }
       return response.data;
     } catch (error) {
@@ -156,7 +196,8 @@ export const authService = {
       const response = await api.post("/business/refresh", { refreshToken });
       const token = response.data.accessToken || response.data.token;
       if (token) {
-        localStorage.setItem("token", token);
+        const storage = localStorage.getItem("token") ? localStorage : sessionStorage;
+        storage.setItem("token", token);
       }
       return response.data;
     } catch (error) {
@@ -185,56 +226,46 @@ export const authService = {
   },
 
   logout: async () => {
-    const userType = localStorage.getItem("userType");
-    if (userType === "business") {
-      return authService.logoutBusiness();
+    const userType = localStorage.getItem("userType") || sessionStorage.getItem("userType");
+    const endpoint = userType === "business" ? "/business/logout" : "/auth/logout";
+    
+    try {
+      await api.post(endpoint);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      localStorage.clear();
+      sessionStorage.clear();
     }
-    return authService.logoutClient();
   },
 
   clearStorage: () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("userType");
-    localStorage.removeItem("refreshToken");
-  },
-
-  getCurrentUser: () => {
-    const userStr = localStorage.getItem("user");
-    if (!userStr || userStr === "undefined" || userStr === "null") {
-      return null;
-    }
-    try {
-      return JSON.parse(userStr);
-    } catch (error) {
-      console.error("Error parsing user data:", error);
-      return null;
-    }
+    const keys = ["token", "user", "userType", "refreshToken"];
+    keys.forEach(key => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+    });
   },
 
   getUserType: () => {
-    const userType = localStorage.getItem("userType");
+    const userType = localStorage.getItem("userType") || sessionStorage.getItem("userType");
     if (!userType || userType === "undefined" || userType === "null") {
       return null;
     }
     return userType;
   },
 
-  getToken: () => {
-    return localStorage.getItem("token");
-  },
-
   isAuthenticated: () => {
-    return !!localStorage.getItem("token");
+    return !!(localStorage.getItem("token") || sessionStorage.getItem("token"));
   },
 
   getMeClient: async () => {
     try {
       const response = await api.get("/auth/me");
       if (response.data) {
-        localStorage.setItem("user", JSON.stringify(response.data));
+        const storage = sessionStorage.getItem("token") ? sessionStorage : localStorage;
+        storage.setItem("user", JSON.stringify(response.data));
       }
-      
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -244,11 +275,10 @@ export const authService = {
   getMeBusiness: async () => {
     try {
       const response = await api.get("/business/me");
-
       const data = response.data.business || response.data;
-      
       if (data) {
-        localStorage.setItem("user", JSON.stringify(data));
+        const storage = sessionStorage.getItem("token") ? sessionStorage : localStorage;
+        storage.setItem("user", JSON.stringify(data));
       }
       return data;
     } catch (error) {

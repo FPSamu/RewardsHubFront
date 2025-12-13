@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 
 function Login() {
+  const [rememberMe, setRememberMe] = useState(false); 
+  // const [email, setEmail] = useState('');
+  // const [password, setPassword] = useState('');
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
@@ -27,12 +30,12 @@ function Login() {
     setError('');
 
     try {
-      // Usa el método específico según el tipo de usuario
+
       let response;
       if (formData.userType === 'business') {
-        response = await authService.loginBusiness(formData.email, formData.password);
+        await authService.login(formData.email, formData.password, rememberMe, "business");
       } else {
-        response = await authService.loginClient(formData.email, formData.password);
+        await authService.login(formData.email, formData.password, rememberMe, "client");
       }
 
       console.log('Login exitoso:', response);
@@ -168,7 +171,9 @@ function Login() {
                 <input
                   id="remember-me"
                   name="remember-me"
-                  type="checkbox"
+                  type="checkbox" 
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 text-[#FFB733] focus:ring-[#FFE8C6] border-[#CED4DA] rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-[14px] leading-5 font-medium text-[#495057]">
