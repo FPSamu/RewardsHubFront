@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
+import SEO from '../components/SEO';
 
 function SignUpClient() {
     const navigate = useNavigate();
@@ -129,6 +130,48 @@ function SignUpClient() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA] py-12 px-4 sm:px-6 lg:px-8">
+            {/* SEO Meta Tags */}
+            <SEO
+                title="Registro de Cliente - RewardsHub | Acumula Puntos y Gana Recompensas"
+                description="Crea tu cuenta de cliente en RewardsHub. Genera tu código QR único, acumula puntos en tus negocios favoritos y canjea increíbles recompensas. ¡Regístrate gratis!"
+                keywords="registro cliente, crear cuenta, acumular puntos, recompensas, código QR, programa de lealtad, fidelización"
+                type="website"
+                structuredData={{
+                    "@context": "https://schema.org",
+                    "@type": "WebPage",
+                    "name": "Registro de Cliente - RewardsHub",
+                    "description": "Crea tu cuenta de cliente en RewardsHub para acumular puntos y canjear recompensas",
+                    "url": "https://rewards-hub-opal.vercel.app/signup/client",
+                    "isPartOf": {
+                        "@type": "WebSite",
+                        "name": "RewardsHub",
+                        "url": "https://rewards-hub-opal.vercel.app/"
+                    },
+                    "breadcrumb": {
+                        "@type": "BreadcrumbList",
+                        "itemListElement": [
+                            {
+                                "@type": "ListItem",
+                                "position": 1,
+                                "name": "Inicio",
+                                "item": "https://rewards-hub-opal.vercel.app/"
+                            },
+                            {
+                                "@type": "ListItem",
+                                "position": 2,
+                                "name": "Registro",
+                                "item": "https://rewards-hub-opal.vercel.app/signup"
+                            },
+                            {
+                                "@type": "ListItem",
+                                "position": 3,
+                                "name": "Cliente",
+                                "item": "https://rewards-hub-opal.vercel.app/signup/client"
+                            }
+                        ]
+                    }
+                }}
+            />
             <div className="max-w-md w-full">
                 {/* Card principal */}
                 <div className="bg-white rounded-3xl p-8 shadow-[0_10px_24px_-10px_rgba(2,6,23,0.15)] border border-[#E9ECEF]">

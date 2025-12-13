@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import businessService from '../services/businessService';
+import SEO from '../components/SEO';
 
 function SignUpBusiness() {
     const navigate = useNavigate();
@@ -153,6 +154,57 @@ function SignUpBusiness() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA] py-12 px-4 sm:px-6 lg:px-8">
+            {/* SEO Meta Tags */}
+            <SEO
+                title="Registro de Negocio - RewardsHub | Fideliza a tus Clientes"
+                description="Registra tu negocio en RewardsHub y crea un programa de fidelización personalizado. Escanea códigos QR, otorga puntos y fideliza a tus clientes. ¡Regístrate gratis!"
+                keywords="registro negocio, programa de fidelización, loyalty program, recompensas para negocios, escáner QR, puntos de lealtad"
+                type="website"
+                structuredData={{
+                    "@context": "https://schema.org",
+                    "@type": "WebPage",
+                    "name": "Registro de Negocio - RewardsHub",
+                    "description": "Registra tu negocio en RewardsHub para crear un programa de fidelización personalizado",
+                    "url": "https://rewards-hub-opal.vercel.app/signup/business",
+                    "isPartOf": {
+                        "@type": "WebSite",
+                        "name": "RewardsHub",
+                        "url": "https://rewards-hub-opal.vercel.app/"
+                    },
+                    "breadcrumb": {
+                        "@type": "BreadcrumbList",
+                        "itemListElement": [
+                            {
+                                "@type": "ListItem",
+                                "position": 1,
+                                "name": "Inicio",
+                                "item": "https://rewards-hub-opal.vercel.app/"
+                            },
+                            {
+                                "@type": "ListItem",
+                                "position": 2,
+                                "name": "Registro",
+                                "item": "https://rewards-hub-opal.vercel.app/signup"
+                            },
+                            {
+                                "@type": "ListItem",
+                                "position": 3,
+                                "name": "Negocio",
+                                "item": "https://rewards-hub-opal.vercel.app/signup/business"
+                            }
+                        ]
+                    },
+                    "mainEntity": {
+                        "@type": "Service",
+                        "name": "Programa de Fidelización para Negocios",
+                        "description": "Sistema de puntos y recompensas personalizado para tu negocio",
+                        "provider": {
+                            "@type": "Organization",
+                            "name": "RewardsHub"
+                        }
+                    }
+                }}
+            />
             <div className="max-w-md w-full">
                 {/* Card principal */}
                 <div className="bg-white rounded-3xl p-8 shadow-[0_10px_24px_-10px_rgba(2,6,23,0.15)] border border-[#E9ECEF]">

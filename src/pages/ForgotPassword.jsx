@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -16,7 +17,7 @@ const ForgotPassword = () => {
       const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       // Nota el prefijo /auth que es crucial
       await axios.post(`${backendUrl}/auth/forgot-password`, { email });
-      
+
       setStatus('success');
       setMessage('Si existe una cuenta con ese email, recibirás un enlace para restablecer tu contraseña.');
     } catch (error) {
@@ -28,6 +29,14 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      {/* SEO Meta Tags */}
+      <SEO
+        title="Recuperar Contraseña - RewardsHub"
+        description="¿Olvidaste tu contraseña de RewardsHub? Recupera el acceso a tu cuenta ingresando tu correo electrónico. Te enviaremos instrucciones para restablecer tu contraseña."
+        keywords="recuperar contraseña, olvidar contraseña, restablecer contraseña, rewardsHub, reset password"
+        type="website"
+      />
+
       <div className="max-w-md w-full bg-surface shadow-card rounded-xl p-8">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900">Recuperar Contraseña</h2>
@@ -42,7 +51,7 @@ const ForgotPassword = () => {
               </svg>
             </div>
             <p className="text-gray-800 font-medium mb-6">{message}</p>
-            <Link 
+            <Link
               to="/login"
               className="text-brand-primary font-semibold hover:underline"
             >

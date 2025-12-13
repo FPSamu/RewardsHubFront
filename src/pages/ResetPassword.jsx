@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -14,7 +15,7 @@ const ResetPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       setStatus('error');
       setMessage('Las contraseñas no coinciden.');
@@ -22,9 +23,9 @@ const ResetPassword = () => {
     }
 
     if (!token) {
-        setStatus('error');
-        setMessage('Token inválido o faltante.');
-        return;
+      setStatus('error');
+      setMessage('Token inválido o faltante.');
+      return;
     }
 
     setStatus('loading');
@@ -33,11 +34,11 @@ const ResetPassword = () => {
     try {
       const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       // Llamada al backend con el prefijo /auth
-      await axios.post(`${backendUrl}/auth/reset-password`, { 
-        token, 
-        password 
+      await axios.post(`${backendUrl}/auth/reset-password`, {
+        token,
+        password
       });
-      
+
       setStatus('success');
       // Redirigir al login después de 3 segundos
       setTimeout(() => navigate('/login'), 3000);
@@ -52,18 +53,31 @@ const ResetPassword = () => {
   // Si no hay token en la URL, mostrar error inmediato
   if (!token) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-            <div className="max-w-md w-full bg-white shadow-card rounded-xl p-8 text-center">
-                <h2 className="text-xl font-bold text-accent-danger mb-4">Enlace inválido</h2>
-                <p className="text-gray-600 mb-6">Falta el token de seguridad en el enlace.</p>
-                <Link to="/login" className="text-brand-primary font-bold">Ir al Login</Link>
-            </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <SEO
+          title="Enlace Inválido - RewardsHub"
+          description="El enlace para restablecer contraseña es inválido o ha expirado."
+          type="website"
+        />
+        <div className="max-w-md w-full bg-white shadow-card rounded-xl p-8 text-center">
+          <h2 className="text-xl font-bold text-accent-danger mb-4">Enlace inválido</h2>
+          <p className="text-gray-600 mb-6">Falta el token de seguridad en el enlace.</p>
+          <Link to="/login" className="text-brand-primary font-bold">Ir al Login</Link>
         </div>
+      </div>
     );
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      {/* SEO Meta Tags */}
+      <SEO
+        title="Restablecer Contraseña - RewardsHub"
+        description="Crea una nueva contraseña segura para tu cuenta de RewardsHub. Ingresa tu nueva contraseña para recuperar el acceso a tu cuenta."
+        keywords="restablecer contraseña, nueva contraseña, cambiar contraseña, rewardsHub, reset password"
+        type="website"
+      />
+
       <div className="max-w-md w-full bg-surface shadow-card rounded-xl p-8">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900">Nueva Contraseña</h2>
@@ -72,7 +86,7 @@ const ResetPassword = () => {
 
         {status === 'success' ? (
           <div className="text-center">
-             <div className="h-16 w-16 bg-accent-success rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="h-16 w-16 bg-accent-success rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
               </svg>
