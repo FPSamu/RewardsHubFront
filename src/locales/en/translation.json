@@ -36,6 +36,7 @@
     "login": {
         "title": "Log In",
         "subtitle": "Access your RewardsHub account",
+        "accountType": "Account Type",
         "client": "Customer",
         "business": "Business",
         "button": "Log In",

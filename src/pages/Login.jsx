@@ -101,7 +101,7 @@ function Login() {
               {/* Tipo de Usuario */}
               <div>
                 <label className="block text-[14px] leading-5 font-semibold text-[#495057] mb-3">
-                  {t('login.accountType', 'Tipo de Cuenta')}
+                  {t('login.accountType')}
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button

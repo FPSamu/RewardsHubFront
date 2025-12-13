@@ -36,6 +36,7 @@
     "login": {
         "title": "Iniciar Sesión",
         "subtitle": "Ingresa a tu cuenta de RewardsHub",
+        "accountType": "Tipo de Cuenta",
         "client": "Cliente",
         "business": "Negocio",
         "button": "Iniciar Sesión",
