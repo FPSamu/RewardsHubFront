@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import authService from '../services/authService';
 import SEO from '../components/SEO';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 function Login() {
+  const { t } = useTranslation();
   const [rememberMe, setRememberMe] = useState(false);
   // const [email, setEmail] = useState('');
   // const [password, setPassword] = useState('');
@@ -57,6 +60,10 @@ function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA] py-12 px-4 sm:px-6 lg:px-8">
+      {/* Language Switcher - Esquina superior derecha */}
+      <div className="absolute top-4 right-4 z-50">
+        <LanguageSwitcher />
+      </div>
       {/* SEO Meta Tags */}
       <SEO
         title="Iniciar Sesión - RewardsHub"
@@ -79,7 +86,7 @@ function Login() {
               RewardsHub
             </h2>
             <p className="mt-3 text-center text-[14px] leading-5 font-medium text-[#6C757D]">
-              Inicia sesión en tu cuenta
+              {t('login.subtitle')}
             </p>
           </div>
 
@@ -94,7 +101,7 @@ function Login() {
               {/* Tipo de Usuario */}
               <div>
                 <label className="block text-[14px] leading-5 font-semibold text-[#495057] mb-3">
-                  Tipo de Cuenta
+                  {t('login.accountType', 'Tipo de Cuenta')}
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
@@ -105,7 +112,7 @@ function Login() {
                       : 'border-[#DEE2E6] bg-white text-[#495057] hover:border-[#ADB5BD]'
                       }`}
                   >
-                    👤 Cliente
+                    👤 {t('login.client')}
                   </button>
                   <button
                     type="button"
@@ -115,14 +122,14 @@ function Login() {
                       : 'border-[#DEE2E6] bg-white text-[#495057] hover:border-[#ADB5BD]'
                       }`}
                   >
-                    🏢 Negocio
+                    🏢 {t('login.business')}
                   </button>
                 </div>
               </div>
 
               <div>
                 <label htmlFor="email" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
-                  Correo Electrónico
+                  {t('common.email')}
                 </label>
                 <input
                   id="email"
@@ -139,7 +146,7 @@ function Login() {
 
               <div>
                 <label htmlFor="password" className="block text-[14px] leading-5 font-semibold text-[#495057] mb-2">
-                  Contraseña
+                  {t('common.password')}
                 </label>
                 <div className="relative">
                   <input
@@ -185,7 +192,7 @@ function Login() {
                   className="h-4 w-4 text-[#FFB733] focus:ring-[#FFE8C6] border-[#CED4DA] rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-[14px] leading-5 font-medium text-[#495057]">
-                  Recordarme
+                  {t('common.rememberMe')}
                 </label>
               </div>
 
@@ -194,7 +201,7 @@ function Login() {
                   to="/forgot-password"
                   className="font-semibold text-[#FFB733] hover:text-[#EAB000] transition-colors duration-180"
                 >
-                  ¿Olvidaste tu contraseña?
+                  {t('common.forgotPassword')}
                   {/* <a href="#" className="font-semibold text-[#FFB733] hover:text-[#EAB000] transition-colors duration-180">
                     ¿Olvidaste tu contraseña?
                   </a> */}
@@ -208,15 +215,15 @@ function Login() {
                 disabled={loading}
                 className="group relative w-full flex items-center justify-center h-11 px-4 border border-transparent text-[16px] leading-6 font-semibold rounded-full text-white bg-[#FFB733] hover:opacity-95 focus:outline-none focus:ring-[3px] focus:ring-[#FFE8C6] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-180 shadow-[0_10px_24px_-10px_rgba(2,6,23,0.15)]"
               >
-                {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                {loading ? t('login.loggingIn') : t('login.button')}
               </button>
             </div>
 
             <div className="text-center">
               <p className="text-[14px] leading-5 font-medium text-[#6C757D]">
-                ¿No tienes una cuenta?{' '}
+                {t('common.dontHaveAccount')}{' '}
                 <Link to="/signup" className="font-semibold text-[#FFB733] hover:text-[#EAB000] transition-colors duration-180">
-                  Regístrate aquí
+                  {t('common.signup')}
                 </Link>
               </p>
             </div>
