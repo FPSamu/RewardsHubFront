@@ -276,18 +276,6 @@ const BusinessLayout = () => {
                             >
                                 Escanear QR
                             </NavLink>
-                             {/* Added link to delivery/orders */}
-                            <NavLink
-                                to="/business/dashboard/delivery"
-                                className={({ isActive }) =>
-                                    `px-4 py-2 rounded-pill text-sm font-medium transition-all duration-180 ${isActive
-                                        ? 'bg-brand-muted text-brand-onColor'
-                                        : 'text-gray-600 hover:bg-gray-100 hover:text-brand-primary'
-                                    }`
-                                }
-                            >
-                                Delivery
-                            </NavLink>
                         </div>
 
                         {/* Right side - Mobile Menu Button + User Menu */}
