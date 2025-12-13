@@ -24,7 +24,7 @@
                 },
                 {
                     "key": "X-Frame-Options",
-                    "value": "DENY"
+                    "value": "SAMEORIGIN"
                 },
                 {
                     "key": "X-XSS-Protection",
@@ -36,11 +36,5 @@
                 }
             ]
         }
-    ],
-    "public": true,
-    "cleanUrls": true,
-    "trailingSlash": false,
-    "env": {
-        "VITE_API_URL": "https://rewardshub-vvaj.onrender.com"
-    }
+    ]
 }
