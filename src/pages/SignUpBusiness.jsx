@@ -122,6 +122,8 @@ function SignUpBusiness() {
             // Paso 1: Registrar el negocio
             const response = await authService.signUpBusiness(userData);
             console.log('Registro exitoso:', response);
+            console.log('⚠️ DEBUG - isVerified al registrarse (business):', response.user?.isVerified || response.business?.isVerified);
+
 
             // Paso 2: Subir el logo si existe
             if (logoFile) {
@@ -143,7 +145,8 @@ function SignUpBusiness() {
                 console.error('Error al crear sucursal principal:', locationErr);
             }
 
-            navigate('/business/location-setup');
+            // Redirigir a pantalla de verificación de email
+            navigate('/verify-pending');
         } catch (err) {
             setError(err.message || 'Error al crear la cuenta. Intenta nuevamente.');
             console.error('Error en registro:', err);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import authService from '../services/authService';
 import SEO from '../components/SEO';
 
 const VerifyPending = () => {
@@ -8,9 +8,12 @@ const VerifyPending = () => {
     const [isResending, setIsResending] = useState(false);
     const [message, setMessage] = useState('');
 
-    // Obtener token del localStorage (asumiendo que lo guardas ahí al hacer login)
-    const token = localStorage.getItem('token');
-    // O usa tu Context de Auth si tienes uno
+    // Obtener información del usuario
+    const token = authService.getToken();
+    const userType = authService.getUserType();
+
+    console.log('🔑 VerifyPending - Token:', token ? 'Presente' : 'No encontrado');
+    console.log('👥 VerifyPending - UserType:', userType);
 
     // 1. POLLING: Preguntar cada 3 segundos si ya estamos verificados
     useEffect(() => {
@@ -19,39 +22,65 @@ const VerifyPending = () => {
             return;
         }
 
-        const intervalId = setInterval(async () => {
+        // Función para verificar el estado
+        const checkVerificationStatus = async () => {
             try {
-                const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-                const response = await axios.get(`${backendUrl}/auth/me`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                console.log('🔄 Polling - Verificando estado de verificación...');
+                // Usar el servicio authService para obtener la información actualizada
+                const userData = await authService.getMe();
+                console.log('📊 Polling - Datos del usuario:', userData);
+                console.log('✅ Polling - isVerified:', userData.isVerified);
+                console.log('🔍 Polling - userType:', userType);
 
-                if (response.data.isVerified) {
-                    // ¡Magia! Ya se verificó, enviarlo al dashboard
-                    // Determina si es cliente o negocio según tu lógica, aquí envío a client como ejemplo
-                    // Podrías guardar el user type en localStorage también
-                    navigate('/client/dashboard');
+                if (userData.isVerified) {
+                    console.log('🎉 ¡Usuario verificado! Redirigiendo...');
+                    // ¡Usuario verificado! Redirigir según el tipo
+                    if (userType === 'business') {
+                        console.log('🏢 Es negocio, verificando ubicación...');
+                        console.log('📍 Latitude:', userData.latitude);
+                        console.log('📍 Longitude:', userData.longitude);
+                        // Para negocios, verificar si necesita configurar ubicación
+                        if (!userData.latitude || !userData.longitude) {
+                            console.log('➡️ Redirigiendo a /business/location-setup');
+                            navigate('/business/location-setup');
+                        } else {
+                            console.log('➡️ Redirigiendo a /business/dashboard');
+                            navigate('/business/dashboard');
+                        }
+                    } else {
+                        console.log('👤 Es cliente, redirigiendo a dashboard...');
+                        // Para clientes, ir directo al dashboard
+                        navigate('/client/dashboard');
+                    }
+                } else {
+                    console.log('⏳ Usuario aún no verificado, esperando...');
                 }
             } catch (error) {
-                console.error("Error checking status", error);
+                console.error("❌ Error checking verification status:", error);
+                // Si hay error 401, el interceptor de axios ya redirigirá al login
             }
-        }, 3000); // Cada 3 segundos
+        };
+
+        // Ejecutar verificación inmediatamente al montar el componente
+        console.log('🚀 Ejecutando verificación inicial...');
+        checkVerificationStatus();
+
+        // Luego configurar el intervalo para verificar cada 3 segundos
+        const intervalId = setInterval(checkVerificationStatus, 3000);
 
         // Limpiar intervalo al desmontar
         return () => clearInterval(intervalId);
-    }, [token, navigate]);
+    }, [token, userType, navigate]);
 
     const handleResend = async () => {
         setIsResending(true);
         setMessage('');
         try {
-            const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-            await axios.post(`${backendUrl}/auth/resend-verification`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // Usar el servicio authService que maneja automáticamente client/business
+            await authService.resendVerification();
             setMessage('¡Correo reenviado con éxito! Revisa tu bandeja de entrada (y spam).');
         } catch (error) {
-            setMessage('Error al reenviar. Intenta más tarde.');
+            setMessage(error.message || 'Error al reenviar. Intenta más tarde.');
         } finally {
             setIsResending(false);
         }
@@ -97,8 +126,8 @@ const VerifyPending = () => {
                     </button>
 
                     <button
-                        onClick={() => {
-                            localStorage.removeItem('token');
+                        onClick={async () => {
+                            await authService.logout();
                             navigate('/login');
                         }}
                         className="text-gray-400 hover:text-gray-600 text-sm font-medium"

@@ -90,6 +90,7 @@ function SignUpClient() {
             // Usa la ruta /auth/register
             const response = await authService.signUpClient(userData);
             console.log('Registro exitoso:', response);
+            console.log('⚠️ DEBUG - isVerified al registrarse:', response.user?.isVerified);
 
             // Upload profile picture if provided
             if (profilePicture && response.user) {
@@ -119,7 +120,8 @@ function SignUpClient() {
                 }
             }
 
-            navigate('/client/dashboard');
+            // Redirigir a pantalla de verificación de email
+            navigate('/verify-pending');
         } catch (err) {
             setError(err.message || 'Error al crear la cuenta. Intenta nuevamente.');
             console.error('Error en registro:', err);

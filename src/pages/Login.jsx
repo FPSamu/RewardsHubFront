@@ -31,17 +31,26 @@ function Login() {
     setError('');
 
     try {
-
       let response;
       if (formData.userType === 'business') {
-        await authService.login(formData.email, formData.password, rememberMe, "business");
+        response = await authService.login(formData.email, formData.password, rememberMe, "business");
       } else {
-        await authService.login(formData.email, formData.password, rememberMe, "client");
+        response = await authService.login(formData.email, formData.password, rememberMe, "client");
       }
 
       console.log('Login exitoso:', response);
 
-      // Redirigir según el tipo de usuario
+      // Verificar si el usuario está verificado
+      const user = response.user || response.business;
+      console.log('⚠️ DEBUG - Usuario completo:', user);
+      console.log('⚠️ DEBUG - isVerified al hacer login:', user?.isVerified);
+      if (!user.isVerified) {
+        // Usuario no verificado, redirigir a pantalla de espera
+        navigate('/verify-pending');
+        return;
+      }
+
+      // Usuario verificado, redirigir según el tipo de usuario
       if (formData.userType === 'business') {
         navigate('/business/dashboard');
       } else {
