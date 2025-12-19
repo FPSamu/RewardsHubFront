@@ -42,8 +42,6 @@ function Login() {
 
       // Verificar si el usuario está verificado
       const user = response.user || response.business;
-      console.log('⚠️ DEBUG - Usuario completo:', user);
-      console.log('⚠️ DEBUG - isVerified al hacer login:', user?.isVerified);
       if (!user.isVerified) {
         // Usuario no verificado, redirigir a pantalla de espera
         navigate('/verify-pending');
