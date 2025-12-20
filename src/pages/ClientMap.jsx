@@ -187,7 +187,6 @@ const ClientMap = () => {
     const [locationError, setLocationError] = useState(null);
     const [gettingLocation, setGettingLocation] = useState(true);
     const [activeFilter, setActiveFilter] = useState('all');
-    const [categoryFilter, setCategoryFilter] = useState('all');
 
     // Get user location
     useEffect(() => {
@@ -330,7 +329,6 @@ const ClientMap = () => {
                     return {
                         id: businessId,
                         name: business.name,
-                        category: business.category || 'General',
                         address: business.address || business.location?.formattedAddress || 'Dirección no disponible',
                         location: business.location,
                         status: status,
@@ -342,7 +340,33 @@ const ClientMap = () => {
                     };
                 });
 
-                setBusinesses(enrichedBusinesses);
+                // DEDUPLICAR: Si hay múltiples sucursales del mismo negocio (mismo id),
+                // mantener solo una (la más cercana)
+                const uniqueBusinessesMap = new Map();
+                enrichedBusinesses.forEach(business => {
+                    const existingBusiness = uniqueBusinessesMap.get(business.id);
+
+                    // Si no existe o este está más cerca, guardarlo
+                    if (!existingBusiness) {
+                        uniqueBusinessesMap.set(business.id, business);
+                    } else {
+                        // Comparar distancias (convertir de string "X.X km" a número)
+                        const existingDistance = parseFloat(existingBusiness.distance);
+                        const currentDistance = parseFloat(business.distance);
+
+                        if (!isNaN(currentDistance) && (isNaN(existingDistance) || currentDistance < existingDistance)) {
+                            uniqueBusinessesMap.set(business.id, business);
+                        }
+                    }
+                });
+
+                // Convertir el Map de vuelta a array
+                const deduplicatedBusinesses = Array.from(uniqueBusinessesMap.values());
+
+                console.log('📊 Negocios antes de deduplicar:', enrichedBusinesses.length);
+                console.log('📊 Negocios después de deduplicar:', deduplicatedBusinesses.length);
+
+                setBusinesses(deduplicatedBusinesses);
                 setError(null);
             } catch (err) {
                 console.error('Error fetching businesses:', err);
@@ -376,15 +400,17 @@ const ClientMap = () => {
 
     // Use real data if available
     const allBusinesses = businesses || [];
-    const visited = allBusinesses.filter((b) => b.status === 'visited');
-    const notVisited = allBusinesses.filter((b) => b.status === 'not_visited');
-    const rewardsAvailable = allBusinesses.filter((b) => b.hasRewards === true);
 
     // Filter businesses based on active filter
     const getFilteredBusinesses = () => {
         let filtered = [];
 
-        // First, filter by status
+        // Calculate these arrays fresh each time to avoid stale data
+        const visited = allBusinesses.filter((b) => b.status === 'visited');
+        const notVisited = allBusinesses.filter((b) => b.status === 'not_visited');
+        const rewardsAvailable = allBusinesses.filter((b) => b.hasRewards === true);
+
+        // Filter by status
         switch (activeFilter) {
             case 'visited':
                 filtered = visited;
@@ -401,18 +427,15 @@ const ClientMap = () => {
                 break;
         }
 
-        // Then, filter by category if a specific category is selected
-        if (categoryFilter !== 'all') {
-            filtered = filtered.filter(b => b.category === categoryFilter);
-        }
-
         return filtered;
     };
 
     const filteredBusinesses = getFilteredBusinesses();
 
-    // Get count of businesses by category for filter buttons
-    const foodCount = allBusinesses.filter(b => b.category === 'food').length;
+    // Calculate counts for the filter buttons
+    const visited = allBusinesses.filter((b) => b.status === 'visited');
+    const notVisited = allBusinesses.filter((b) => b.status === 'not_visited');
+    const rewardsAvailable = allBusinesses.filter((b) => b.hasRewards === true);
 
     const getStatusBadge = (status, hasRewards) => {
         if (hasRewards) {
@@ -512,11 +535,6 @@ const ClientMap = () => {
 
                             // Find business data to get status and rewards
                             const businessData = businesses.find(b => b.id === business.id) || {};
-
-                            // Filter by category if a specific category is selected
-                            if (categoryFilter !== 'all' && businessData.category !== categoryFilter) {
-                                return null;
-                            }
 
                             const status = businessData.status || 'not_visited';
                             const availableRewardsCount = businessData.availableRewards || 0;
@@ -728,40 +746,6 @@ const ClientMap = () => {
                                 }`}
                         >
                             No Visitados ({notVisited.length})
-                        </button>
-                    </div>
-                </div>
-
-                {/* Category Filters */}
-                <div className="mb-6">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Filtrar por Categoría</h4>
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                        <button
-                            onClick={() => setCategoryFilter('all')}
-                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${categoryFilter === 'all'
-                                ? 'bg-purple-600 text-white hover:opacity-96'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            Todas las Categorías
-                        </button>
-                        <button
-                            onClick={() => setCategoryFilter('food')}
-                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${categoryFilter === 'food'
-                                ? 'bg-purple-600 text-white hover:opacity-96'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            🍔 Comida ({foodCount})
-                        </button>
-                        <button
-                            onClick={() => setCategoryFilter('test')}
-                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${categoryFilter === 'test'
-                                ? 'bg-purple-600 text-white hover:opacity-96'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            🍔 test ({foodCount})
                         </button>
                     </div>
                 </div>
