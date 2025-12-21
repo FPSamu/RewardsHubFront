@@ -23,16 +23,16 @@ const BusinessSubscription = () => {
         {
             id: 'monthly',
             name: 'Plan Mensual',
-            price: 500,
+            price: 599,
             currency: 'MXN',
             interval: 'mes',
             features: [
-                'Acceso completo al dashboard',
+                'Acceso completo',
                 'Gestión ilimitada de clientes',
                 'Creación de recompensas personalizadas',
                 'Sistema de puntos y sellos',
                 'Escaneo de códigos QR',
-                'Reportes básicos',
+                'Reportes',
                 'Soporte por email',
             ],
             recommended: false,
@@ -40,20 +40,18 @@ const BusinessSubscription = () => {
         {
             id: 'yearly',
             name: 'Plan Anual',
-            price: 4500,
+            price: 5399,
             currency: 'MXN',
             interval: 'año',
             features: [
+                '3 MESES GRATIS',
                 'Todo lo del plan mensual',
-                'Ahorra $1,500 MXN al año',
                 'Reportes avanzados y analytics',
                 'Soporte prioritario',
                 'Actualizaciones premium',
-                'Capacitación personalizada',
-                '2 meses gratis',
             ],
             recommended: !hasLifetimeAccess, // No recomendado si hay lifetime
-            savings: '25% de descuento',
+            savings: '33% de descuento',
         },
     ];
 
