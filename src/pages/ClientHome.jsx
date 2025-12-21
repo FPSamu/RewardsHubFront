@@ -143,24 +143,6 @@ const ClientHome = () => {
                     </p>
                 </div>
 
-                {/* QR Code Section */}
-                <div className="bg-gradient-to-br from-brand-primary to-accent-gold rounded-xl shadow-card p-6 text-white">
-                    <div className="flex flex-col md:flex-row items-center justify-between">
-                        <div className="mb-4 md:mb-0">
-                            <h3 className="text-2xl font-bold mb-2">Tu Código QR</h3>
-                            <p className="text-white/90 mb-4">
-                                Muestra este código en los negocios afiliados para acumular puntos
-                            </p>
-                            <div className="text-sm text-white/80 font-mono">
-                                ID: {user?.id || 'no-id'}
-                            </div>
-                        </div>
-                        <div className="bg-white p-4 rounded-xl shadow-popover">
-                            <QRCodeSVG value={user?.id || 'no-id'} size={200} />
-                        </div>
-                    </div>
-                </div>
-
                 {/* Error Message */}
                 <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl">
                     {error}
@@ -206,12 +188,13 @@ const ClientHome = () => {
                         <p className="text-white/90 mb-4">
                             Muestra este código en los negocios afiliados para acumular puntos
                         </p>
-                        {/* <div className="text-sm text-white/80 font-mono">
-                            ID: {user?.id || userPointsData?.userId || 'no-id'}
-                        </div> */}
                     </div>
                     <div className="bg-white p-4 rounded-xl shadow-popover">
                         <QRCodeSVG value={user?.id || userPointsData?.userId || 'no-id'} size={200} />
+                    </div>
+                    <br />
+                    <div className="text-sm text-white/80 font-mono">
+                        Toma una captura de pantalla de éste código y accede más rápidamente
                     </div>
                 </div>
             </div>
