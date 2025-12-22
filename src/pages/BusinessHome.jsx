@@ -4,6 +4,7 @@ import businessService from '../services/businessService';
 import rewardService from '../services/rewardService';
 import userPointsService from '../services/userPointsService';
 import workShiftService from '../services/workShiftService';
+import reportService from '../services/reportService';
 
 const BusinessHome = () => {
     const navigate = useNavigate();
@@ -27,6 +28,19 @@ const BusinessHome = () => {
     });
     const [savingShift, setSavingShift] = useState(false);
     const [shiftError, setShiftError] = useState(null);
+
+    // Estados para el modal de reportes
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [reportType, setReportType] = useState('shift'); // 'shift', 'day', 'range'
+    const [reportData, setReportData] = useState({
+        shiftId: '',
+        date: new Date().toISOString().split('T')[0],
+        startDate: '',
+        endDate: ''
+    });
+    const [availableShifts, setAvailableShifts] = useState([]);
+    const [generatingReport, setGeneratingReport] = useState(false);
+    const [reportError, setReportError] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -166,6 +180,109 @@ const BusinessHome = () => {
         }
     };
 
+    // Funciones para manejar reportes
+    const handleOpenReportModal = async () => {
+        setShowReportModal(true);
+        setReportError(null);
+
+        // Cargar turnos disponibles
+        try {
+            const shiftsResponse = await workShiftService.getMyWorkShifts();
+            const shiftsData = Array.isArray(shiftsResponse)
+                ? shiftsResponse
+                : (shiftsResponse?.shifts || shiftsResponse?.workShifts || []);
+            setAvailableShifts(shiftsData);
+
+            // Seleccionar el primer turno por defecto si existe
+            if (shiftsData.length > 0) {
+                setReportData(prev => ({ ...prev, shiftId: shiftsData[0].id }));
+            }
+        } catch (error) {
+            console.error('Error loading shifts:', error);
+        }
+    };
+
+    const handleCloseReportModal = () => {
+        setShowReportModal(false);
+        setReportType('shift');
+        setReportData({
+            shiftId: '',
+            date: new Date().toISOString().split('T')[0],
+            startDate: '',
+            endDate: ''
+        });
+        setReportError(null);
+    };
+
+    const handleGenerateReport = async () => {
+        setGeneratingReport(true);
+        setReportError(null);
+
+        try {
+            let pdfBlob;
+
+            if (reportType === 'shift') {
+                if (!reportData.shiftId || !reportData.date) {
+                    setReportError('Por favor selecciona un turno y una fecha');
+                    setGeneratingReport(false);
+                    return;
+                }
+                console.log('Generating shift report with:', { shiftId: reportData.shiftId, date: reportData.date });
+                pdfBlob = await reportService.generateShiftReport(reportData.shiftId, reportData.date);
+            } else if (reportType === 'day') {
+                if (!reportData.date) {
+                    setReportError('Por favor selecciona una fecha');
+                    setGeneratingReport(false);
+                    return;
+                }
+                console.log('Generating day report with:', { date: reportData.date });
+                pdfBlob = await reportService.generateDayReport(reportData.date);
+            } else if (reportType === 'range') {
+                if (!reportData.startDate || !reportData.endDate) {
+                    setReportError('Por favor selecciona ambas fechas');
+                    setGeneratingReport(false);
+                    return;
+                }
+                if (reportData.startDate > reportData.endDate) {
+                    setReportError('La fecha de inicio debe ser anterior a la fecha de fin');
+                    setGeneratingReport(false);
+                    return;
+                }
+                console.log('Generating range report with:', { startDate: reportData.startDate, endDate: reportData.endDate });
+                pdfBlob = await reportService.generateRangeReport(reportData.startDate, reportData.endDate);
+            }
+
+            // Descargar el PDF
+            const url = window.URL.createObjectURL(pdfBlob);
+            const link = document.createElement('a');
+            link.href = url;
+
+            // Nombre del archivo según el tipo de reporte
+            let fileName = 'reporte';
+            if (reportType === 'shift') {
+                fileName = `reporte_turno_${reportData.date}.pdf`;
+            } else if (reportType === 'day') {
+                fileName = `reporte_dia_${reportData.date}.pdf`;
+            } else if (reportType === 'range') {
+                fileName = `reporte_${reportData.startDate}_${reportData.endDate}.pdf`;
+            }
+
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+            // Cerrar modal después de generar
+            handleCloseReportModal();
+        } catch (error) {
+            console.error('Error generating report:', error);
+            setReportError(error.message || 'Error al generar el reporte. Por favor, intenta de nuevo.');
+        } finally {
+            setGeneratingReport(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -217,7 +334,7 @@ const BusinessHome = () => {
             {/* Quick Actions */}
             <div className="bg-gradient-to-br from-brand-primary to-accent-gold rounded-xl shadow-card p-6 text-white">
                 <h3 className="text-2xl font-bold mb-4">Acciones Rápidas</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <button
                         onClick={() => navigate('/business/dashboard/scan')}
                         className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl p-4 text-left transition-all duration-180 border border-white/30"
@@ -295,6 +412,33 @@ const BusinessHome = () => {
                             <div>
                                 <p className="font-semibold text-white">Recompensas</p>
                                 <p className="text-sm text-white/80">Gestionar recompensas</p>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={handleOpenReportModal}
+                        className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl p-4 text-left transition-all duration-180 border border-white/30"
+                    >
+                        <div className="flex items-center space-x-3">
+                            <div className="bg-white/20 p-3 rounded-full">
+                                <svg
+                                    className="w-6 h-6 text-white"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.75}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="font-semibold text-white">Generar Reporte</p>
+                                <p className="text-sm text-white/80">Exportar transacciones</p>
                             </div>
                         </div>
                     </button>
@@ -574,6 +718,219 @@ const BusinessHome = () => {
                                 )}
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Generación de Reportes */}
+            {showReportModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-popover max-w-2xl w-full p-6">
+                        {/* Header */}
+                        <div className="mb-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-brand-muted rounded-full flex items-center justify-center">
+                                        <svg
+                                            className="w-6 h-6 text-brand-primary"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                            strokeWidth={1.75}
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-bold text-gray-800">Generar Reporte</h3>
+                                        <p className="text-sm text-gray-600">Exporta las transacciones en PDF</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleCloseReportModal}
+                                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                                    disabled={generatingReport}
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Tipo de Reporte */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                Tipo de Reporte *
+                            </label>
+                            <div className="grid grid-cols-3 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setReportType('shift')}
+                                    className={`p-4 rounded-lg border-2 transition-all ${reportType === 'shift'
+                                        ? 'border-brand-primary bg-brand-muted text-brand-primary'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                    disabled={generatingReport}
+                                >
+                                    <svg className="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <p className="text-sm font-semibold">Por Turno</p>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setReportType('day')}
+                                    className={`p-4 rounded-lg border-2 transition-all ${reportType === 'day'
+                                        ? 'border-brand-primary bg-brand-muted text-brand-primary'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                    disabled={generatingReport}
+                                >
+                                    <svg className="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p className="text-sm font-semibold">Por Día</p>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setReportType('range')}
+                                    className={`p-4 rounded-lg border-2 transition-all ${reportType === 'range'
+                                        ? 'border-brand-primary bg-brand-muted text-brand-primary'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                    disabled={generatingReport}
+                                >
+                                    <svg className="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p className="text-sm font-semibold">Por Rango</p>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Campos según el tipo de reporte */}
+                        <div className="space-y-4 mb-6">
+                            {reportType === 'shift' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Turno *
+                                        </label>
+                                        <select
+                                            value={reportData.shiftId}
+                                            onChange={(e) => setReportData({ ...reportData, shiftId: e.target.value })}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                            disabled={generatingReport}
+                                        >
+                                            <option value="">Selecciona un turno</option>
+                                            {availableShifts.map((shift) => (
+                                                <option key={shift.id} value={shift.id}>
+                                                    {shift.name} ({shift.startTime} - {shift.endTime})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Fecha *
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={reportData.date}
+                                            onChange={(e) => setReportData({ ...reportData, date: e.target.value })}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                            disabled={generatingReport}
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {reportType === 'day' && (
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Fecha *
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={reportData.date}
+                                        onChange={(e) => setReportData({ ...reportData, date: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                        disabled={generatingReport}
+                                    />
+                                </div>
+                            )}
+
+                            {reportType === 'range' && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Fecha de Inicio *
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={reportData.startDate}
+                                            onChange={(e) => setReportData({ ...reportData, startDate: e.target.value })}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                            disabled={generatingReport}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Fecha de Fin *
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={reportData.endDate}
+                                            onChange={(e) => setReportData({ ...reportData, endDate: e.target.value })}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                            disabled={generatingReport}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Error Message */}
+                        {reportError && (
+                            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-6">
+                                {reportError}
+                            </div>
+                        )}
+
+                        {/* Botones */}
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleCloseReportModal}
+                                disabled={generatingReport}
+                                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleGenerateReport}
+                                disabled={generatingReport}
+                                className="flex-1 px-6 py-3 bg-brand-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {generatingReport ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                                        Generando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        Generar PDF
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
