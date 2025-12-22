@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import businessService from '../services/businessService';
 import rewardService from '../services/rewardService';
 import userPointsService from '../services/userPointsService';
+import workShiftService from '../services/workShiftService';
 
 const BusinessHome = () => {
     const navigate = useNavigate();
@@ -17,6 +18,16 @@ const BusinessHome = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Estados para el modal de turnos
+    const [showShiftModal, setShowShiftModal] = useState(false);
+    const [shiftFormData, setShiftFormData] = useState({
+        name: '',
+        startTime: '',
+        endTime: ''
+    });
+    const [savingShift, setSavingShift] = useState(false);
+    const [shiftError, setShiftError] = useState(null);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -25,6 +36,26 @@ const BusinessHome = () => {
                 // Fetch business details
                 const businessData = await businessService.getMyBusiness();
                 setBusiness(businessData);
+
+                // Verificar si el negocio tiene turnos configurados
+                try {
+                    const shiftsResponse = await workShiftService.getMyWorkShifts();
+                    // Manejar diferentes estructuras de respuesta del backend
+                    const shiftsData = Array.isArray(shiftsResponse)
+                        ? shiftsResponse
+                        : (shiftsResponse?.shifts || shiftsResponse?.workShifts || []);
+
+                    console.log('Shifts data:', shiftsData); // Para debugging
+
+                    // Si no hay turnos configurados, mostrar el modal
+                    if (!shiftsData || shiftsData.length === 0) {
+                        setShowShiftModal(true);
+                    }
+                } catch (shiftErr) {
+                    console.error('Error fetching shifts:', shiftErr);
+                    // Si hay error al obtener turnos, asumir que no hay y mostrar modal
+                    setShowShiftModal(true);
+                }
 
                 // Fetch rewards
                 const rewardsData = await rewardService.getBusinessRewards(businessData.id);
@@ -58,6 +89,82 @@ const BusinessHome = () => {
 
         fetchData();
     }, []);
+
+    // Manejar cambios en el formulario de turnos
+    const handleShiftFormChange = (e) => {
+        const { name, value } = e.target;
+        setShiftFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+        // Limpiar error cuando el usuario empieza a escribir
+        if (shiftError) setShiftError(null);
+    };
+
+    // Manejar envío del formulario de turnos
+    const handleShiftFormSubmit = async (e) => {
+        e.preventDefault();
+
+        // Validar que todos los campos estén llenos
+        if (!shiftFormData.name.trim() || !shiftFormData.startTime || !shiftFormData.endTime) {
+            setShiftError('Todos los campos son obligatorios');
+            return;
+        }
+
+        // Nota: Permitimos turnos que cruzan la medianoche (ej: 22:00 - 02:00)
+        // El backend debería manejar esto correctamente
+
+
+        try {
+            setSavingShift(true);
+            setShiftError(null);
+
+            // Verificar que tenemos el businessId
+            if (!business?.id) {
+                setShiftError('Error: No se pudo obtener la información del negocio');
+                setSavingShift(false);
+                return;
+            }
+
+            const shiftPayload = {
+                businessId: business.id,
+                name: shiftFormData.name.trim(),
+                startTime: shiftFormData.startTime,
+                endTime: shiftFormData.endTime
+            };
+
+            // console.log('Creating shift with payload:', shiftPayload);
+
+            const response = await workShiftService.createWorkShift(shiftPayload);
+
+            // console.log('Shift created successfully:', response);
+
+            // Cerrar el modal y resetear el formulario
+            setShowShiftModal(false);
+            setShiftFormData({
+                name: '',
+                startTime: '',
+                endTime: ''
+            });
+        } catch (err) {
+            console.error('Error creating shift:', err);
+
+            // Extraer mensaje de error más específico
+            let errorMessage = 'Error al crear el turno. Por favor, intenta de nuevo.';
+
+            if (typeof err === 'string') {
+                errorMessage = err;
+            } else if (err?.message) {
+                errorMessage = err.message;
+            } else if (err?.error) {
+                errorMessage = err.error;
+            }
+
+            setShiftError(errorMessage);
+        } finally {
+            setSavingShift(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -93,9 +200,9 @@ const BusinessHome = () => {
             {/* Welcome Section */}
             <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
                 <div className="flex items-center space-x-3 mb-4">
-                    <img 
-                        src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png" 
-                        alt="RewardsHub Logo" 
+                    <img
+                        src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png"
+                        alt="RewardsHub Logo"
                         className="h-12 w-auto object-contain"
                     />
                     <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
@@ -317,8 +424,8 @@ const BusinessHome = () => {
                                         <p className="text-sm text-gray-600 line-clamp-2">{reward.description}</p>
                                     </div>
                                     <span className={`ml-3 px-3 py-1 rounded-pill text-xs font-semibold ${reward.isActive
-                                            ? 'bg-green-50 text-accent-success'
-                                            : 'bg-gray-200 text-gray-600'
+                                        ? 'bg-green-50 text-accent-success'
+                                        : 'bg-gray-200 text-gray-600'
                                         }`}>
                                         {reward.isActive ? 'Activa' : 'Inactiva'}
                                     </span>
@@ -365,6 +472,111 @@ const BusinessHome = () => {
                     </div>
                 )}
             </div>
+
+            {/* Modal de Configuración de Turno (No se puede cerrar) */}
+            {showShiftModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-popover max-w-md w-full p-6">
+                        <div className="mb-6">
+                            <div className="flex items-center justify-center w-16 h-16 bg-brand-muted rounded-full mx-auto mb-4">
+                                <svg
+                                    className="w-8 h-8 text-brand-primary"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.75}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
+                            </div>
+                            <h3 className="text-2xl font-bold text-gray-800 text-center mb-2">
+                                Configurar Turno de Trabajo
+                            </h3>
+                            <p className="text-gray-600 text-center text-sm">
+                                Para continuar, necesitas configurar al menos un turno de trabajo para tu negocio
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleShiftFormSubmit} className="space-y-4">
+                            {/* Nombre del turno */}
+                            <div>
+                                <label htmlFor="shift-name" className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Nombre del Turno *
+                                </label>
+                                <input
+                                    id="shift-name"
+                                    type="text"
+                                    name="name"
+                                    value={shiftFormData.name}
+                                    onChange={handleShiftFormChange}
+                                    placeholder="Ej: Turno Matutino, Turno Vespertino"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all"
+                                    disabled={savingShift}
+                                />
+                            </div>
+
+                            {/* Hora de inicio */}
+                            <div>
+                                <label htmlFor="shift-start" className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Hora de Inicio *
+                                </label>
+                                <input
+                                    id="shift-start"
+                                    type="time"
+                                    name="startTime"
+                                    value={shiftFormData.startTime}
+                                    onChange={handleShiftFormChange}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all"
+                                    disabled={savingShift}
+                                />
+                            </div>
+
+                            {/* Hora de fin */}
+                            <div>
+                                <label htmlFor="shift-end" className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Hora de Fin *
+                                </label>
+                                <input
+                                    id="shift-end"
+                                    type="time"
+                                    name="endTime"
+                                    value={shiftFormData.endTime}
+                                    onChange={handleShiftFormChange}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all"
+                                    disabled={savingShift}
+                                />
+                            </div>
+
+                            {/* Error message */}
+                            {shiftError && (
+                                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                                    {shiftError}
+                                </div>
+                            )}
+
+                            {/* Submit button */}
+                            <button
+                                type="submit"
+                                disabled={savingShift}
+                                className="w-full bg-brand-primary text-white py-3 px-6 rounded-lg font-semibold hover:opacity-90 transition-opacity duration-180 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                            >
+                                {savingShift ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                                        Guardando...
+                                    </>
+                                ) : (
+                                    'Guardar Turno'
+                                )}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

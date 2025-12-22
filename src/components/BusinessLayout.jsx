@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import 'leaflet/dist/leaflet.css'; // Leaflet css might still be needed if used elsewhere, otherwise remove
 import businessService from '../services/businessService';
 import subscriptionService from '../services/subscriptionService';
+import workShiftService from '../services/workShiftService';
 
 const BusinessLayout = () => {
     const navigate = useNavigate();
@@ -26,6 +27,19 @@ const BusinessLayout = () => {
     const [deletingAccount, setDeletingAccount] = useState(false);
     const menuRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    // Estados para el modal de turnos
+    const [showShiftsModal, setShowShiftsModal] = useState(false);
+    const [shifts, setShifts] = useState([]);
+    const [loadingShifts, setLoadingShifts] = useState(false);
+    const [editingShift, setEditingShift] = useState(null);
+    const [shiftFormData, setShiftFormData] = useState({
+        name: '',
+        startTime: '',
+        endTime: ''
+    });
+    const [savingShift, setSavingShift] = useState(false);
+    const [shiftError, setShiftError] = useState(null);
 
     // Load business data on mount for profile button
     useEffect(() => {
@@ -210,6 +224,111 @@ const BusinessLayout = () => {
         };
     }, []);
 
+    // Funciones para manejar turnos
+    const loadShifts = async () => {
+        setLoadingShifts(true);
+        try {
+            const shiftsResponse = await workShiftService.getMyWorkShifts();
+            const shiftsData = Array.isArray(shiftsResponse)
+                ? shiftsResponse
+                : (shiftsResponse?.shifts || shiftsResponse?.workShifts || []);
+            setShifts(shiftsData);
+        } catch (error) {
+            console.error('Error loading shifts:', error);
+            setShiftError('Error al cargar los turnos');
+        } finally {
+            setLoadingShifts(false);
+        }
+    };
+
+    const handleOpenShiftsModal = () => {
+        setShowShiftsModal(true);
+        loadShifts();
+    };
+
+    const handleCloseShiftsModal = () => {
+        setShowShiftsModal(false);
+        setEditingShift(null);
+        setShiftFormData({ name: '', startTime: '', endTime: '' });
+        setShiftError(null);
+    };
+
+    const handleEditShift = (shift) => {
+        setEditingShift(shift);
+        setShiftFormData({
+            name: shift.name,
+            startTime: shift.startTime,
+            endTime: shift.endTime
+        });
+        setShiftError(null);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingShift(null);
+        setShiftFormData({ name: '', startTime: '', endTime: '' });
+        setShiftError(null);
+    };
+
+    const handleSaveShift = async (e) => {
+        e.preventDefault();
+
+        if (!shiftFormData.name.trim() || !shiftFormData.startTime || !shiftFormData.endTime) {
+            setShiftError('Todos los campos son obligatorios');
+            return;
+        }
+
+        setSavingShift(true);
+        setShiftError(null);
+
+        try {
+            if (editingShift) {
+                // Actualizar turno existente
+                await workShiftService.updateWorkShift(editingShift.id, {
+                    name: shiftFormData.name.trim(),
+                    startTime: shiftFormData.startTime,
+                    endTime: shiftFormData.endTime
+                });
+            } else {
+                // Crear nuevo turno
+                if (!currentBusiness?.id) {
+                    setShiftError('Error: No se pudo obtener la información del negocio');
+                    setSavingShift(false);
+                    return;
+                }
+
+                await workShiftService.createWorkShift({
+                    businessId: currentBusiness.id,
+                    name: shiftFormData.name.trim(),
+                    startTime: shiftFormData.startTime,
+                    endTime: shiftFormData.endTime
+                });
+            }
+
+            // Recargar turnos y resetear formulario
+            await loadShifts();
+            handleCancelEdit();
+        } catch (error) {
+            console.error('Error saving shift:', error);
+            setShiftError(error.message || 'Error al guardar el turno');
+        } finally {
+            setSavingShift(false);
+        }
+    };
+
+    const handleDeleteShift = async (shiftId) => {
+        if (!confirm('¿Estás seguro de que deseas eliminar este turno?')) {
+            return;
+        }
+
+        try {
+            await workShiftService.deleteWorkShift(shiftId);
+            await loadShifts();
+        } catch (error) {
+            console.error('Error deleting shift:', error);
+            setShiftError('Error al eliminar el turno');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Navbar */}
@@ -374,6 +493,18 @@ const BusinessLayout = () => {
                                             </svg>
                                             <span>Sucursales</span>
                                         </button>
+                                        <button
+                                            onClick={() => {
+                                                setIsMenuOpen(false);
+                                                handleOpenShiftsModal();
+                                            }}
+                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-180 flex items-center space-x-2"
+                                        >
+                                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <span>Turnos</span>
+                                        </button>
                                         <div className="border-t border-gray-200 my-1"></div>
                                         <button
                                             onClick={handleLogout}
@@ -509,6 +640,202 @@ const BusinessLayout = () => {
                     deleting={deletingAccount}
                 />
             )}
+
+            {/* Shifts Management Modal */}
+            {showShiftsModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div className="bg-white rounded-xl shadow-popover max-w-3xl w-full max-h-[90vh] overflow-y-auto my-8">
+                        {/* Header */}
+                        <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-gray-800">Gestión de Turnos</h3>
+                                    <p className="text-sm text-gray-600 mt-1">Configura los horarios de trabajo de tu negocio</p>
+                                </div>
+                                <button
+                                    onClick={handleCloseShiftsModal}
+                                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            {/* Error Message */}
+                            {shiftError && (
+                                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                                    {shiftError}
+                                </div>
+                            )}
+
+                            {/* Formulario de Crear/Editar Turno */}
+                            <form onSubmit={handleSaveShift} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                                    {editingShift ? 'Editar Turno' : 'Nuevo Turno'}
+                                </h4>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Nombre del Turno *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={shiftFormData.name}
+                                            onChange={(e) => setShiftFormData({ ...shiftFormData, name: e.target.value })}
+                                            placeholder="Ej: Turno Matutino"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                            disabled={savingShift}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Hora de Inicio *
+                                        </label>
+                                        <input
+                                            type="time"
+                                            value={shiftFormData.startTime}
+                                            onChange={(e) => setShiftFormData({ ...shiftFormData, startTime: e.target.value })}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                            disabled={savingShift}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Hora de Fin *
+                                        </label>
+                                        <input
+                                            type="time"
+                                            value={shiftFormData.endTime}
+                                            onChange={(e) => setShiftFormData({ ...shiftFormData, endTime: e.target.value })}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                            disabled={savingShift}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 mt-4">
+                                    <button
+                                        type="submit"
+                                        disabled={savingShift}
+                                        className="px-6 py-2 bg-brand-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    >
+                                        {savingShift ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                                Guardando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                </svg>
+                                                {editingShift ? 'Actualizar' : 'Crear Turno'}
+                                            </>
+                                        )}
+                                    </button>
+
+                                    {editingShift && (
+                                        <button
+                                            type="button"
+                                            onClick={handleCancelEdit}
+                                            disabled={savingShift}
+                                            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    )}
+                                </div>
+                            </form>
+
+                            {/* Lista de Turnos */}
+                            <div>
+                                <h4 className="text-lg font-semibold text-gray-800 mb-4">Turnos Configurados</h4>
+
+                                {loadingShifts ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-primary border-t-transparent"></div>
+                                    </div>
+                                ) : shifts.length === 0 ? (
+                                    <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                                        <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <p className="text-gray-600 font-medium">No hay turnos configurados</p>
+                                        <p className="text-sm text-gray-500 mt-1">Crea tu primer turno usando el formulario de arriba</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {shifts.map((shift) => (
+                                            <div
+                                                key={shift.id}
+                                                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex-1">
+                                                        <h5 className="font-semibold text-gray-800 text-lg">{shift.name}</h5>
+                                                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                                                            <div className="flex items-center gap-2">
+                                                                <svg className="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                                <span className="font-medium">{shift.startTime}</span>
+                                                            </div>
+                                                            <span className="text-gray-400">→</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <svg className="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                                <span className="font-medium">{shift.endTime}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => handleEditShift(shift)}
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Editar turno"
+                                                        >
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteShift(shift.id)}
+                                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Eliminar turno"
+                                                        >
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 border-t border-gray-200 bg-gray-50">
+                            <button
+                                onClick={handleCloseShiftsModal}
+                                className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -583,7 +910,7 @@ function SettingsModal({ formData, setFormData, businessData, logoPreview, onLog
                         />
                         <p className="text-xs text-gray-500 mt-1">Información adicional sobre tu negocio (opcional)</p>
                     </div>
-                    
+
                     {/* Business Logo */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
