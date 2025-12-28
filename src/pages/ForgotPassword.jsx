@@ -17,6 +17,7 @@ const ForgotPassword = () => {
       const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       // Nota el prefijo /auth que es crucial
       await axios.post(`${backendUrl}/auth/forgot-password`, { email });
+      await axios.post(`${backendUrl}/business/forgot-password`, { email });
 
       setStatus('success');
       setMessage('Si existe una cuenta con ese email, recibirás un enlace para restablecer tu contraseña.');
