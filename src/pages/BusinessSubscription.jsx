@@ -23,7 +23,7 @@ const BusinessSubscription = () => {
         {
             id: 'monthly',
             name: 'Plan Mensual',
-            price: 599,
+            price: 499,
             currency: 'MXN',
             interval: 'mes',
             features: [
@@ -40,11 +40,12 @@ const BusinessSubscription = () => {
         {
             id: 'yearly',
             name: 'Plan Anual',
-            price: 5399,
+            price: 4499,
             currency: 'MXN',
             interval: 'año',
             features: [
-                '3 MESES GRATIS',
+                '$375 al mes',
+                'Un descuento de $124 mensuales',
                 'Todo lo del plan mensual',
                 'Reportes avanzados y analytics',
                 'Soporte prioritario',
