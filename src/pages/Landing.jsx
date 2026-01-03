@@ -216,7 +216,7 @@ function Landing() {
                 </section>
 
                 <section className="bg-gradient-to-b from-[#352D22] to-[#8E6A28] min-h-screen flex flex-col items-center gap-12 md:gap-16 lg:gap-20 w-full px-4 sm:px-8 md:px-16 lg:px-32 xl:px-80 py-12 md:py-16 lg:py-20">
-                    <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10">
+                    <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10 py-4">
                         <div className="flex flex-col items-start gap-2 w-full md:w-1/2">
                             <div className="flex items-center gap-5">
                                 <span style={{
@@ -278,7 +278,7 @@ function Landing() {
                         />
                     </div>
 
-                    <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10">
+                    <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10 py-4">
                         <div className="flex flex-col items-start gap-2 w-full md:w-1/2 order-1 md:order-2">
                             <div className="flex items-center gap-5">
                                 <span style={{
@@ -340,7 +340,7 @@ function Landing() {
                         />
                     </div>
 
-                    <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10">
+                    <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10 py-4">
                         <div className="flex flex-col items-start gap-2 w-full md:w-1/2">
                             <div className="flex items-center gap-5">
                                 <span style={{
@@ -400,6 +400,195 @@ function Landing() {
                             onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
                             onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         />
+                    </div>
+                </section>
+                <section className="flex p-2.5 flex-col justify-center items-center gap-10 self-stretch">
+                    <h2 style={{
+                        color: '#FFF',
+                        textAlign: 'center',
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '40px',
+                        fontStyle: 'normal',
+                        fontWeight: 700,
+                        lineHeight: 'normal',
+                        letterSpacing: '1.92px'
+                    }}>PLANES PARA TU NEGOCIO</h2>
+                    <div className="flex flex-row justify-center items-stretch gap-8 flex-wrap">
+                        <div className="relative bg-white rounded-3xl p-8 shadow-2xl border-4 border-[#FFB733] max-w-sm w-full hover:scale-105 transition-transform duration-300 flex flex-col justify-between">
+                            {/* Badge de Mejor Valor */}
+                            <div className="absolute -top-4 -right-4 bg-gradient-to-r from-[#FFB733] to-[#EBA626] text-white px-4 py-2 rounded-full shadow-lg transform rotate-12">
+                                <span style={{
+                                    fontFamily: 'Montserrat, sans-serif',
+                                    fontSize: '12px',
+                                    fontWeight: 700,
+                                    letterSpacing: '0.5px'
+                                }}>MEJOR VALOR</span>
+                            </div>
+                            {/* Header */}
+                            <div className="mb-6">
+                                <h3 style={{
+                                    color: '#352D22',
+                                    fontFamily: 'Montserrat, sans-serif',
+                                    fontSize: '28px',
+                                    fontWeight: 700,
+                                    marginBottom: '8px'
+                                }}>ANUAL</h3>
+                                <p style={{
+                                    color: '#8E6A28',
+                                    fontFamily: 'Inter, sans-serif',
+                                    fontSize: '14px',
+                                    fontWeight: 400,
+                                    lineHeight: '1.4'
+                                }}>Sin compromiso mínimo, cancela en cualquier momento</p>
+                            </div>
+
+                            {/* Precio */}
+                            <div className="mb-6 pb-6 border-b-2 border-gray-200">
+                                <div className="flex items-baseline gap-2">
+                                    <span style={{
+                                        color: '#352D22',
+                                        fontFamily: 'Montserrat, sans-serif',
+                                        fontSize: '48px',
+                                        fontWeight: 700,
+                                        lineHeight: '1'
+                                    }}>$299.99</span>
+                                    <span style={{
+                                        color: '#8E6A28',
+                                        fontFamily: 'Inter, sans-serif',
+                                        fontSize: '16px',
+                                        fontWeight: 400
+                                    }}>/ por mes</span>
+                                </div>
+                            </div>
+
+                            {/* Features */}
+                            <div className="space-y-4 mb-8">
+                                {[
+                                    'Todo lo que incluye el plan mensual',
+                                    'Un descuento de $124 mensuales',
+                                    'Soporte prioritario',
+                                    'Actualizaciones premium',
+                                ].map((feature, index) => (
+                                    <div key={index} className="flex items-center gap-3">
+                                        <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 20 20" fill="none">
+                                            <circle cx="10" cy="10" r="10" fill="#FFB733" />
+                                            <path d="M6 10L9 13L14 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                        <p style={{
+                                            color: '#352D22',
+                                            fontFamily: 'Inter, sans-serif',
+                                            fontSize: '15px',
+                                            fontWeight: 400
+                                        }}>{feature}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* CTA Button */}
+                            <Link
+                                to="/signup/business"
+                                className="w-full py-4 rounded-full bg-[#FFB733] text-white font-semibold hover:bg-[#4a3d2d] transition-colors shadow-lg hover:shadow-xl flex justify-center items-center text-center"
+                                style={{
+                                    fontFamily: 'Inter, sans-serif',
+                                    fontSize: '16px'
+                                }}>
+                                Comenzar Ahora
+                            </Link>
+                        </div>
+                        
+                        <div className="bg-white rounded-3xl p-8 shadow-2xl border-2 border-[#FFB733] max-w-sm w-full hover:scale-105 transition-transform duration-300 flex flex-col justify-between">
+                            {/* Header */}
+                            <div className="mb-6">
+                                <h3 style={{
+                                    color: '#352D22',
+                                    fontFamily: 'Montserrat, sans-serif',
+                                    fontSize: '28px',
+                                    fontWeight: 700,
+                                    marginBottom: '8px'
+                                }}>MENSUAL</h3>
+                                <p style={{
+                                    color: '#8E6A28',
+                                    fontFamily: 'Inter, sans-serif',
+                                    fontSize: '14px',
+                                    fontWeight: 400,
+                                    lineHeight: '1.4'
+                                }}>Sin compromiso mínimo, cancela en cualquier momento</p>
+                            </div>
+
+                            {/* Precio */}
+                            <div className="mb-6 pb-6 border-b-2 border-gray-200">
+                                <div className="flex items-baseline gap-2">
+                                    <span style={{
+                                        color: '#352D22',
+                                        fontFamily: 'Montserrat, sans-serif',
+                                        fontSize: '48px',
+                                        fontWeight: 700,
+                                        lineHeight: '1'
+                                    }}>$399.00</span>
+                                    <span style={{
+                                        color: '#8E6A28',
+                                        fontFamily: 'Inter, sans-serif',
+                                        fontSize: '16px',
+                                        fontWeight: 400
+                                    }}>/ por mes</span>
+                                </div>
+                            </div>
+
+                            {/* Features */}
+                            <div className="space-y-4 mb-8">
+                                {[
+                                    'Acceso completo',
+                                    'Gestión ilimitada de clientes',
+                                    'Creación de recompensas personalizadas',
+                                    'Sistema de puntos y sellos',
+                                    'Escaneo de códigos QR',
+                                    'Reportes',
+                                    'Soporte por email'
+                                ].map((feature, index) => (
+                                    <div key={index} className="flex items-center gap-3">
+                                        <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 20 20" fill="none">
+                                            <circle cx="10" cy="10" r="10" fill="#FFB733" />
+                                            <path d="M6 10L9 13L14 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                        <p style={{
+                                            color: '#352D22',
+                                            fontFamily: 'Inter, sans-serif',
+                                            fontSize: '15px',
+                                            fontWeight: 400
+                                        }}>{feature}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* CTA Button */}
+                            <Link
+                                to="/signup/business"
+                                className="w-full py-4 rounded-full bg-[#FFB733] text-white font-semibold hover:bg-[#4a3d2d] transition-colors shadow-lg hover:shadow-xl flex justify-center items-center text-center"
+                                style={{
+                                    fontFamily: 'Inter, sans-serif',
+                                    fontSize: '16px'
+                                }}>
+                                Comenzar Ahora
+                            </Link>
+                        </div>
+                    </div>
+                    <div className="mt-6 sm:mt-8 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-[#FFB733]/10 via-[#EBA626]/10 to-[#FFB733]/10 border-2 border-[#FFB733] rounded-xl sm:rounded-2xl shadow-lg max-w-2xl mx-auto">
+                        <p className="text-center flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap" style={{
+                            color: '#fff',
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: 'clamp(14px, 4vw, 18px)',
+                            fontWeight: 700,
+                            letterSpacing: '0.5px',
+                            lineHeight: '1.4'
+                        }}>
+                            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#FFB733] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                            <span>Crea una cuenta de cliente <span className="text-[#FFB733]">COMPLETAMENTE GRATIS</span></span>
+                            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#FFB733] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                        </p>
                     </div>
                 </section>
             </main>
