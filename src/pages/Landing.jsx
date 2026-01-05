@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
+import 'animate.css';
 import SEO from '../components/SEO';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 
 
 function Landing() {
@@ -24,6 +27,13 @@ function Landing() {
 
         // Activar animaciones después de montar
         setTimeout(() => setIsVisible(true), 100);
+
+        // Inicializar AOS
+        AOS.init({
+            duration: 1000,
+            once: true,
+            offset: 100,
+        });
     }, [navigate]);
 
     // Alternar textos cada 3 segundos
@@ -216,7 +226,7 @@ function Landing() {
                 </section>
 
                 <section className="bg-gradient-to-b from-[#352D22] to-[#8E6A28] min-h-screen flex flex-col items-center gap-12 md:gap-16 lg:gap-20 w-full px-4 sm:px-8 md:px-16 lg:px-32 xl:px-80 py-12 md:py-16 lg:py-20">
-                    <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10 py-4">
+                    <div data-aos="fade-up-right" className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10 py-4">
                         <div className="flex flex-col items-start gap-2 w-full md:w-1/2">
                             <div className="flex items-center gap-5">
                                 <span style={{
@@ -278,7 +288,7 @@ function Landing() {
                         />
                     </div>
 
-                    <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10 py-4">
+                    <div data-aos="fade-up-left" className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10 py-4">
                         <div className="flex flex-col items-start gap-2 w-full md:w-1/2 order-1 md:order-2">
                             <div className="flex items-center gap-5">
                                 <span style={{
@@ -340,7 +350,7 @@ function Landing() {
                         />
                     </div>
 
-                    <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10 py-4">
+                    <div data-aos="fade-up-right" className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16 self-stretch w-full max-w-7xl shadow-2xl rounded-xl px-10 py-4">
                         <div className="flex flex-col items-start gap-2 w-full md:w-1/2">
                             <div className="flex items-center gap-5">
                                 <span style={{
@@ -414,7 +424,7 @@ function Landing() {
                         letterSpacing: '1.92px'
                     }}>PLANES PARA TU NEGOCIO</h2>
                     <div className="flex flex-row justify-center items-stretch gap-8 flex-wrap">
-                        <div className="relative bg-white rounded-3xl p-8 shadow-2xl border-4 border-[#FFB733] max-w-sm w-full hover:scale-105 transition-transform duration-300 flex flex-col justify-between">
+                        <div data-aos="flip-right" className="relative bg-white rounded-3xl p-8 shadow-2xl border-4 border-[#FFB733] max-w-sm w-full hover:scale-105 transition-transform duration-300 flex flex-col justify-between">
                             {/* Badge de Mejor Valor */}
                             <div className="absolute -top-4 -right-4 bg-gradient-to-r from-[#FFB733] to-[#EBA626] text-white px-4 py-2 rounded-full shadow-lg transform rotate-12">
                                 <span style={{
@@ -495,8 +505,8 @@ function Landing() {
                                 Comenzar Ahora
                             </Link>
                         </div>
-                        
-                        <div className="bg-white rounded-3xl p-8 shadow-2xl border-2 border-[#FFB733] max-w-sm w-full hover:scale-105 transition-transform duration-300 flex flex-col justify-between">
+
+                        <div data-aos="flip-left" className="bg-white rounded-3xl p-8 shadow-2xl border-2 border-[#FFB733] max-w-sm w-full hover:scale-105 transition-transform duration-300 flex flex-col justify-between">
                             {/* Header */}
                             <div className="mb-6">
                                 <h3 style={{
@@ -572,7 +582,7 @@ function Landing() {
                             </Link>
                         </div>
                     </div>
-                    <div className="mt-6 sm:mt-8 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-[#FFB733]/10 via-[#EBA626]/10 to-[#FFB733]/10 border-2 border-[#FFB733] rounded-xl sm:rounded-2xl shadow-lg max-w-2xl mx-auto">
+                    <div data-aos="flip-up" className="mt-6 sm:mt-8 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-[#FFB733]/10 via-[#EBA626]/10 to-[#FFB733]/10 border-2 border-[#FFB733] rounded-xl sm:rounded-2xl shadow-lg max-w-2xl mx-auto">
                         <p className="text-center flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap" style={{
                             color: '#fff',
                             fontFamily: 'Montserrat, sans-serif',

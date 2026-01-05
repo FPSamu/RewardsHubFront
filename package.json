@@ -21,6 +21,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "animate.css": "^4.1.1",
+    "aos": "^2.3.4",
     "axios": "^1.6.2",
     "html5-qrcode": "^2.3.8",
     "leaflet": "^1.9.4",
