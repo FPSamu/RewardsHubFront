@@ -126,7 +126,7 @@ function Landing() {
                 </nav>
             </header>
 
-            <main className="flex py-[60px] flex-col justify-center items-center gap-[120px]">
+            <main className="flex py-[60px] flex-col justify-center items-center gap-[20px]">
                 <section className="flex flex-col items-center gap-10 self-stretch">
                     <div className="flex flex-col items-stretch">
                         <h1
