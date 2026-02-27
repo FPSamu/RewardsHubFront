@@ -15,6 +15,7 @@ const BusinessScan = () => {
     const [rewardType, setRewardType] = useState('points'); // 'points', 'stamps', 'both'
     const [error, setError] = useState(null);
     const [business, setBusiness] = useState(null);
+    const [selectedLocationId, setSelectedLocationId] = useState('');
     const [rewardSystems, setRewardSystems] = useState({ points: null, stamps: [] });
     const [selectedStampSystem, setSelectedStampSystem] = useState(null);
     const [productIdentifier, setProductIdentifier] = useState('');
@@ -49,6 +50,12 @@ const BusinessScan = () => {
                 // Fetch business rewards
                 const rewardsData = await rewardService.getBusinessRewards(businessData.id);
                 setRewards(rewardsData);
+
+                // Set default location if only one exists
+                const locations = businessData?.locations || [];
+                if (locations.length === 1) {
+                    setSelectedLocationId(locations[0]._id || locations[0].id || '');
+                }
 
                 // Set default stamp system if only one exists
                 if (stampSystems.length === 1) {
@@ -148,7 +155,8 @@ const BusinessScan = () => {
         setStep('processing');
         try {
             const requestData = {
-                userId: userId
+                userId: userId,
+                locationId: selectedLocationId || undefined
             };
 
             // Build transaction notes for better tracking
@@ -197,7 +205,7 @@ const BusinessScan = () => {
             setError(err.message || 'Error al procesar la transacción');
             setStep('error');
         }
-    }, [rewardType, purchaseAmount, stampQuantity, selectedStampSystem, productIdentifier, rewardSystems, business]);
+    }, [rewardType, purchaseAmount, stampQuantity, selectedStampSystem, productIdentifier, rewardSystems, business, selectedLocationId]);
 
     useEffect(() => {
         const onScanSuccess = async (decodedText) => {
@@ -244,6 +252,10 @@ const BusinessScan = () => {
 
     const handleGenerateDeliveryCode = async () => {
         // Validaciones dinámicas
+        if (!selectedLocationId) {
+            setError('Selecciona una sucursal');
+            return;
+        }
         if (!purchaseAmount && !stampQuantity) {
             setError('Ingresa el monto, la cantidad de sellos, o ambos');
             return;
@@ -274,7 +286,9 @@ const BusinessScan = () => {
 
         try {
             // Construir payload dinámico
-            const payload = {};
+            const payload = {
+                locationId: selectedLocationId
+            };
             if (purchaseAmount) {
                 const amountVal = parseFloat(purchaseAmount);
                 if (amountVal > 0) {
@@ -310,6 +324,17 @@ const BusinessScan = () => {
 
     const handleStartAction = () => {
         // Lógica unificada para el botón principal
+
+        // Validar sucursal
+        const locations = business?.locations || [];
+        if (locations.length === 0) {
+            setError('No hay sucursales configuradas. Agrega una sucursal para continuar.');
+            return;
+        }
+        if (!selectedLocationId) {
+            setError('Por favor selecciona una sucursal');
+            return;
+        }
 
         // 1. Caso Delivery (Generar código)
         if (rewardType === 'delivery') {
@@ -378,6 +403,7 @@ const BusinessScan = () => {
         try {
             const requestData = {
                 userId: scannedUserId,
+                locationId: selectedLocationId || undefined,
                 // Include reward information for transaction history
                 rewardId: redeemingReward.id,
                 rewardName: redeemingReward.name,
@@ -480,6 +506,43 @@ const BusinessScan = () => {
                         <h3 className="text-xl font-bold text-gray-800 mb-6 tracking-tight">
                             Información de la Compra
                         </h3>
+
+                        {/* Branch Selection */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Sucursal</label>
+                            {(!business?.locations || business.locations.length === 0) ? (
+                                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
+                                    No hay sucursales configuradas. Agrega una en la sección de ubicaciones.
+                                </div>
+                            ) : business.locations.length === 1 ? (
+                                <div className="bg-gray-50 border border-gray-300 rounded-lg px-4 py-3">
+                                    <p className="font-semibold text-gray-800">
+                                        {business.locations[0].name || 'Sucursal principal'}
+                                    </p>
+                                    {business.locations[0].address && (
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            {business.locations[0].address.replace(/-/g, ' ')}
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <select
+                                    value={selectedLocationId}
+                                    onChange={(e) => setSelectedLocationId(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
+                                >
+                                    <option value="">Selecciona una sucursal</option>
+                                    {business.locations.map((loc) => {
+                                        const locId = loc._id || loc.id;
+                                        return (
+                                            <option key={locId} value={locId}>
+                                                {loc.name || 'Sucursal'}{loc.address ? ` - ${loc.address.replace(/-/g, ' ')}` : ''}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            )}
+                        </div>
 
                         {/* Reward Type Selection */}
                         <div className="mb-6">
@@ -911,6 +974,14 @@ const BusinessScan = () => {
                         <div className="bg-gray-50 rounded-lg p-4 mb-6">
                             <h4 className="text-sm font-semibold text-gray-700 mb-3">Resumen de la transacción:</h4>
                             <div className="space-y-2">
+                                {selectedLocationId && (
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-600">Sucursal:</span>
+                                        <span className="font-bold text-gray-800">
+                                            {(business?.locations || []).find(loc => (loc._id || loc.id) === selectedLocationId)?.name || 'Sucursal'}
+                                        </span>
+                                    </div>
+                                )}
                                 {(rewardType === 'points' || rewardType === 'both') && purchaseAmount && (
                                     <>
                                         <div className="flex justify-between items-center text-sm">
@@ -1203,6 +1274,14 @@ const BusinessScan = () => {
 
                         <div className="bg-gray-50 rounded-lg p-6 mb-8">
                             <div className="space-y-3">
+                                {selectedLocationId && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-600">Sucursal:</span>
+                                        <span className="font-bold text-gray-800">
+                                            {(business?.locations || []).find(loc => (loc._id || loc.id) === selectedLocationId)?.name || 'Sucursal'}
+                                        </span>
+                                    </div>
+                                )}
                                 {(rewardType === 'points' || rewardType === 'both') && purchaseAmount && (
                                     <>
                                         <div className="flex justify-between items-center">
