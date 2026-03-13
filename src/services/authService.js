@@ -67,7 +67,8 @@ export const authService = {
 
   loginBusiness: async (email, password, rememberMe = false) => {
     try {
-      const response = await api.post("/business/login", { email, password });
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const response = await api.post("/business/login", { email, password, timezone });
       const token = response.data.accessToken || response.data.token;
       
       if (token) {
@@ -89,9 +90,13 @@ export const authService = {
 
   login: async (email, password, rememberMe = false, userType = "client") => {
     const endpoint = userType === "business" ? "/business/login" : "/auth/login";
-    
+
     try {
-      const response = await api.post(endpoint, { email, password });
+      const body = { email, password };
+      if (userType === "business") {
+        body.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      }
+      const response = await api.post(endpoint, body);
       const token = response.data.accessToken || response.data.token;
       
       if (token) {

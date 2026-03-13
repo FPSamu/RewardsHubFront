@@ -25,6 +25,7 @@ const BusinessScan = () => {
     const [redeemingReward, setRedeemingReward] = useState(null); // Reward being redeemed
     const [showRedeemModal, setShowRedeemModal] = useState(false);
     const [deliveryCodeData, setDeliveryCodeData] = useState(null);
+    const [selectedLocation, setSelectedLocation] = useState(null);
 
     const scannerRef = useRef(null);
     const qrReaderRef = useRef(null);
@@ -35,6 +36,38 @@ const BusinessScan = () => {
             try {
                 const businessData = await businessService.getMyBusiness();
                 setBusiness(businessData);
+
+                // Auto-select location by proximity, falling back to main or only location
+                const locations = businessData.locations || [];
+                if (locations.length === 1) {
+                    setSelectedLocation(locations[0]._id);
+                } else if (locations.length > 1) {
+                    const selectByProximity = () => new Promise((resolve) => {
+                        if (!navigator.geolocation) return resolve(null);
+                        navigator.geolocation.getCurrentPosition(
+                            ({ coords }) => {
+                                const closest = locations.reduce((best, loc) => {
+                                    const dLat = coords.latitude - loc.latitude;
+                                    const dLng = coords.longitude - loc.longitude;
+                                    const dist = dLat * dLat + dLng * dLng; // no need for sqrt, comparing only
+                                    return dist < best.dist ? { loc, dist } : best;
+                                }, { loc: null, dist: Infinity });
+                                resolve(closest.loc);
+                            },
+                            () => resolve(null), // denied or error → fallback
+                            { timeout: 5000, maximumAge: 60000 }
+                        );
+                    });
+
+                    const nearest = await selectByProximity();
+                    if (nearest) {
+                        setSelectedLocation(nearest._id);
+                    } else {
+                        // Fallback: use main location if geolocation unavailable
+                        const main = locations.find(l => l.isMain);
+                        if (main) setSelectedLocation(main._id);
+                    }
+                }
 
                 // Fetch reward systems
                 const systems = await systemService.getBusinessSystems();
@@ -151,6 +184,11 @@ const BusinessScan = () => {
                 userId: userId
             };
 
+            // Include the selected branch/location
+            if (selectedLocation) {
+                requestData.locationId = selectedLocation;
+            }
+
             // Build transaction notes for better tracking
             const transactionNotes = [];
 
@@ -197,7 +235,7 @@ const BusinessScan = () => {
             setError(err.message || 'Error al procesar la transacción');
             setStep('error');
         }
-    }, [rewardType, purchaseAmount, stampQuantity, selectedStampSystem, productIdentifier, rewardSystems, business]);
+    }, [rewardType, purchaseAmount, stampQuantity, selectedStampSystem, productIdentifier, rewardSystems, business, selectedLocation]);
 
     useEffect(() => {
         const onScanSuccess = async (decodedText) => {
@@ -814,6 +852,28 @@ const BusinessScan = () => {
                                     </div>
                                 )}
                             </>
+                        )}
+
+                        {/* Location Selector - only shown when business has multiple branches */}
+                        {business?.locations?.length > 1 && (
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Sucursal
+                                </label>
+                                <select
+                                    value={selectedLocation || ''}
+                                    onChange={(e) => setSelectedLocation(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 bg-white"
+                                >
+                                    <option value="">Selecciona una sucursal</option>
+                                    {business.locations.map(loc => (
+                                        <option key={loc._id} value={loc._id}>
+                                            {loc.name || loc.formattedAddress || loc.address}
+                                            {loc.isMain ? ' (Principal)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         )}
 
                         {/* Error Message */}
