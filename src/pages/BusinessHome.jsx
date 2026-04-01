@@ -24,7 +24,8 @@ const BusinessHome = () => {
     const [shiftFormData, setShiftFormData] = useState({
         name: '',
         startTime: '',
-        endTime: ''
+        endTime: '',
+        branchId: ''
     });
     const [savingShift, setSavingShift] = useState(false);
     const [shiftError, setShiftError] = useState(null);
@@ -144,8 +145,11 @@ const BusinessHome = () => {
                 businessId: business.id,
                 name: shiftFormData.name.trim(),
                 startTime: shiftFormData.startTime,
-                endTime: shiftFormData.endTime
+                endTime: shiftFormData.endTime,
             };
+            if (shiftFormData.branchId) {
+                shiftPayload.branchId = shiftFormData.branchId;
+            }
 
             // console.log('Creating shift with payload:', shiftPayload);
 
@@ -695,6 +699,33 @@ const BusinessHome = () => {
                                 />
                             </div>
 
+                            {/* Sucursal (solo si hay más de una) */}
+                            {business?.locations?.length > 0 && (
+                                <div>
+                                    <label htmlFor="shift-branch" className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Sucursal
+                                    </label>
+                                    <select
+                                        id="shift-branch"
+                                        name="branchId"
+                                        value={shiftFormData.branchId}
+                                        onChange={handleShiftFormChange}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all"
+                                        disabled={savingShift}
+                                    >
+                                        <option value="">Todas las sucursales (General)</option>
+                                        {business.locations.map((loc) => (
+                                            <option key={loc._id} value={loc._id}>
+                                                {loc.name || loc.address}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Puedes agregar turnos por sucursal desde Gestión de Turnos
+                                    </p>
+                                </div>
+                            )}
+
                             {/* Error message */}
                             {shiftError && (
                                 <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
@@ -828,11 +859,19 @@ const BusinessHome = () => {
                                             disabled={generatingReport}
                                         >
                                             <option value="">Selecciona un turno</option>
-                                            {availableShifts.map((shift) => (
-                                                <option key={shift.id} value={shift.id}>
-                                                    {shift.name} ({shift.startTime} - {shift.endTime})
-                                                </option>
-                                            ))}
+                                            {availableShifts.map((shift) => {
+                                                const loc = shift.branchId
+                                                    ? business?.locations?.find(l => l._id === shift.branchId)
+                                                    : null;
+                                                const branchLabel = loc
+                                                    ? ` — ${loc.name || loc.address}`
+                                                    : shift.branchId ? '' : ' — General';
+                                                return (
+                                                    <option key={shift.id} value={shift.id}>
+                                                        {shift.name} ({shift.startTime} - {shift.endTime}){branchLabel}
+                                                    </option>
+                                                );
+                                            })}
                                         </select>
                                     </div>
                                     <div>

@@ -36,7 +36,8 @@ const BusinessLayout = () => {
     const [shiftFormData, setShiftFormData] = useState({
         name: '',
         startTime: '',
-        endTime: ''
+        endTime: '',
+        branchId: ''
     });
     const [savingShift, setSavingShift] = useState(false);
     const [shiftError, setShiftError] = useState(null);
@@ -249,7 +250,7 @@ const BusinessLayout = () => {
     const handleCloseShiftsModal = () => {
         setShowShiftsModal(false);
         setEditingShift(null);
-        setShiftFormData({ name: '', startTime: '', endTime: '' });
+        setShiftFormData({ name: '', startTime: '', endTime: '', branchId: '' });
         setShiftError(null);
     };
 
@@ -258,14 +259,15 @@ const BusinessLayout = () => {
         setShiftFormData({
             name: shift.name,
             startTime: shift.startTime,
-            endTime: shift.endTime
+            endTime: shift.endTime,
+            branchId: shift.branchId || ''
         });
         setShiftError(null);
     };
 
     const handleCancelEdit = () => {
         setEditingShift(null);
-        setShiftFormData({ name: '', startTime: '', endTime: '' });
+        setShiftFormData({ name: '', startTime: '', endTime: '', branchId: '' });
         setShiftError(null);
     };
 
@@ -286,7 +288,8 @@ const BusinessLayout = () => {
                 await workShiftService.updateWorkShift(editingShift.id, {
                     name: shiftFormData.name.trim(),
                     startTime: shiftFormData.startTime,
-                    endTime: shiftFormData.endTime
+                    endTime: shiftFormData.endTime,
+                    branchId: shiftFormData.branchId || null,
                 });
             } else {
                 // Crear nuevo turno
@@ -296,12 +299,16 @@ const BusinessLayout = () => {
                     return;
                 }
 
-                await workShiftService.createWorkShift({
+                const createPayload = {
                     businessId: currentBusiness.id,
                     name: shiftFormData.name.trim(),
                     startTime: shiftFormData.startTime,
-                    endTime: shiftFormData.endTime
-                });
+                    endTime: shiftFormData.endTime,
+                };
+                if (shiftFormData.branchId) {
+                    createPayload.branchId = shiftFormData.branchId;
+                }
+                await workShiftService.createWorkShift(createPayload);
             }
 
             // Recargar turnos y resetear formulario
@@ -719,6 +726,30 @@ const BusinessLayout = () => {
                                     </div>
                                 </div>
 
+                                {currentBusiness?.locations?.length > 0 && (
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Sucursal
+                                        </label>
+                                        <select
+                                            value={shiftFormData.branchId}
+                                            onChange={(e) => setShiftFormData({ ...shiftFormData, branchId: e.target.value })}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                            disabled={savingShift}
+                                        >
+                                            <option value="">Todas las sucursales (General)</option>
+                                            {currentBusiness.locations.map((loc) => (
+                                                <option key={loc._id} value={loc._id}>
+                                                    {loc.name || loc.address}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Deja en "Todas las sucursales" para un turno que aplique a todo el negocio
+                                        </p>
+                                    </div>
+                                )}
+
                                 <div className="flex items-center gap-3 mt-4">
                                     <button
                                         type="submit"
@@ -769,58 +800,89 @@ const BusinessLayout = () => {
                                         <p className="text-gray-600 font-medium">No hay turnos configurados</p>
                                         <p className="text-sm text-gray-500 mt-1">Crea tu primer turno usando el formulario de arriba</p>
                                     </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {shifts.map((shift) => (
-                                            <div
-                                                key={shift.id}
-                                                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex-1">
+                                ) : (() => {
+                                    const generalShifts = shifts.filter(s => !s.branchId);
+                                    const branchShifts = shifts.filter(s => !!s.branchId);
+                                    const branchGroups = branchShifts.reduce((acc, s) => {
+                                        if (!acc[s.branchId]) acc[s.branchId] = [];
+                                        acc[s.branchId].push(s);
+                                        return acc;
+                                    }, {});
+                                    const getBranchName = (branchId) => {
+                                        const loc = currentBusiness?.locations?.find(l => l._id === branchId);
+                                        return loc ? (loc.name || loc.address) : branchId;
+                                    };
+                                    const renderShiftCard = (shift) => (
+                                        <div
+                                            key={shift.id}
+                                            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 flex-wrap">
                                                         <h5 className="font-semibold text-gray-800 text-lg">{shift.name}</h5>
-                                                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                                                            <div className="flex items-center gap-2">
-                                                                <svg className="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                </svg>
-                                                                <span className="font-medium">{shift.startTime}</span>
-                                                            </div>
-                                                            <span className="text-gray-400">→</span>
-                                                            <div className="flex items-center gap-2">
-                                                                <svg className="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                </svg>
-                                                                <span className="font-medium">{shift.endTime}</span>
-                                                            </div>
+                                                        {!shift.branchId ? (
+                                                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-muted text-brand-onColor">General</span>
+                                                        ) : null}
+                                                    </div>
+                                                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                                                        <div className="flex items-center gap-2">
+                                                            <svg className="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                            </svg>
+                                                            <span className="font-medium">{shift.startTime}</span>
+                                                        </div>
+                                                        <span className="text-gray-400">→</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <svg className="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                            </svg>
+                                                            <span className="font-medium">{shift.endTime}</span>
                                                         </div>
                                                     </div>
-
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={() => handleEditShift(shift)}
-                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                            title="Editar turno"
-                                                        >
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                            </svg>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteShift(shift.id)}
-                                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                            title="Eliminar turno"
-                                                        >
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleEditShift(shift)}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="Editar turno"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteShift(shift.id)}
+                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Eliminar turno"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                        </div>
+                                    );
+                                    return (
+                                        <div className="space-y-5">
+                                            {generalShifts.length > 0 && (
+                                                <div>
+                                                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Generales</p>
+                                                    <div className="space-y-3">{generalShifts.map(renderShiftCard)}</div>
+                                                </div>
+                                            )}
+                                            {Object.entries(branchGroups).map(([branchId, branchShiftList]) => (
+                                                <div key={branchId}>
+                                                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
+                                                        {getBranchName(branchId)}
+                                                    </p>
+                                                    <div className="space-y-3">{branchShiftList.map(renderShiftCard)}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
 
