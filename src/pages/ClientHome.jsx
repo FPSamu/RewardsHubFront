@@ -3,7 +3,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import authService from '../services/authService';
 import userPointsService from '../services/userPointsService';
 import businessService from '../services/businessService';
-import deliveryService from '../services/deliveryService'; // <--- 1. Importar servicio
+import deliveryService from '../services/deliveryService';
+import rewardService from '../services/rewardService';
 
 const ClientHome = () => {
     const [user, setUser] = useState(null);
@@ -11,6 +12,10 @@ const ClientHome = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    const [selectedBusiness, setSelectedBusiness] = useState(null);
+    const [businessRewards, setBusinessRewards] = useState([]);
+    const [loadingRewards, setLoadingRewards] = useState(false);
 
     const [showRedeemModal, setShowRedeemModal] = useState(false);
     const [redeemCode, setRedeemCode] = useState('');
@@ -117,6 +122,22 @@ const ClientHome = () => {
             setRedeemError('');
             setRedeemCode('');
         }, 300);
+    };
+
+    const handleBusinessClick = async (business) => {
+        setSelectedBusiness(business);
+        setBusinessRewards([]);
+        setLoadingRewards(true);
+        try {
+            const rewards = await rewardService.getBusinessRewards(business.businessId);
+            const rewardsArray = Array.isArray(rewards) ? rewards : (rewards?.rewards || []);
+            setBusinessRewards(rewardsArray.filter(r => r.isActive !== false));
+        } catch (err) {
+            console.error('Error fetching rewards:', err);
+            setBusinessRewards([]);
+        } finally {
+            setLoadingRewards(false);
+        }
     };
 
     if (loading) {
@@ -304,7 +325,8 @@ const ClientHome = () => {
                         filteredBusinesses.map((business) => (
                             <div
                                 key={business._id || business.businessId}
-                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 gap-3"
+                                onClick={() => handleBusinessClick(business)}
+                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 gap-3 cursor-pointer"
                             >
                                 <div className="flex items-center space-x-3 min-w-0 flex-1">
                                     {business.businessLogoUrl ? (
@@ -349,7 +371,7 @@ const ClientHome = () => {
                         ))
                     ) : (
                         <div className="text-center py-8 text-gray-500">
-                            <p>No se encontraron negocios que coincidan con &quot{searchTerm}&quot</p>
+                            <p>No se encontraron negocios que coincidan con "{searchTerm}"</p>
                         </div>
                     )}
                 </div>
@@ -366,6 +388,7 @@ const ClientHome = () => {
                             .map((business) => (
                                 <div
                                     key={business._id}
+                                    onClick={() => handleBusinessClick(business)}
                                     className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 cursor-pointer gap-3"
                                 >
                                     <div className="flex items-center space-x-3 min-w-0 flex-1">
@@ -443,6 +466,107 @@ const ClientHome = () => {
                 <span className="font-bold hidden sm:block">Canjear Código</span>
                 <span className="font-bold sm:hidden">Canjear</span>
             </button>
+
+            {selectedBusiness && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[85vh] flex flex-col">
+                        {/* Header */}
+                        <div className="flex items-center gap-4 p-5 border-b border-gray-100">
+                            {selectedBusiness.businessLogoUrl ? (
+                                <div className="w-12 h-12 flex-shrink-0 rounded-full overflow-hidden border border-gray-200">
+                                    <img src={selectedBusiness.businessLogoUrl} alt={selectedBusiness.businessName} className="w-full h-full object-cover" />
+                                </div>
+                            ) : (
+                                <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex-shrink-0 flex items-center justify-center font-bold text-lg">
+                                    {(selectedBusiness.businessName || 'N').charAt(0).toUpperCase()}
+                                </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-lg font-bold text-gray-800 truncate">{selectedBusiness.businessName}</h3>
+                                <div className="flex items-center gap-3 mt-0.5">
+                                    <span className="text-sm font-semibold text-brand-primary">{selectedBusiness.points} pts</span>
+                                    {selectedBusiness.stamps > 0 && (
+                                        <span className="text-sm font-semibold text-accent-success">{selectedBusiness.stamps} sellos</span>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setSelectedBusiness(null)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors p-1 flex-shrink-0"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Rewards list */}
+                        <div className="overflow-y-auto flex-1 p-5">
+                            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Recompensas disponibles</p>
+
+                            {loadingRewards ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-primary border-t-transparent"></div>
+                                </div>
+                            ) : businessRewards.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <svg className="w-14 h-14 text-gray-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                                    </svg>
+                                    <p className="text-gray-500 font-medium">Sin recompensas configuradas</p>
+                                    <p className="text-sm text-gray-400 mt-1">Este negocio aún no tiene recompensas activas</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {businessRewards.map((reward) => {
+                                        const isPoints = reward.type === 'points' || reward.pointsRequired;
+                                        const required = isPoints ? reward.pointsRequired : reward.stampsRequired;
+                                        const current = isPoints ? selectedBusiness.points : selectedBusiness.stamps;
+                                        const progress = required > 0 ? Math.min((current / required) * 100, 100) : 0;
+                                        const canRedeem = current >= required;
+
+                                        return (
+                                            <div key={reward._id || reward.id} className={`rounded-xl border p-4 ${canRedeem ? 'border-accent-success bg-green-50' : 'border-gray-200 bg-white'}`}>
+                                                <div className="flex items-start justify-between gap-3 mb-3">
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-semibold text-gray-800 text-sm">{reward.name}</h4>
+                                                        {reward.description && (
+                                                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{reward.description}</p>
+                                                        )}
+                                                    </div>
+                                                    {canRedeem ? (
+                                                        <span className="flex-shrink-0 text-xs font-bold px-2.5 py-1 bg-accent-success text-white rounded-full">
+                                                            ¡Listo!
+                                                        </span>
+                                                    ) : (
+                                                        <span className="flex-shrink-0 text-xs font-semibold px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full">
+                                                            {required - current} {isPoints ? 'pts' : 'sellos'} más
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Progress bar */}
+                                                <div className="space-y-1.5">
+                                                    <div className="flex justify-between text-xs text-gray-500">
+                                                        <span>{current} {isPoints ? 'pts' : 'sellos'}</span>
+                                                        <span>{required} {isPoints ? 'pts' : 'sellos'}</span>
+                                                    </div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div
+                                                            className={`h-2 rounded-full transition-all duration-500 ${canRedeem ? 'bg-accent-success' : 'bg-brand-primary'}`}
+                                                            style={{ width: `${progress}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {showRedeemModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">

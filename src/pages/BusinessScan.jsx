@@ -15,7 +15,6 @@ const BusinessScan = () => {
     const [rewardType, setRewardType] = useState('points'); // 'points', 'stamps', 'both'
     const [error, setError] = useState(null);
     const [business, setBusiness] = useState(null);
-    const [selectedLocationId, setSelectedLocationId] = useState('');
     const [rewardSystems, setRewardSystems] = useState({ points: null, stamps: [] });
     const [selectedStampSystem, setSelectedStampSystem] = useState(null);
     const [productIdentifier, setProductIdentifier] = useState('');
@@ -26,6 +25,7 @@ const BusinessScan = () => {
     const [redeemingReward, setRedeemingReward] = useState(null); // Reward being redeemed
     const [showRedeemModal, setShowRedeemModal] = useState(false);
     const [deliveryCodeData, setDeliveryCodeData] = useState(null);
+    const [selectedLocation, setSelectedLocation] = useState(null);
 
     const scannerRef = useRef(null);
     const qrReaderRef = useRef(null);
@@ -36,6 +36,38 @@ const BusinessScan = () => {
             try {
                 const businessData = await businessService.getMyBusiness();
                 setBusiness(businessData);
+
+                // Auto-select location by proximity, falling back to main or only location
+                const locations = businessData.locations || [];
+                if (locations.length === 1) {
+                    setSelectedLocation(locations[0]._id);
+                } else if (locations.length > 1) {
+                    const selectByProximity = () => new Promise((resolve) => {
+                        if (!navigator.geolocation) return resolve(null);
+                        navigator.geolocation.getCurrentPosition(
+                            ({ coords }) => {
+                                const closest = locations.reduce((best, loc) => {
+                                    const dLat = coords.latitude - loc.latitude;
+                                    const dLng = coords.longitude - loc.longitude;
+                                    const dist = dLat * dLat + dLng * dLng; // no need for sqrt, comparing only
+                                    return dist < best.dist ? { loc, dist } : best;
+                                }, { loc: null, dist: Infinity });
+                                resolve(closest.loc);
+                            },
+                            () => resolve(null), // denied or error → fallback
+                            { timeout: 5000, maximumAge: 60000 }
+                        );
+                    });
+
+                    const nearest = await selectByProximity();
+                    if (nearest) {
+                        setSelectedLocation(nearest._id);
+                    } else {
+                        // Fallback: use main location if geolocation unavailable
+                        const main = locations.find(l => l.isMain);
+                        if (main) setSelectedLocation(main._id);
+                    }
+                }
 
                 // Fetch reward systems
                 const systems = await systemService.getBusinessSystems();
@@ -50,12 +82,6 @@ const BusinessScan = () => {
                 // Fetch business rewards
                 const rewardsData = await rewardService.getBusinessRewards(businessData.id);
                 setRewards(rewardsData);
-
-                // Set default location if only one exists
-                const locations = businessData?.locations || [];
-                if (locations.length === 1) {
-                    setSelectedLocationId(locations[0]._id || locations[0].id || '');
-                }
 
                 // Set default stamp system if only one exists
                 if (stampSystems.length === 1) {
@@ -155,9 +181,13 @@ const BusinessScan = () => {
         setStep('processing');
         try {
             const requestData = {
-                userId: userId,
-                locationId: selectedLocationId || undefined
+                userId: userId
             };
+
+            // Include the selected branch/location
+            if (selectedLocation) {
+                requestData.locationId = selectedLocation;
+            }
 
             // Build transaction notes for better tracking
             const transactionNotes = [];
@@ -205,7 +235,7 @@ const BusinessScan = () => {
             setError(err.message || 'Error al procesar la transacción');
             setStep('error');
         }
-    }, [rewardType, purchaseAmount, stampQuantity, selectedStampSystem, productIdentifier, rewardSystems, business, selectedLocationId]);
+    }, [rewardType, purchaseAmount, stampQuantity, selectedStampSystem, productIdentifier, rewardSystems, business, selectedLocation]);
 
     useEffect(() => {
         const onScanSuccess = async (decodedText) => {
@@ -252,10 +282,6 @@ const BusinessScan = () => {
 
     const handleGenerateDeliveryCode = async () => {
         // Validaciones dinámicas
-        if (!selectedLocationId) {
-            setError('Selecciona una sucursal');
-            return;
-        }
         if (!purchaseAmount && !stampQuantity) {
             setError('Ingresa el monto, la cantidad de sellos, o ambos');
             return;
@@ -286,9 +312,7 @@ const BusinessScan = () => {
 
         try {
             // Construir payload dinámico
-            const payload = {
-                locationId: selectedLocationId
-            };
+            const payload = {};
             if (purchaseAmount) {
                 const amountVal = parseFloat(purchaseAmount);
                 if (amountVal > 0) {
@@ -324,17 +348,6 @@ const BusinessScan = () => {
 
     const handleStartAction = () => {
         // Lógica unificada para el botón principal
-
-        // Validar sucursal
-        const locations = business?.locations || [];
-        if (locations.length === 0) {
-            setError('No hay sucursales configuradas. Agrega una sucursal para continuar.');
-            return;
-        }
-        if (!selectedLocationId) {
-            setError('Por favor selecciona una sucursal');
-            return;
-        }
 
         // 1. Caso Delivery (Generar código)
         if (rewardType === 'delivery') {
@@ -403,7 +416,6 @@ const BusinessScan = () => {
         try {
             const requestData = {
                 userId: scannedUserId,
-                locationId: selectedLocationId || undefined,
                 // Include reward information for transaction history
                 rewardId: redeemingReward.id,
                 rewardName: redeemingReward.name,
@@ -506,43 +518,6 @@ const BusinessScan = () => {
                         <h3 className="text-xl font-bold text-gray-800 mb-6 tracking-tight">
                             Información de la Compra
                         </h3>
-
-                        {/* Branch Selection */}
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Sucursal</label>
-                            {(!business?.locations || business.locations.length === 0) ? (
-                                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
-                                    No hay sucursales configuradas. Agrega una en la sección de ubicaciones.
-                                </div>
-                            ) : business.locations.length === 1 ? (
-                                <div className="bg-gray-50 border border-gray-300 rounded-lg px-4 py-3">
-                                    <p className="font-semibold text-gray-800">
-                                        {business.locations[0].name || 'Sucursal principal'}
-                                    </p>
-                                    {business.locations[0].address && (
-                                        <p className="text-sm text-gray-600 mt-1">
-                                            {business.locations[0].address.replace(/-/g, ' ')}
-                                        </p>
-                                    )}
-                                </div>
-                            ) : (
-                                <select
-                                    value={selectedLocationId}
-                                    onChange={(e) => setSelectedLocationId(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 text-lg"
-                                >
-                                    <option value="">Selecciona una sucursal</option>
-                                    {business.locations.map((loc) => {
-                                        const locId = loc._id || loc.id;
-                                        return (
-                                            <option key={locId} value={locId}>
-                                                {loc.name || 'Sucursal'}{loc.address ? ` - ${loc.address.replace(/-/g, ' ')}` : ''}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
-                            )}
-                        </div>
 
                         {/* Reward Type Selection */}
                         <div className="mb-6">
@@ -879,6 +854,28 @@ const BusinessScan = () => {
                             </>
                         )}
 
+                        {/* Location Selector - only shown when business has multiple branches */}
+                        {business?.locations?.length > 1 && (
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Sucursal
+                                </label>
+                                <select
+                                    value={selectedLocation || ''}
+                                    onChange={(e) => setSelectedLocation(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-brand-muted focus:border-brand-primary transition-all duration-180 bg-white"
+                                >
+                                    <option value="">Selecciona una sucursal</option>
+                                    {business.locations.map(loc => (
+                                        <option key={loc._id} value={loc._id}>
+                                            {loc.name || loc.formattedAddress || loc.address}
+                                            {loc.isMain ? ' (Principal)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
                         {/* Error Message */}
                         {error && (
                             <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
@@ -974,14 +971,6 @@ const BusinessScan = () => {
                         <div className="bg-gray-50 rounded-lg p-4 mb-6">
                             <h4 className="text-sm font-semibold text-gray-700 mb-3">Resumen de la transacción:</h4>
                             <div className="space-y-2">
-                                {selectedLocationId && (
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-gray-600">Sucursal:</span>
-                                        <span className="font-bold text-gray-800">
-                                            {(business?.locations || []).find(loc => (loc._id || loc.id) === selectedLocationId)?.name || 'Sucursal'}
-                                        </span>
-                                    </div>
-                                )}
                                 {(rewardType === 'points' || rewardType === 'both') && purchaseAmount && (
                                     <>
                                         <div className="flex justify-between items-center text-sm">
@@ -1274,14 +1263,6 @@ const BusinessScan = () => {
 
                         <div className="bg-gray-50 rounded-lg p-6 mb-8">
                             <div className="space-y-3">
-                                {selectedLocationId && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Sucursal:</span>
-                                        <span className="font-bold text-gray-800">
-                                            {(business?.locations || []).find(loc => (loc._id || loc.id) === selectedLocationId)?.name || 'Sucursal'}
-                                        </span>
-                                    </div>
-                                )}
                                 {(rewardType === 'points' || rewardType === 'both') && purchaseAmount && (
                                     <>
                                         <div className="flex justify-between items-center">

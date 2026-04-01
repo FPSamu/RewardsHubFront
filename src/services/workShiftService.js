@@ -67,6 +67,19 @@ export const workShiftService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Get work shifts for a specific branch
+  getWorkShiftsByBranch: async (branchId, businessId, includeInactive = false) => {
+    try {
+      const params = new URLSearchParams({ businessId });
+      if (includeInactive) params.append('includeInactive', 'true');
+      const response = await api.get(`/work-shifts/branch/${branchId}?${params}`);
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) return [];
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default workShiftService;
