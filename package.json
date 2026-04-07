@@ -4,8 +4,8 @@
   "description": "RewardsHub Frontend - Universal rewards and fidelization platform",
   "main": "index.js",
   "scripts": {
-    "dev": "vite",
-    "dev:host": "vite --host",
+    "dev": "vite --force",
+    "dev:host": "vite --host --force",
     "build": "vite build",
     "preview": "vite preview",
     "preview:host": "vite preview --host",

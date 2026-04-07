@@ -13,6 +13,9 @@ const ClientHome = () => {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
+    const [availableRewards, setAvailableRewards] = useState([]);
+    const [closeRewards, setCloseRewards] = useState([]);
+
     const [selectedBusiness, setSelectedBusiness] = useState(null);
     const [businessRewards, setBusinessRewards] = useState([]);
     const [loadingRewards, setLoadingRewards] = useState(false);
@@ -75,6 +78,75 @@ const ClientHome = () => {
                     })
                 );
                 pointsData.businessPoints = businessPointsWithNames;
+
+                // Calcular recompensas disponibles y cercanas
+                const available = [];
+                const close = [];
+
+                const allBusinessRewards = await Promise.all(
+                    businessPointsWithNames.map(async (bp) => {
+                        try {
+                            const rewards = await rewardService.getBusinessRewards(bp.businessId);
+                            const rewardsArray = Array.isArray(rewards) ? rewards : (rewards?.rewards || []);
+                            return { bp, rewards: rewardsArray.filter(r => r.isActive !== false) };
+                        } catch {
+                            return { bp, rewards: [] };
+                        }
+                    })
+                );
+
+                for (const { bp, rewards } of allBusinessRewards) {
+                    // Estimado de puntos por visita: ratio puntos/sellos
+                    const avgPointsPerVisit = bp.stamps > 0 ? bp.points / bp.stamps : null;
+                    const bizMeta = {
+                        businessName: bp.businessName,
+                        businessId: bp.businessId,
+                        businessLogoUrl: bp.businessLogoUrl,
+                        userPoints: bp.points,
+                        userStamps: bp.stamps,
+                    };
+
+                    for (const reward of rewards) {
+                        const isPoints = reward.type === 'points' || reward.pointsRequired;
+                        const required = isPoints
+                            ? reward.pointsRequired
+                            : (reward.stampsRequired || reward.targetStamps);
+                        const current = isPoints ? bp.points : bp.stamps;
+
+                        if (!required || required <= 0) continue;
+
+                        if (current >= required) {
+                            available.push({ ...reward, ...bizMeta });
+                        } else {
+                            const gap = required - current;
+                            let isClose = false;
+
+                            if (!isPoints) {
+                                // Sellos: "cerca" = falta 1 sello
+                                isClose = gap <= 1;
+                            } else if (avgPointsPerVisit && avgPointsPerVisit > 0) {
+                                // Puntos con historial: "cerca" = el gap cabe en ~1 visita promedio
+                                isClose = gap <= avgPointsPerVisit;
+                            } else {
+                                // Puntos sin historial de sellos: "cerca" = ya tiene ≥75%
+                                isClose = current >= required * 0.75;
+                            }
+
+                            if (isClose) {
+                                close.push({
+                                    ...reward,
+                                    ...bizMeta,
+                                    gap,
+                                    isPoints,
+                                    avgPointsPerVisit,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                setAvailableRewards(available);
+                setCloseRewards(close);
             }
 
             setUserPointsData(pointsData);
@@ -182,6 +254,21 @@ const ClientHome = () => {
         (business.businessName || business.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const businessesWithAvailableRewards = Object.values(
+        availableRewards.reduce((acc, reward) => {
+            if (!acc[reward.businessId]) {
+                acc[reward.businessId] = {
+                    businessId: reward.businessId,
+                    businessName: reward.businessName,
+                    businessLogoUrl: reward.businessLogoUrl,
+                    rewardCount: 0,
+                };
+            }
+            acc[reward.businessId].rewardCount++;
+            return acc;
+        }, {})
+    );
+
     return (
         <div className="space-y-6">
             {/* Welcome Section */}
@@ -200,6 +287,117 @@ const ClientHome = () => {
                     Bienvenido a tu panel de RewardsHub
                 </p>
             </div>
+
+            {/* Available Rewards Card */}
+            {businessesWithAvailableRewards.length > 0 && (
+                <div className="bg-gradient-to-br from-accent-success to-emerald-600 rounded-xl shadow-card p-6 text-white">
+                    <div className="flex items-center space-x-3 mb-4">
+                        <div className="bg-white/20 p-2 rounded-full flex-shrink-0">
+                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold">
+                                {businessesWithAvailableRewards.length === 1
+                                    ? '¡Tienes recompensas en 1 negocio!'
+                                    : `¡Tienes recompensas en ${businessesWithAvailableRewards.length} negocios!`}
+                            </h3>
+                            <p className="text-white/80 text-sm">Toca un negocio para ver tus recompensas disponibles</p>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        {businessesWithAvailableRewards.map((biz) => {
+                            const fullBusiness = businessPoints.find(bp => bp.businessId === biz.businessId) || biz;
+                            return (
+                                <div
+                                    key={biz.businessId}
+                                    onClick={() => handleBusinessClick(fullBusiness)}
+                                    className="bg-white/15 rounded-xl p-4 flex items-center space-x-4 cursor-pointer hover:bg-white/25 transition-colors duration-150"
+                                >
+                                    {biz.businessLogoUrl ? (
+                                        <img
+                                            src={biz.businessLogoUrl}
+                                            alt={biz.businessName}
+                                            className="w-10 h-10 rounded-full object-cover bg-white flex-shrink-0"
+                                        />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center flex-shrink-0">
+                                            <span className="text-white font-bold text-lg">{biz.businessName?.[0] || '?'}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-white truncate">{biz.businessName}</p>
+                                        <p className="text-white/80 text-sm">
+                                            {biz.rewardCount === 1 ? '1 recompensa disponible' : `${biz.rewardCount} recompensas disponibles`}
+                                        </p>
+                                    </div>
+                                    <svg className="w-5 h-5 text-white/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Close Rewards Card — solo se muestra si no hay recompensas disponibles */}
+            {availableRewards.length === 0 && closeRewards.length > 0 && (
+                <div className="bg-gradient-to-br from-rose-400 to-brand-primary rounded-xl shadow-card p-6 text-white">
+                    <div className="flex items-center space-x-3 mb-4">
+                        <div className="bg-white/20 p-2 rounded-full flex-shrink-0">
+                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold">¡Estás cerca de una recompensa!</h3>
+                            <p className="text-white/80 text-sm">Con tu próxima compra podrías alcanzarla</p>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        {closeRewards.map((reward) => {
+                            const gapLabel = reward.isPoints
+                                ? `~${Math.ceil(reward.gap)} pts más`
+                                : reward.gap === 1
+                                    ? '1 sello más'
+                                    : `${reward.gap} sellos más`;
+                            return (
+                                <div
+                                    key={`${reward._id || reward.id}-${reward.businessId}`}
+                                    onClick={() => {
+                                        const fullBusiness = businessPoints.find(bp => bp.businessId === reward.businessId) || reward;
+                                        handleBusinessClick(fullBusiness);
+                                    }}
+                                    className="bg-white/15 rounded-xl p-4 flex items-center space-x-4 cursor-pointer hover:bg-white/25 transition-colors duration-150"
+                                >
+                                    {reward.businessLogoUrl ? (
+                                        <img
+                                            src={reward.businessLogoUrl}
+                                            alt={reward.businessName}
+                                            className="w-10 h-10 rounded-full object-cover bg-white flex-shrink-0"
+                                        />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center flex-shrink-0">
+                                            <span className="text-white font-bold text-lg">{reward.businessName?.[0] || '?'}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-white truncate">{reward.name}</p>
+                                        <p className="text-white/80 text-sm truncate">{reward.businessName}</p>
+                                    </div>
+                                    <div className="flex-shrink-0 text-right">
+                                        <span className="bg-white/25 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap">
+                                            {gapLabel}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* QR Code Section */}
             <div className="bg-gradient-to-br from-brand-primary to-accent-gold rounded-xl shadow-card p-6 text-white">
@@ -387,7 +585,7 @@ const ClientHome = () => {
                             .slice(0, 3)
                             .map((business) => (
                                 <div
-                                    key={business._id}
+                                    key={business._id || business.businessId}
                                     onClick={() => handleBusinessClick(business)}
                                     className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 cursor-pointer gap-3"
                                 >
