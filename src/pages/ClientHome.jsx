@@ -5,6 +5,7 @@ import userPointsService from '../services/userPointsService';
 import businessService from '../services/businessService';
 import deliveryService from '../services/deliveryService';
 import rewardService from '../services/rewardService';
+import WalletButtons from '../components/WalletButtons';
 
 const ClientHome = () => {
     const [user, setUser] = useState(null);
@@ -416,6 +417,7 @@ const ClientHome = () => {
                         Toma una captura de pantalla de éste código y accede más rápidamente
                     </div>
                 </div>
+                <WalletButtons />
             </div>
 
             {/* Stats Grid */}
