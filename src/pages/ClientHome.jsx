@@ -6,6 +6,7 @@ import businessService from '../services/businessService';
 import deliveryService from '../services/deliveryService';
 import rewardService from '../services/rewardService';
 import WalletButtons from '../components/WalletButtons';
+import * as membershipService from '../services/membershipService';
 
 const ClientHome = () => {
     const [user, setUser] = useState(null);
@@ -20,6 +21,8 @@ const ClientHome = () => {
     const [selectedBusiness, setSelectedBusiness] = useState(null);
     const [businessRewards, setBusinessRewards] = useState([]);
     const [loadingRewards, setLoadingRewards] = useState(false);
+
+    const [memberships, setMemberships] = useState([]);
 
     const [showRedeemModal, setShowRedeemModal] = useState(false);
     const [redeemCode, setRedeemCode] = useState('');
@@ -151,6 +154,11 @@ const ClientHome = () => {
             }
 
             setUserPointsData(pointsData);
+
+            // Memberships
+            const myMemberships = await membershipService.getMyMemberships().catch(() => []);
+            setMemberships(myMemberships);
+
             setError(null);
         } catch (err) {
             console.error('Error fetching data:', err);
@@ -419,6 +427,51 @@ const ClientHome = () => {
                 </div>
                 <WalletButtons />
             </div>
+
+            {/* Active Memberships */}
+            {memberships.length > 0 && (
+                <div className="bg-white rounded-xl shadow-card border border-gray-200 p-6">
+                    <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                        </svg>
+                        Mis Membresías
+                    </h2>
+                    <div className="space-y-3">
+                        {memberships.map(m => (
+                            <div key={m._id} className="flex items-center gap-4 p-4 rounded-xl bg-brand-muted/20 border border-brand-primary/20">
+                                {m.businessLogo ? (
+                                    <img src={m.businessLogo} alt={m.businessName} className="w-12 h-12 rounded-full object-cover flex-shrink-0 border border-gray-200" />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-full bg-brand-primary flex items-center justify-center flex-shrink-0 text-white font-bold text-lg">
+                                        {m.businessName?.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-gray-800 truncate">{m.businessName}</p>
+                                    <p className="text-sm text-brand-onColor font-medium">{m.planSnapshot?.benefit}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        {m.daysLeft === 0 ? 'Vence hoy' : `${m.daysLeft} día${m.daysLeft !== 1 ? 's' : ''} restante${m.daysLeft !== 1 ? 's' : ''}`}
+                                    </p>
+                                </div>
+                                <div className="flex-shrink-0 text-right">
+                                    {m.redeemedToday ? (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                            Usado hoy
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /></svg>
+                                            Disponible hoy
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

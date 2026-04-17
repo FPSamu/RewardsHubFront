@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import businessService from '../services/businessService';
 import rewardService from '../services/rewardService';
 import systemService from '../services/systemService';
+import * as membershipService from '../services/membershipService';
 
 const BusinessRewards = () => {
     const [business, setBusiness] = useState(null);
@@ -66,6 +67,14 @@ const BusinessRewards = () => {
         stampsRequired: ''
     });
 
+    // Membership plans state
+    const [membershipPlans, setMembershipPlans] = useState([]);
+    const [showPlanModal, setShowPlanModal] = useState(false);
+    const [editingPlan, setEditingPlan] = useState(null);
+    const [savingPlan, setSavingPlan] = useState(false);
+    const [planError, setPlanError] = useState('');
+    const [planForm, setPlanForm] = useState({ name: '', description: '', benefit: '', durationDays: '', price: '' });
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -101,12 +110,80 @@ const BusinessRewards = () => {
             const stampsSys = systemsData.find(s => s.type === 'stamps' && s.isActive);
             setStampsSystem(stampsSys || null);
 
+            // Fetch membership plans
+            const plans = await membershipService.getMyPlans().catch(() => []);
+            setMembershipPlans(plans);
+
             setError(null);
         } catch (err) {
             console.error('Error fetching data:', err);
             setError(err.message || 'Error al cargar los datos');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const openNewPlanModal = () => {
+        setEditingPlan(null);
+        setPlanForm({ name: '', description: '', benefit: '', durationDays: '', price: '' });
+        setPlanError('');
+        setShowPlanModal(true);
+    };
+
+    const openEditPlanModal = (plan) => {
+        setEditingPlan(plan);
+        setPlanForm({
+            name: plan.name,
+            description: plan.description,
+            benefit: plan.benefit,
+            durationDays: String(plan.durationDays),
+            price: String(plan.price),
+        });
+        setPlanError('');
+        setShowPlanModal(true);
+    };
+
+    const handleSavePlan = async (e) => {
+        e.preventDefault();
+        setSavingPlan(true);
+        setPlanError('');
+        try {
+            const payload = {
+                name: planForm.name.trim(),
+                description: planForm.description.trim(),
+                benefit: planForm.benefit.trim(),
+                durationDays: Number(planForm.durationDays),
+                price: Number(planForm.price),
+            };
+            if (editingPlan) {
+                await membershipService.updatePlan(editingPlan._id, payload);
+            } else {
+                await membershipService.createPlan(payload);
+            }
+            const plans = await membershipService.getMyPlans();
+            setMembershipPlans(plans);
+            setShowPlanModal(false);
+        } catch (err) {
+            setPlanError(err.response?.data?.message || 'Error al guardar el plan');
+        } finally {
+            setSavingPlan(false);
+        }
+    };
+
+    const handleTogglePlan = async (plan) => {
+        try {
+            await membershipService.updatePlan(plan._id, { isActive: !plan.isActive });
+            setMembershipPlans(prev => prev.map(p => p._id === plan._id ? { ...p, isActive: !p.isActive } : p));
+        } catch { /* ignore */ }
+    };
+
+    const handleDeletePlan = async (planId) => {
+        if (!confirm('¿Eliminar este plan? Los clientes con membresías activas no se verán afectados.')) return;
+        try {
+            await membershipService.deletePlan(planId);
+            setMembershipPlans(prev => prev.filter(p => p._id !== planId));
+        } catch (err) {
+            alert(err.response?.data?.message || 'Error al eliminar el plan');
         }
     };
 
@@ -564,6 +641,95 @@ const BusinessRewards = () => {
                     error={updateError}
                     onClose={handleCloseEditModal}
                     onSubmit={handleUpdateReward}
+                />
+            )}
+
+            {/* ── Membership Plans Section ──────────────────────────── */}
+            <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
+                <div className="flex items-center justify-between mb-5">
+                    <div>
+                        <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                            </svg>
+                            Planes de Membresía
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-0.5">El cajero puede activar estas membresías al escanear el QR del cliente.</p>
+                    </div>
+                    <button
+                        onClick={openNewPlanModal}
+                        className="px-4 py-2 bg-brand-primary text-white rounded-pill text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        Nuevo Plan
+                    </button>
+                </div>
+
+                {membershipPlans.length === 0 ? (
+                    <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                        <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                        </svg>
+                        <p className="text-gray-500 font-medium">No hay planes configurados</p>
+                        <p className="text-sm text-gray-400 mt-1">Crea un plan para ofrecer membresías a tus clientes</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {membershipPlans.map(plan => (
+                            <div key={plan._id} className={`flex items-center gap-4 p-4 rounded-xl border ${plan.isActive ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="font-semibold text-gray-800">{plan.name}</p>
+                                        {plan.isActive
+                                            ? <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">Activo</span>
+                                            : <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">Inactivo</span>
+                                        }
+                                    </div>
+                                    <p className="text-sm text-brand-onColor font-medium mt-0.5">{plan.benefit}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">{plan.durationDays} días · ${plan.price}</p>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                    <button
+                                        onClick={() => handleTogglePlan(plan)}
+                                        title={plan.isActive ? 'Desactivar' : 'Activar'}
+                                        className="p-2 text-gray-400 hover:text-brand-primary rounded-lg hover:bg-gray-100 transition-colors"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            {plan.isActive
+                                                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            }
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onClick={() => openEditPlanModal(plan)}
+                                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeletePlan(plan._id)}
+                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Plan Modal */}
+            {showPlanModal && (
+                <PlanModal
+                    plan={editingPlan}
+                    form={planForm}
+                    setForm={setPlanForm}
+                    saving={savingPlan}
+                    error={planError}
+                    onClose={() => setShowPlanModal(false)}
+                    onSubmit={handleSavePlan}
                 />
             )}
         </div>
@@ -1489,6 +1655,66 @@ function EditRewardModal({ reward, formData, setFormData, updating, error, onClo
                             className="flex-1 px-6 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {updating ? 'Guardando...' : 'Guardar Cambios'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Membership Plan Modal
+// ─────────────────────────────────────────────────────────────────────────────
+function PlanModal({ plan, form, setForm, saving, error, onClose, onSubmit }) {
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-popover max-w-lg w-full my-8">
+                <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-gray-800">{plan ? 'Editar Plan' : 'Nuevo Plan de Membresía'}</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <form onSubmit={onSubmit} className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre del plan *</label>
+                        <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                            placeholder="Ej: Café Premium Mensual"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Descripción *</label>
+                        <textarea required rows={2} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                            placeholder="Ej: Membresía mensual que incluye 1 café diario de cualquier tamaño"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Beneficio diario *</label>
+                        <input required value={form.benefit} onChange={e => setForm(f => ({ ...f, benefit: e.target.value }))}
+                            placeholder="Ej: 1 café gratis por día"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                        <p className="text-xs text-gray-500 mt-1">Texto corto que verá el cajero al canjear.</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Duración (días) *</label>
+                            <input required type="number" min="1" value={form.durationDays} onChange={e => setForm(f => ({ ...f, durationDays: e.target.value }))}
+                                placeholder="30"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Precio *</label>
+                            <input required type="number" min="0" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+                                placeholder="500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
+                        </div>
+                    </div>
+                    {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={onClose} className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-pill font-semibold hover:bg-gray-300 transition-colors">Cancelar</button>
+                        <button type="submit" disabled={saving} className="flex-1 px-4 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+                            {saving ? 'Guardando...' : plan ? 'Guardar Cambios' : 'Crear Plan'}
                         </button>
                     </div>
                 </form>

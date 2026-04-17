@@ -6,10 +6,11 @@ import userPointsService from '../services/userPointsService';
 import systemService from '../services/systemService';
 import rewardService from '../services/rewardService';
 import deliveryService from '../services/deliveryService';
+import * as membershipService from '../services/membershipService';
 
 const BusinessScan = () => {
     const navigate = useNavigate();
-    const [step, setStep] = useState('form'); // 'form', 'scanning', 'processing', 'success', 'error', 'rewards-preview'
+    const [step, setStep] = useState('form'); // 'form', 'scanning', 'processing', 'success', 'error', 'rewards-preview', 'membership-result'
     const [purchaseAmount, setPurchaseAmount] = useState('');
     const [stampQuantity, setStampQuantity] = useState('');
     const [rewardType, setRewardType] = useState('points'); // 'points', 'stamps', 'both'
@@ -26,6 +27,13 @@ const BusinessScan = () => {
     const [showRedeemModal, setShowRedeemModal] = useState(false);
     const [deliveryCodeData, setDeliveryCodeData] = useState(null);
     const [selectedLocation, setSelectedLocation] = useState(null);
+
+    // Membership state
+    const [membershipPlans, setMembershipPlans] = useState([]);
+    const [clientMembership, setClientMembership] = useState(undefined); // undefined=loading, null=none
+    const [membershipAction, setMembershipAction] = useState(null); // null | 'activate' | 'activating' | 'activated' | 'redeem-success' | 'already-redeemed' | 'redeem-error'
+    const [membershipMessage, setMembershipMessage] = useState('');
+    const [selectedPlanId, setSelectedPlanId] = useState('');
 
     const scannerRef = useRef(null);
     const qrReaderRef = useRef(null);
@@ -83,6 +91,10 @@ const BusinessScan = () => {
                 const rewardsData = await rewardService.getBusinessRewards(businessData.id);
                 setRewards(rewardsData);
 
+                // Fetch membership plans
+                const plans = await membershipService.getMyPlans().catch(() => []);
+                setMembershipPlans(plans.filter(p => p.isActive));
+
                 // Set default stamp system if only one exists
                 if (stampSystems.length === 1) {
                     setSelectedStampSystem(stampSystems[0].id);
@@ -99,6 +111,49 @@ const BusinessScan = () => {
         try {
             setStep('processing');
             setScannedUserId(userId);
+            setClientMembership(undefined);
+            setMembershipAction(null);
+            setMembershipMessage('');
+            setSelectedPlanId('');
+
+            // Membership mode: skip points/rewards processing entirely
+            if (rewardType === 'membership') {
+                try {
+                    const m = await membershipService.getClientMembership(userId);
+                    setClientMembership(m);
+                    if (m) {
+                        if (m.redeemedToday) {
+                            setMembershipAction('already-redeemed');
+                        } else {
+                            try {
+                                const result = await membershipService.redeemDailyBenefit(userId, m._id);
+                                setClientMembership(prev => ({ ...prev, redeemedToday: true }));
+                                setMembershipAction('redeem-success');
+                                setMembershipMessage(result.benefit || result.message || '');
+                            } catch (redeemErr) {
+                                if (redeemErr.response?.data?.redeemedToday) {
+                                    setMembershipAction('already-redeemed');
+                                } else {
+                                    setMembershipAction('redeem-error');
+                                    setMembershipMessage(redeemErr.response?.data?.message || 'Error al canjear');
+                                }
+                            }
+                        }
+                    } else {
+                        setMembershipAction('activate');
+                    }
+                } catch {
+                    setClientMembership(null);
+                    setMembershipAction('activate');
+                }
+                setStep('membership-result');
+                return;
+            }
+
+            // Non-membership modes: fire-and-forget for side panel in rewards-preview
+            membershipService.getClientMembership(userId)
+                .then(m => setClientMembership(m))
+                .catch(() => setClientMembership(null));
 
             console.log('Checking rewards for user:', userId);
             console.log('Business ID:', business?.id);
@@ -153,16 +208,10 @@ const BusinessScan = () => {
             console.log('Available rewards found:', available.length, available);
             setAvailableRewards(available);
 
-            // If in redeem-only mode, always show rewards preview (even if no rewards available)
-            if (rewardType === 'redeem') {
-                setStep('rewards-preview');
-            } else if (available.length > 0) {
-                // Show rewards preview if there are available rewards
-                console.log('Showing rewards preview modal');
+            // Show rewards-preview if: redeem mode, available rewards, or business has membership plans
+            if (rewardType === 'redeem' || available.length > 0 || membershipPlans.length > 0) {
                 setStep('rewards-preview');
             } else {
-                console.log('No rewards available, proceeding with transaction');
-                // No rewards available, proceed with transaction
                 await processTransaction(userId);
             }
         } catch (err) {
@@ -356,7 +405,7 @@ const BusinessScan = () => {
         }
 
         // 2. Casos de Escaneo (Validaciones)
-        if (rewardType === 'redeem') {
+        if (rewardType === 'redeem' || rewardType === 'membership') {
             setError(null);
             setStep('scanning');
             return;
@@ -462,6 +511,42 @@ const BusinessScan = () => {
         setRedeemingReward(null);
     };
 
+    const handleActivateMembership = async () => {
+        if (!selectedPlanId || !scannedUserId) return;
+        setMembershipAction('activating');
+        setMembershipMessage('');
+        try {
+            const result = await membershipService.activateMembership(scannedUserId, selectedPlanId);
+            setClientMembership({ ...result.membership, redeemedToday: false });
+            setMembershipAction('activated');
+            setMembershipMessage(result.message);
+        } catch (err) {
+            setMembershipAction(null);
+            setMembershipMessage(err.response?.data?.message || 'Error al activar la membresía');
+        }
+    };
+
+    const handleRedeemMembership = async () => {
+        if (!clientMembership || !scannedUserId) return;
+        setMembershipAction('redeeming');
+        setMembershipMessage('');
+        try {
+            const result = await membershipService.redeemDailyBenefit(scannedUserId, clientMembership._id);
+            setClientMembership(prev => ({ ...prev, redeemedToday: true }));
+            setMembershipAction('success');
+            setMembershipMessage(result.message);
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Error al canjear';
+            if (err.response?.data?.redeemedToday) {
+                setClientMembership(prev => ({ ...prev, redeemedToday: true }));
+                setMembershipAction('redeemed-today');
+            } else {
+                setMembershipAction(null);
+            }
+            setMembershipMessage(msg);
+        }
+    };
+
     const handleReset = () => {
         setPurchaseAmount('');
         setStampQuantity('');
@@ -473,6 +558,10 @@ const BusinessScan = () => {
         setAvailableRewards([]);
         setScannedUserId(null);
         setDeliveryCodeData(null);
+        setClientMembership(undefined);
+        setMembershipAction(null);
+        setMembershipMessage('');
+        setSelectedPlanId('');
 
         // Reset to default stamp system if only one exists
         if (rewardSystems.stamps.length === 1) {
@@ -639,6 +728,26 @@ const BusinessScan = () => {
                                     </div>
                                 </button>
 
+                                {membershipPlans.length > 0 && (
+                                <button
+                                    onClick={() => setRewardType('membership')}
+                                    className={`p-4 rounded-lg border-2 transition-all duration-180 ${rewardType === 'membership'
+                                        ? 'border-brand-primary bg-brand-muted'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <div className="flex flex-col items-center">
+                                        <svg className={`w-8 h-8 mb-2 ${rewardType === 'membership' ? 'text-brand-primary' : 'text-gray-400'}`}
+                                            fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                        </svg>
+                                        <span className={`text-sm font-semibold ${rewardType === 'membership' ? 'text-brand-primary' : 'text-gray-600'}`}>
+                                            Membresía
+                                        </span>
+                                    </div>
+                                </button>
+                                )}
+
                                 <button
                                     onClick={() => setRewardType('delivery')}
                                     className={`p-4 rounded-lg border-2 transition-all duration-180 flex flex-col items-center ${rewardType === 'delivery'
@@ -690,6 +799,23 @@ const BusinessScan = () => {
                                         <p className="text-sm font-semibold text-purple-800 mb-1">Modo: Solo Canjear Recompensa</p>
                                         <p className="text-xs text-purple-700">
                                             Escanea el código QR del cliente para ver y canjear sus recompensas disponibles. No se agregarán puntos ni sellos.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Membership Message */}
+                        {rewardType === 'membership' && (
+                            <div className="mb-6 bg-brand-muted/40 border border-brand-primary/30 rounded-lg p-4">
+                                <div className="flex items-start gap-3">
+                                    <svg className="w-5 h-5 text-brand-primary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                    </svg>
+                                    <div>
+                                        <p className="text-sm font-semibold text-brand-onColor mb-1">Modo Membresía</p>
+                                        <p className="text-xs text-gray-600">
+                                            Escanea el QR del cliente para activar una membresía o canjear el beneficio del día. No se agregarán puntos ni sellos.
                                         </p>
                                     </div>
                                 </div>
@@ -893,7 +1019,9 @@ const BusinessScan = () => {
                                 ? 'Generar Código de Puntos'
                                 : rewardType === 'redeem'
                                     ? 'Escanear para Canjear'
-                                    : 'Escanear Código QR'}
+                                    : rewardType === 'membership'
+                                        ? 'Escanear para Membresía'
+                                        : 'Escanear Código QR'}
                         </button>
                     </div>
                 </div>
@@ -1190,9 +1318,119 @@ const BusinessScan = () => {
                             </div>
                         )}
 
+                        {/* ── Membresías ──────────────────────────────── */}
+                        <div className="mt-6 border-t border-gray-200 pt-6">
+                            <h5 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                <svg className="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                                Membresía
+                            </h5>
+
+                            {clientMembership === undefined && (
+                                <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-brand-primary" />
+                                    Cargando membresía...
+                                </div>
+                            )}
+
+                            {/* Client has active membership */}
+                            {clientMembership && (
+                                <div className="bg-brand-muted/30 border border-brand-primary/30 rounded-xl p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="font-semibold text-gray-800">{clientMembership.planSnapshot?.name}</p>
+                                            <p className="text-sm text-brand-onColor font-medium mt-0.5">{clientMembership.planSnapshot?.benefit}</p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Vence: {new Date(clientMembership.endDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </p>
+                                        </div>
+                                        <div className="flex-shrink-0">
+                                            {membershipAction === 'success' ? (
+                                                <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 text-sm font-semibold rounded-lg">
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                    Canjeado
+                                                </span>
+                                            ) : clientMembership.redeemedToday ? (
+                                                <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-500 text-sm font-medium rounded-lg">
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                    Ya canjeado hoy
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    onClick={handleRedeemMembership}
+                                                    disabled={membershipAction === 'redeeming'}
+                                                    className="px-4 py-2 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-1"
+                                                >
+                                                    {membershipAction === 'redeeming' ? (
+                                                        <><div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent" />Canjeando...</>
+                                                    ) : 'Canjear beneficio de hoy'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {membershipMessage && membershipAction === 'success' && (
+                                        <p className="text-xs text-green-700 mt-2">{membershipMessage}</p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* No membership — offer activation */}
+                            {clientMembership === null && membershipPlans.length > 0 && membershipAction !== 'success' && (
+                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                                    <p className="text-sm text-gray-600 mb-3">El cliente no tiene membresía activa en este negocio.</p>
+                                    <div className="flex gap-2">
+                                        <select
+                                            value={selectedPlanId}
+                                            onChange={e => setSelectedPlanId(e.target.value)}
+                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                                        >
+                                            <option value="">Seleccionar plan...</option>
+                                            {membershipPlans.map(plan => (
+                                                <option key={plan._id} value={plan._id}>
+                                                    {plan.name} — ${plan.price} / {plan.durationDays} días
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            onClick={handleActivateMembership}
+                                            disabled={!selectedPlanId || membershipAction === 'activating'}
+                                            className="px-4 py-2 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
+                                        >
+                                            {membershipAction === 'activating' ? (
+                                                <><div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent" />Activando...</>
+                                            ) : 'Activar'}
+                                        </button>
+                                    </div>
+                                    {membershipMessage && (
+                                        <p className="text-xs text-red-600 mt-2">{membershipMessage}</p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Activation success */}
+                            {clientMembership === null && membershipAction === 'success' && (
+                                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+                                    <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                    <p className="text-sm text-green-700 font-medium">{membershipMessage}</p>
+                                </div>
+                            )}
+
+                            {clientMembership === null && membershipPlans.length === 0 && (
+                                <p className="text-xs text-gray-400">No hay planes de membresía configurados.</p>
+                            )}
+                        </div>
+
                         {/* Action buttons */}
-                        <div className="flex gap-4">
-                            {rewardType !== 'redeem' ? (
+                        <div className="flex gap-4 mt-6">
+                            {rewardType === 'membership' || rewardType === 'redeem' ? (
+                                <button
+                                    onClick={handleReset}
+                                    className="flex-1 px-6 py-4 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors duration-180"
+                                >
+                                    Listo
+                                </button>
+                            ) : (
                                 <>
                                     <button
                                         onClick={handleContinueTransaction}
@@ -1207,15 +1445,175 @@ const BusinessScan = () => {
                                         Cancelar
                                     </button>
                                 </>
-                            ) : (
-                                <button
-                                    onClick={handleReset}
-                                    className="flex-1 px-6 py-4 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors duration-180"
-                                >
-                                    {availableRewards.length > 0 ? 'Finalizar' : 'Volver'}
-                                </button>
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Membership Result Step */}
+            {step === 'membership-result' && (
+                <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
+                    <div className="max-w-md mx-auto py-8">
+
+                        {/* Redeem success */}
+                        {membershipAction === 'redeem-success' && (
+                            <div className="text-center">
+                                <div className="bg-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-5">
+                                    <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-2xl font-bold text-gray-800 mb-2">¡Membresía canjeada correctamente!</h3>
+                                {membershipMessage && (
+                                    <p className="text-brand-primary font-semibold text-lg mb-4">{membershipMessage}</p>
+                                )}
+                                {clientMembership?.planSnapshot && (
+                                    <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left">
+                                        <p className="text-sm text-gray-500 mb-1">Plan</p>
+                                        <p className="font-semibold text-gray-800">{clientMembership.planSnapshot.name}</p>
+                                        <p className="text-sm text-gray-500 mt-2 mb-1">Beneficio entregado</p>
+                                        <p className="font-medium text-gray-700">{clientMembership.planSnapshot.benefit}</p>
+                                        <p className="text-xs text-gray-400 mt-3">
+                                            Vence: {new Date(clientMembership.endDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                        </p>
+                                    </div>
+                                )}
+                                <button onClick={handleReset} className="w-full px-6 py-4 bg-brand-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                                    Listo
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Already redeemed today */}
+                        {membershipAction === 'already-redeemed' && (
+                            <div className="text-center">
+                                <div className="bg-amber-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-5">
+                                    <svg className="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">Beneficio ya canjeado hoy</h3>
+                                <p className="text-gray-600 mb-1">El cliente ya ha canjeado su recompensa diaria.</p>
+                                {clientMembership?.lastRedeemedBusinessName && (
+                                    <p className="text-sm text-gray-500 mb-4">
+                                        Canjeado en: <span className="font-medium text-gray-700">{clientMembership.lastRedeemedBusinessName}</span>
+                                    </p>
+                                )}
+                                {clientMembership?.planSnapshot && (
+                                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-left">
+                                        <p className="text-sm text-gray-500 mb-1">Plan activo</p>
+                                        <p className="font-semibold text-gray-800">{clientMembership.planSnapshot.name}</p>
+                                        <p className="text-sm text-gray-500 mt-2 mb-1">Beneficio</p>
+                                        <p className="font-medium text-gray-700">{clientMembership.planSnapshot.benefit}</p>
+                                        <p className="text-xs text-gray-400 mt-3">
+                                            Vence: {new Date(clientMembership.endDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                        </p>
+                                    </div>
+                                )}
+                                <button onClick={handleReset} className="w-full px-6 py-4 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                                    Cerrar
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Activate membership */}
+                        {(membershipAction === 'activate' || membershipAction === 'activating') && (
+                            <div>
+                                <div className="text-center mb-6">
+                                    <div className="bg-brand-muted rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-5">
+                                        <svg className="w-10 h-10 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-800 mb-1">Sin membresía activa</h3>
+                                    <p className="text-gray-500 text-sm">El cliente no tiene membresía en este negocio. Selecciona un plan para activar.</p>
+                                </div>
+                                {membershipPlans.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {membershipPlans.filter(p => p.isActive).map(plan => (
+                                            <label key={plan._id} className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedPlanId === plan._id ? 'border-brand-primary bg-brand-muted/30' : 'border-gray-200 hover:border-gray-300'}`}>
+                                                <input
+                                                    type="radio"
+                                                    name="plan"
+                                                    value={plan._id}
+                                                    checked={selectedPlanId === plan._id}
+                                                    onChange={e => setSelectedPlanId(e.target.value)}
+                                                    className="mt-1 accent-brand-primary"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-gray-800">{plan.name}</p>
+                                                    <p className="text-sm text-gray-500 mt-0.5">{plan.benefit}</p>
+                                                    <div className="flex items-center gap-3 mt-1.5">
+                                                        <span className="text-xs text-gray-400">{plan.durationDays} días</span>
+                                                        <span className="text-xs font-semibold text-brand-primary">${plan.price} MXN</span>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        ))}
+                                        <div className="flex gap-3 pt-2">
+                                            <button
+                                                onClick={handleActivateMembership}
+                                                disabled={!selectedPlanId || membershipAction === 'activating'}
+                                                className="flex-1 px-6 py-4 bg-brand-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                                            >
+                                                {membershipAction === 'activating' && <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />}
+                                                Activar Membresía
+                                            </button>
+                                            <button onClick={handleReset} className="px-6 py-4 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-center text-sm text-gray-400 mb-6">No hay planes configurados.</p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Activated success */}
+                        {membershipAction === 'activated' && (
+                            <div className="text-center">
+                                <div className="bg-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-5">
+                                    <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-2xl font-bold text-gray-800 mb-2">¡Membresía activada!</h3>
+                                {membershipMessage && <p className="text-gray-600 mb-4">{membershipMessage}</p>}
+                                {clientMembership?.planSnapshot && (
+                                    <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left">
+                                        <p className="text-sm text-gray-500 mb-1">Plan</p>
+                                        <p className="font-semibold text-gray-800">{clientMembership.planSnapshot.name}</p>
+                                        <p className="text-sm text-gray-500 mt-2 mb-1">Beneficio diario</p>
+                                        <p className="font-medium text-gray-700">{clientMembership.planSnapshot.benefit}</p>
+                                        <p className="text-xs text-gray-400 mt-3">
+                                            Válida hasta: {new Date(clientMembership.endDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                        </p>
+                                    </div>
+                                )}
+                                <button onClick={handleReset} className="w-full px-6 py-4 bg-brand-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                                    Listo
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Redeem error */}
+                        {membershipAction === 'redeem-error' && (
+                            <div className="text-center">
+                                <div className="bg-red-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-5">
+                                    <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">Error al canjear</h3>
+                                <p className="text-red-600 mb-6">{membershipMessage}</p>
+                                <button onClick={handleReset} className="w-full px-6 py-4 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                                    Cerrar
+                                </button>
+                            </div>
+                        )}
+
                     </div>
                 </div>
             )}
