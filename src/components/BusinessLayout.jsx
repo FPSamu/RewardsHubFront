@@ -1,9 +1,11 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import 'leaflet/dist/leaflet.css'; // Leaflet css might still be needed if used elsewhere, otherwise remove
 import businessService from '../services/businessService';
 import subscriptionService from '../services/subscriptionService';
 import workShiftService from '../services/workShiftService';
+import * as adminPinService from '../services/adminPinService';
+import AdminPinModal from './AdminPinModal';
 
 const BusinessLayout = () => {
     const navigate = useNavigate();
@@ -27,6 +29,37 @@ const BusinessLayout = () => {
     const [deletingAccount, setDeletingAccount] = useState(false);
     const menuRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    // Admin PIN modal
+    const [showAdminPinModal, setShowAdminPinModal] = useState(false);
+    const [pendingPinAction, setPendingPinAction] = useState(null);
+
+    // Show PIN modal when any write operation returns 403 (token expired/missing)
+    useEffect(() => {
+        const handler = () => setShowAdminPinModal(true);
+        window.addEventListener('adminPinRequired', handler);
+        return () => window.removeEventListener('adminPinRequired', handler);
+    }, []);
+
+    const requirePin = useCallback((action) => {
+        if (adminPinService.hasToken()) {
+            action();
+        } else {
+            setPendingPinAction(() => action);
+            setShowAdminPinModal(true);
+        }
+    }, []);
+
+    const handlePinSuccess = useCallback(() => {
+        setShowAdminPinModal(false);
+        pendingPinAction?.();
+        setPendingPinAction(null);
+    }, [pendingPinAction]);
+
+    const handlePinClose = useCallback(() => {
+        setShowAdminPinModal(false);
+        setPendingPinAction(null);
+    }, []);
 
     // Estados para el modal de turnos
     const [showShiftsModal, setShowShiftsModal] = useState(false);
@@ -61,8 +94,12 @@ const BusinessLayout = () => {
         navigate('/login');
     };
 
-    const handleSettings = async () => {
+    const handleSettings = () => {
         setIsMenuOpen(false);
+        requirePin(openSettingsModal);
+    };
+
+    const openSettingsModal = async () => {
         try {
             const data = await businessService.getMyBusiness();
             console.log("Business Data loaded:", data); // DEBUG
@@ -81,7 +118,6 @@ const BusinessLayout = () => {
             setShowSettingsModal(true);
         } catch (error) {
             console.error('Error loading business data:', error);
-            // Abrir modal con datos vacíos si hay error
             setShowSettingsModal(true);
         }
     };
@@ -645,6 +681,14 @@ const BusinessLayout = () => {
                     }}
                     onCancel={() => setShowSubscriptionWarning(false)}
                     deleting={deletingAccount}
+                />
+            )}
+
+            {/* Admin PIN Modal */}
+            {showAdminPinModal && (
+                <AdminPinModal
+                    onSuccess={handlePinSuccess}
+                    onClose={handlePinClose}
                 />
             )}
 
