@@ -24,6 +24,8 @@
     "animate.css": "^4.1.1",
     "aos": "^2.3.4",
     "axios": "^1.6.2",
+    "firebase": "^12.12.1",
+    "google-auth-library": "^10.6.2",
     "html5-qrcode": "^2.3.8",
     "leaflet": "^1.9.4",
     "qrcode.react": "^4.2.0",

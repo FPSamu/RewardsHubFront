@@ -420,10 +420,6 @@ const ClientHome = () => {
                     <div className="bg-white p-4 rounded-xl shadow-popover">
                         <QRCodeSVG value={user?.id || userPointsData?.userId || 'no-id'} size={200} />
                     </div>
-                    <br />
-                    <div className="text-sm text-white/80 font-mono">
-                        Toma una captura de pantalla de éste código y accede más rápidamente
-                    </div>
                 </div>
                 <WalletButtons />
             </div>

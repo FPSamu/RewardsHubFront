@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import SEO from '../components/SEO';
+import { AuthCard } from '../components/auth/AuthCard';
+import { BrandLogo } from '../components/ui/BrandLogo';
+import { PasswordInput } from '../components/ui/PasswordInput';
+import { AlertMessage } from '../components/ui/AlertMessage';
+import { SubmitButton } from '../components/ui/SubmitButton';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -10,133 +15,97 @@ const ResetPassword = () => {
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [status, setStatus] = useState('idle'); // 'idle', 'loading', 'success', 'error'
+  const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (password !== confirmPassword) {
-      setStatus('error');
-      setMessage('Las contraseñas no coinciden.');
-      return;
-    }
-
-    if (!token) {
-      setStatus('error');
-      setMessage('Token inválido o faltante.');
-      return;
-    }
-
+    if (password !== confirmPassword) { setStatus('error'); setMessage('Las contraseñas no coinciden.'); return; }
+    if (!token) { setStatus('error'); setMessage('Token inválido o faltante.'); return; }
     setStatus('loading');
     setMessage('');
-
     try {
       const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      // Llamada al backend con el prefijo /auth
-      await axios.post(`${backendUrl}/auth/reset-password`, {
-        token,
-        password
-      });
-
+      await axios.post(`${backendUrl}/auth/reset-password`, { token, password });
       setStatus('success');
-      // Redirigir al login después de 3 segundos
       setTimeout(() => navigate('/login'), 3000);
     } catch (error) {
       console.error(error);
       setStatus('error');
-      // El backend devuelve mensajes como "Invalid or expired token"
       setMessage(error.response?.data?.message || 'Error al restablecer contraseña. El enlace puede haber expirado.');
     }
   };
 
-  // Si no hay token en la URL, mostrar error inmediato
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <SEO
-          title="Enlace Inválido - RewardsHub"
-          description="El enlace para restablecer contraseña es inválido o ha expirado."
-          type="website"
-        />
-        <div className="max-w-md w-full bg-white shadow-card rounded-xl p-8 text-center">
-          <h2 className="text-xl font-bold text-accent-danger mb-4">Enlace inválido</h2>
-          <p className="text-gray-600 mb-6">Falta el token de seguridad en el enlace.</p>
-          <Link to="/login" className="text-brand-primary font-bold">Ir al Login</Link>
+      <AuthCard>
+        <SEO title="Enlace Inválido - RewardsHub" description="El enlace para restablecer contraseña es inválido o ha expirado." type="website" />
+        <div className="text-center space-y-4">
+          <BrandLogo size="lg" orientation="vertical" />
+          <h2 className="text-[20px] font-bold text-[#E5484D]">Enlace inválido</h2>
+          <p className="text-[14px] text-[#947F4E]">Falta el token de seguridad en el enlace.</p>
+          <Link to="/login" className="inline-block text-[14px] font-semibold text-[#EBA626] hover:text-[#C47D10] transition-colors duration-150">
+            Ir al Login
+          </Link>
         </div>
-      </div>
+      </AuthCard>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      {/* SEO Meta Tags */}
+    <AuthCard>
       <SEO
         title="Restablecer Contraseña - RewardsHub"
-        description="Crea una nueva contraseña segura para tu cuenta de RewardsHub. Ingresa tu nueva contraseña para recuperar el acceso a tu cuenta."
-        keywords="restablecer contraseña, nueva contraseña, cambiar contraseña, rewardsHub, reset password"
+        description="Crea una nueva contraseña segura para tu cuenta de RewardsHub."
+        keywords="restablecer contraseña, nueva contraseña, cambiar contraseña, rewardsHub"
         type="website"
       />
 
-      <div className="max-w-md w-full bg-surface shadow-card rounded-xl p-8">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Nueva Contraseña</h2>
-          <p className="mt-2 text-gray-600">Ingresa tu nueva contraseña a continuación.</p>
-        </div>
-
-        {status === 'success' ? (
-          <div className="text-center">
-            <div className="h-16 w-16 bg-accent-success rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">¡Contraseña actualizada!</h3>
-            <p className="text-gray-600 mt-2">Te estamos redirigiendo al inicio de sesión...</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Confirmar Contraseña</label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
-              />
-            </div>
-
-            {status === 'error' && (
-              <div className="p-3 rounded-md bg-red-50 text-accent-danger text-sm text-center">
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={status === 'loading'}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-brand-onColor bg-brand-primary hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors disabled:opacity-50"
-            >
-              {status === 'loading' ? 'Actualizando...' : 'Cambiar Contraseña'}
-            </button>
-          </form>
-        )}
+      <div className="flex flex-col items-center mb-8">
+        <BrandLogo size="lg" orientation="vertical" />
+        <h2 className="mt-4 text-[22px] font-extrabold text-[#13110A] tracking-tight">Nueva Contraseña</h2>
+        <p className="mt-1 text-[14px] text-[#947F4E] font-medium">Ingresa tu nueva contraseña a continuación.</p>
       </div>
-    </div>
+
+      {status === 'success' ? (
+        <div className="text-center space-y-4">
+          <div className="h-14 w-14 bg-[#F0FBF6] rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-7 h-7 text-[#22A06B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-[18px] font-bold text-[#13110A]">¡Contraseña actualizada!</h3>
+          <p className="text-[14px] text-[#947F4E]">Te estamos redirigiendo al inicio de sesión...</p>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {status === 'error' && <AlertMessage>{message}</AlertMessage>}
+
+          <PasswordInput
+            id="password"
+            label="Nueva Contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="new-password"
+            hint="Mínimo 6 caracteres"
+          />
+
+          <PasswordInput
+            id="confirmPassword"
+            label="Confirmar Contraseña"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            autoComplete="new-password"
+          />
+
+          <SubmitButton loading={status === 'loading'} loadingText="Actualizando...">
+            Cambiar Contraseña
+          </SubmitButton>
+        </form>
+      )}
+    </AuthCard>
   );
 };
 

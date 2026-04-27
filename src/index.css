@@ -202,3 +202,22 @@ code {
 .animate-bounce-slow {
   animation: bounce 2s infinite;
 }
+
+/* Auth page panel swap & content transitions */
+@keyframes authFadeInUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes authFadeInDown {
+  from { opacity: 0; transform: translateY(-14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.auth-content-appear {
+  animation: authFadeInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.auth-hero-appear {
+  animation: authFadeInDown 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
