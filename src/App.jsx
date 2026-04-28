@@ -21,6 +21,7 @@ import BusinessSubscription from './pages/BusinessSubscription'
 
 import ProtectedRoute from './components/ProtectedRoute'
 import BusinessProtectedRoute from './components/BusinessProtectedRoute'
+import TermsPage from './pages/TermsPage'
 import './App.css'
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
                     {/* Auth — single animated page handles both login and signup */}
                     <Route path="/login" element={<AuthPage />} />
                     <Route path="/signup" element={<AuthPage />} />
+                    <Route path="/terminos" element={<TermsPage />} />
 
                     <Route path="/verify-pending" element={<VerifyPending />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />

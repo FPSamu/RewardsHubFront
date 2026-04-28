@@ -37,17 +37,19 @@ const getStorage = () =>
   localStorage.getItem('token') ? localStorage : sessionStorage;
 
 const saveSession = ({ token, refreshToken, user, apiRole }, rememberMe) => {
-  const storage    = rememberMe ? localStorage  : sessionStorage;
-  const evicted    = rememberMe ? sessionStorage : localStorage;
+  if (!apiRole) throw new Error('saveSession: apiRole is required — check API response shape');
+
+  const storage = rememberMe ? localStorage  : sessionStorage;
+  const evicted = rememberMe ? sessionStorage : localStorage;
   KEYS.forEach((k) => evicted.removeItem(k));
+  evicted.removeItem('userType');
 
   const role = toInternalRole(apiRole);
   if (token)        storage.setItem('token',        token);
   if (refreshToken) storage.setItem('refreshToken', refreshToken);
   if (user)         storage.setItem('user',         JSON.stringify(user));
-  if (role)         storage.setItem('role',         role);
-  // legacy key used by some components
-  if (role)         storage.setItem('userType',     role);
+  storage.setItem('role',     role);
+  storage.setItem('userType', role);
 };
 
 // ─── Public service ───────────────────────────────────────────────────────────

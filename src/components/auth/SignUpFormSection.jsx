@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BrandLogo } from '../ui/BrandLogo';
 import { FormInput } from '../ui/FormInput';
 import { PasswordInput } from '../ui/PasswordInput';
@@ -40,8 +42,10 @@ export function SignUpFormSection({
   onSwitchToLogin,
   isMobile = false,
 }) {
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const isClient = accountType === 'client';
   const nameSuffix = isMobile ? '-mobile' : '';
+  const canSubmit = termsAccepted && !loading;
 
   return (
     <div className={`w-full ${isMobile ? 'max-w-[400px]' : 'max-w-[380px] px-10'}`}>
@@ -111,15 +115,37 @@ export function SignUpFormSection({
           autoComplete="new-password"
         />
 
+        {/* Terms checkbox */}
+        <label className="flex items-start gap-3 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(e) => setTermsAccepted(e.target.checked)}
+            className="mt-0.5 w-4 h-4 rounded border-neutral-300 text-[#EBA626] accent-[#EBA626] flex-shrink-0 cursor-pointer"
+          />
+          <span className="text-[13px] text-[#947F4E] leading-snug">
+            He leído y acepto los{' '}
+            <Link
+              to="/terminos"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#EBA626] hover:text-[#C47D10] underline underline-offset-2 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              términos y condiciones
+            </Link>
+          </span>
+        </label>
+
         <div className="pt-1">
-          <SubmitButton loading={loading} loadingText="Creando cuenta...">
+          <SubmitButton loading={loading} loadingText="Creando cuenta..." disabled={!canSubmit}>
             {isClient ? 'Crear Cuenta de Cliente' : 'Crear Cuenta de Negocio'}
           </SubmitButton>
         </div>
 
         <AuthDivider />
 
-        <SocialButton provider="google" onClick={onGoogleClick} disabled={loading} />
+        <SocialButton provider="google" onClick={onGoogleClick} disabled={!canSubmit} />
 
         <p className="text-center text-[13px] font-medium text-[#947F4E]">
           ¿Ya tienes una cuenta?{' '}
