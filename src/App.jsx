@@ -16,12 +16,15 @@ import BusinessHome from './pages/BusinessHome'
 import BusinessClients from './pages/BusinessClients'
 import BusinessRewards from './pages/BusinessRewards'
 import BusinessScan from './pages/BusinessScan'
-import BusinessLocationSetup from './pages/BusinessLocationSetup'
 import BusinessSubscription from './pages/BusinessSubscription'
 
 import ProtectedRoute from './components/ProtectedRoute'
 import BusinessProtectedRoute from './components/BusinessProtectedRoute'
+import PinProtectedRoute from './components/PinProtectedRoute'
 import TermsPage from './pages/TermsPage'
+import BusinessAdminDashboard from './pages/BusinessAdminDashboard'
+import BusinessSettings from './pages/BusinessSettings'
+import BusinessLocations from './pages/BusinessLocations'
 import './App.css'
 
 function App() {
@@ -62,17 +65,21 @@ function App() {
                     />
                     <Route
                         path="/business/location-setup"
-                        element={<BusinessProtectedRoute><BusinessLocationSetup /></BusinessProtectedRoute>}
+                        element={<Navigate to="/business/dashboard/locations" replace />}
                     />
                     <Route
                         path="/business/dashboard"
                         element={<BusinessProtectedRoute><BusinessLayout /></BusinessProtectedRoute>}
                     >
-                        <Route index element={<Navigate to="/business/dashboard/home" replace />} />
-                        <Route path="home" element={<BusinessHome />} />
-                        <Route path="clients" element={<BusinessClients />} />
-                        <Route path="rewards" element={<BusinessRewards />} />
+                        <Route index element={<Navigate to="/business/dashboard/scan" replace />} />
                         <Route path="scan" element={<BusinessScan />} />
+                        <Route path="admin" element={<PinProtectedRoute><BusinessAdminDashboard /></PinProtectedRoute>} />
+                        {/* Legacy routes — kept but no longer linked from nav */}
+                        <Route path="home" element={<BusinessHome />} />
+                        <Route path="clients" element={<PinProtectedRoute><BusinessClients /></PinProtectedRoute>} />
+                        <Route path="rewards" element={<PinProtectedRoute><BusinessRewards /></PinProtectedRoute>} />
+                        <Route path="settings" element={<BusinessSettings />} />
+                        <Route path="locations" element={<PinProtectedRoute><BusinessLocations /></PinProtectedRoute>} />
                     </Route>
                 </Routes>
             </div>

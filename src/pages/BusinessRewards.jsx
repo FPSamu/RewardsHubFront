@@ -4,1723 +4,1423 @@ import rewardService from '../services/rewardService';
 import systemService from '../services/systemService';
 import * as membershipService from '../services/membershipService';
 
-const BusinessRewards = () => {
-    const [business, setBusiness] = useState(null);
-    const [rewards, setRewards] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [showPointsSystemModal, setShowPointsSystemModal] = useState(false);
-    const [isEditingPointsSystem, setIsEditingPointsSystem] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editingReward, setEditingReward] = useState(null);
-    const [rewardType, setRewardType] = useState(null); // 'points' or 'stamps'
-    const [creating, setCreating] = useState(false);
-    const [createError, setCreateError] = useState(null);
-    const [updating, setUpdating] = useState(false);
-    const [updateError, setUpdateError] = useState(null);
-
-    // Estado para verificar si existe sistema de puntos
-    const [hasPointsSystem, setHasPointsSystem] = useState(false);
-    const [pointsSystemConfig, setPointsSystemConfig] = useState(null);
-    const [pointsSystem, setPointsSystem] = useState(null);
-    const [stampsSystem, setStampsSystem] = useState(null);
-
-    // Points system configuration form
-    const [pointsSystemForm, setPointsSystemForm] = useState({
-        amount: '',
-        currency: 'MXN',
-        points: ''
-    });
-
-    // Points reward form state
-    const [pointsRewardFormData, setPointsRewardFormData] = useState({
-        name: '',
-        description: '',
-        pointsRequired: '',
-        rewardType: 'discount',
-        rewardValue: '',
-        rewardDescription: ''
-    });
-
-    // Stamps reward form state
-    const [stampsFormData, setStampsFormData] = useState({
-        name: '',
-        description: '',
-        targetStamps: '',
-        productType: 'any',
-        productIdentifier: '',
-        stampReward: {
-            rewardType: 'free_product',
-            rewardValue: '',
-            description: ''
-        }
-    });
-
-    // Edit reward form state
-    const [editFormData, setEditFormData] = useState({
-        name: '',
-        description: '',
-        rewardType: '',
-        rewardValue: '',
-        pointsRequired: '',
-        stampsRequired: ''
-    });
-
-    // Membership plans state
-    const [membershipPlans, setMembershipPlans] = useState([]);
-    const [showPlanModal, setShowPlanModal] = useState(false);
-    const [editingPlan, setEditingPlan] = useState(null);
-    const [savingPlan, setSavingPlan] = useState(false);
-    const [planError, setPlanError] = useState('');
-    const [planForm, setPlanForm] = useState({ name: '', description: '', benefit: '', durationDays: '', price: '' });
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-
-            // Fetch business details
-            const businessData = await businessService.getMyBusiness();
-            setBusiness(businessData);
-
-            // Fetch rewards (including inactive ones)
-            const rewardsData = await rewardService.getBusinessRewards(businessData.id, true);
-            setRewards(rewardsData);
-
-            // Fetch systems (separado de rewards)
-            const systemsData = await systemService.getBusinessSystems();
-
-            // Verificar si existe un sistema de puntos (type: 'points')
-            const pointsSys = systemsData.find(s => s.type === 'points' && s.isActive);
-            if (pointsSys) {
-                setHasPointsSystem(true);
-                setPointsSystemConfig(pointsSys.pointsConversion);
-                setPointsSystem(pointsSys);
-            } else {
-                setHasPointsSystem(false);
-                setPointsSystemConfig(null);
-                setPointsSystem(null);
-            }
-
-            // Verificar si existe un sistema de sellos (type: 'stamps')
-            const stampsSys = systemsData.find(s => s.type === 'stamps' && s.isActive);
-            setStampsSystem(stampsSys || null);
-
-            // Fetch membership plans
-            const plans = await membershipService.getMyPlans().catch(() => []);
-            setMembershipPlans(plans);
-
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching data:', err);
-            setError(err.message || 'Error al cargar los datos');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const openNewPlanModal = () => {
-        setEditingPlan(null);
-        setPlanForm({ name: '', description: '', benefit: '', durationDays: '', price: '' });
-        setPlanError('');
-        setShowPlanModal(true);
-    };
-
-    const openEditPlanModal = (plan) => {
-        setEditingPlan(plan);
-        setPlanForm({
-            name: plan.name,
-            description: plan.description,
-            benefit: plan.benefit,
-            durationDays: String(plan.durationDays),
-            price: String(plan.price),
-        });
-        setPlanError('');
-        setShowPlanModal(true);
-    };
-
-    const handleSavePlan = async (e) => {
-        e.preventDefault();
-        setSavingPlan(true);
-        setPlanError('');
-        try {
-            const payload = {
-                name: planForm.name.trim(),
-                description: planForm.description.trim(),
-                benefit: planForm.benefit.trim(),
-                durationDays: Number(planForm.durationDays),
-                price: Number(planForm.price),
-            };
-            if (editingPlan) {
-                await membershipService.updatePlan(editingPlan._id, payload);
-            } else {
-                await membershipService.createPlan(payload);
-            }
-            const plans = await membershipService.getMyPlans();
-            setMembershipPlans(plans);
-            setShowPlanModal(false);
-        } catch (err) {
-            setPlanError(err.response?.data?.message || 'Error al guardar el plan');
-        } finally {
-            setSavingPlan(false);
-        }
-    };
-
-    const handleTogglePlan = async (plan) => {
-        try {
-            await membershipService.updatePlan(plan._id, { isActive: !plan.isActive });
-            setMembershipPlans(prev => prev.map(p => p._id === plan._id ? { ...p, isActive: !p.isActive } : p));
-        } catch { /* ignore */ }
-    };
-
-    const handleDeletePlan = async (planId) => {
-        if (!confirm('¿Eliminar este plan? Los clientes con membresías activas no se verán afectados.')) return;
-        try {
-            await membershipService.deletePlan(planId);
-            setMembershipPlans(prev => prev.filter(p => p._id !== planId));
-        } catch (err) {
-            alert(err.response?.data?.message || 'Error al eliminar el plan');
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-                    <p className="text-gray-600">Cargando...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="space-y-6">
-                <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                    <h2 className="text-3xl font-bold text-gray-800 mb-2 tracking-tight">
-                        Gestión de Recompensas
-                    </h2>
-                </div>
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl">
-                    {error}
-                </div>
-            </div>
-        );
-    }
-
-    const activeRewards = rewards.filter(r => r.isActive);
-    const inactiveRewards = rewards.filter(r => !r.isActive);
-
-    // Handler to open modal for create or edit
-    function handleOpenPointsSystemModal(editMode = false) {
-        setIsEditingPointsSystem(editMode);
-        if (editMode && pointsSystem) {
-            setPointsSystemForm({
-                amount: pointsSystem.pointsConversion?.amount?.toString() || '',
-                currency: pointsSystem.pointsConversion?.currency || 'MXN',
-                points: pointsSystem.pointsConversion?.points?.toString() || ''
-            });
-        } else {
-            setPointsSystemForm({ amount: '', currency: 'MXN', points: '' });
-        }
-        setCreateError(null);
-        setShowPointsSystemModal(true);
-    }
-
-    // Handler for saving (create or update)
-    async function handleSavePointsSystem(e) {
-        e.preventDefault();
-        setCreating(true);
-        setCreateError(null);
-
-        try {
-            const payload = {
-                name: 'Sistema de Puntos',
-                description: 'Sistema de acumulación de puntos',
-                pointsConversion: {
-                    amount: parseFloat(pointsSystemForm.amount),
-                    currency: pointsSystemForm.currency,
-                    points: parseInt(pointsSystemForm.points)
-                }
-            };
-
-            if (isEditingPointsSystem && pointsSystem) {
-                await systemService.updatePointsSystem(pointsSystem.id, payload);
-            } else {
-                await systemService.createPointsSystem(payload);
-            }
-            await fetchData();
-
-            setShowPointsSystemModal(false);
-            setPointsSystemForm({ amount: '', currency: 'MXN', points: '' });
-            setCreateError(null);
-        } catch (err) {
-            console.error('Error saving points system:', err);
-            setCreateError(err.message || 'Error al configurar el sistema de puntos');
-        } finally {
-            setCreating(false);
-        }
-    }
-
-    return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                <div className="flex flex-col gap-4">
-                    {/* Title Section */}
-                    <div>
-                        <div className="flex items-center space-x-3 mb-2">
-                            <img
-                                src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png"
-                                alt="RewardsHub Logo"
-                                className="h-10 w-auto object-contain"
-                            />
-                            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">
-                                Gestión de Recompensas
-                            </h2>
-                        </div>
-                        <p className="text-gray-600 text-sm sm:text-base">
-                            Administra las recompensas de {business?.name}
-                        </p>
-                    </div>
-
-                    {/* Buttons Section */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                        {!hasPointsSystem && (
-                            <button
-                                onClick={() => handleOpenPointsSystemModal(false)}
-                                className="w-full sm:w-auto px-6 py-3 bg-accent-gold text-white rounded-pill font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card flex items-center justify-center gap-2"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span className="hidden sm:inline">Configurar Sistema de Puntos</span>
-                                <span className="sm:hidden">Configurar Puntos</span>
-                            </button>
-                        )}
-                        {hasPointsSystem && (
-                            <button
-                                onClick={() => handleOpenPointsSystemModal(true)}
-                                className="w-full sm:w-auto px-6 py-3 bg-accent-gold text-white rounded-pill font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card flex items-center justify-center gap-2"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span className="hidden sm:inline">Editar Sistema de Puntos</span>
-                                <span className="sm:hidden">Editar Puntos</span>
-                            </button>
-                        )}
-                        <button
-                            onClick={() => setShowCreateModal(true)}
-                            className="w-full sm:w-auto px-6 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity duration-180 shadow-card flex items-center justify-center gap-2"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                            </svg>
-                            Nueva Recompensa
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600">Total Recompensas</p>
-                            <p className="text-3xl font-bold text-brand-primary">{rewards.length}</p>
-                        </div>
-                        <div className="bg-brand-muted p-3 rounded-full">
-                            <svg
-                                className="w-8 h-8 text-brand-primary"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.75}
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
-                                />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600">Recompensas Activas</p>
-                            <p className="text-3xl font-bold text-accent-success">{activeRewards.length}</p>
-                        </div>
-                        <div className="bg-green-50 p-3 rounded-full">
-                            <svg
-                                className="w-8 h-8 text-accent-success"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.75}
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600">Recompensas Inactivas</p>
-                            <p className="text-3xl font-bold text-gray-400">{inactiveRewards.length}</p>
-                        </div>
-                        <div className="bg-gray-100 p-3 rounded-full">
-                            <svg
-                                className="w-8 h-8 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.75}
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Active Rewards */}
-            <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                <h3 className="text-xl font-bold text-gray-800 mb-4 tracking-tight">Recompensas Activas</h3>
-                {activeRewards.length > 0 ? (
-                    <div className="space-y-3">
-                        {activeRewards.map((reward) => (
-                            <div
-                                key={reward.id}
-                                className="bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 border border-gray-200 p-4"
-                            >
-                                {/* Header: Icon + Title/Description */}
-                                <div className="flex items-start gap-3 mb-3">
-                                    <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex-shrink-0 flex items-center justify-center font-bold shadow-card">
-                                        {reward.pointsRequired ? (
-                                            <svg
-                                                className="w-6 h-6"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                                strokeWidth={2}
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
-                                            </svg>
-                                        ) : (
-                                            <svg
-                                                className="w-6 h-6"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                                strokeWidth={2}
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M5 13l4 4L19 7"
-                                                />
-                                            </svg>
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="font-semibold text-gray-800">{reward.name}</h4>
-                                        <p className="text-sm text-gray-600">{reward.description}</p>
-                                    </div>
-                                </div>
-
-                                {/* Badges */}
-                                <div className="flex flex-wrap gap-2 mb-3">
-                                    {reward.pointsRequired ? (
-                                        <span className="inline-flex items-center px-3 py-1.5 bg-brand-muted text-brand-primary text-xs font-semibold rounded-pill">
-                                            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            {reward.pointsRequired} puntos
-                                        </span>
-                                    ) : reward.stampsRequired ? (
-                                        <span className="inline-flex items-center px-3 py-1.5 bg-green-50 text-accent-success text-xs font-semibold rounded-pill">
-                                            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            {reward.stampsRequired} sellos
-                                        </span>
-                                    ) : null}
-                                    {reward.discount && (
-                                        <span className="inline-flex items-center px-3 py-1.5 bg-yellow-50 text-accent-gold text-xs font-semibold rounded-pill">
-                                            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                                            </svg>
-                                            {reward.discount}% descuento
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Action Buttons - Responsive Grid */}
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={() => handleOpenEditModal(reward)}
-                                        className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-pill text-sm font-semibold hover:bg-gray-300 transition-colors duration-180 flex items-center justify-center gap-2"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Editar
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeactivateReward(reward.id)}
-                                        className="px-4 py-2.5 bg-red-50 text-red-600 rounded-pill text-sm font-semibold hover:bg-red-100 transition-colors duration-180 flex items-center justify-center gap-2"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                        </svg>
-                                        Desactivar
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-8">
-                        <svg
-                            className="w-16 h-16 text-gray-300 mx-auto mb-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
-                            />
-                        </svg>
-                        <p className="text-gray-600 font-medium">No tienes recompensas activas</p>
-                        <p className="text-sm text-gray-500 mt-1">
-                            Crea una nueva recompensa o activa una existente
-                        </p>
-                    </div>
-                )}
-            </div>
-
-            {/* Inactive Rewards */}
-            {inactiveRewards.length > 0 && (
-                <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4 tracking-tight">Recompensas Inactivas</h3>
-                    <div className="space-y-3">
-                        {inactiveRewards.map((reward) => (
-                            <div
-                                key={reward.id}
-                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-180 border border-gray-200 opacity-75"
-                            >
-                                <div className="flex items-center space-x-4 flex-1">
-                                    <div className="bg-gray-300 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold">
-                                        {reward.pointsRequired ? (
-                                            <svg
-                                                className="w-6 h-6"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                                strokeWidth={2}
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                />
-                                            </svg>
-                                        ) : (
-                                            <svg
-                                                className="w-6 h-6"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                                strokeWidth={2}
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M5 13l4 4L19 7"
-                                                />
-                                            </svg>
-                                        )}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-800">{reward.name}</h4>
-                                        <p className="text-sm text-gray-600">{reward.description}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <button
-                                        onClick={() => handleActivateReward(reward.id)}
-                                        className="px-4 py-2 bg-accent-success text-white rounded-pill text-sm font-semibold hover:opacity-90 transition-opacity duration-180"
-                                    >
-                                        Activar
-                                    </button>
-                                    <button
-                                        className="px-4 py-2 bg-red-50 text-red-600 rounded-pill text-sm font-semibold hover:bg-red-100 transition-colors duration-180"
-                                    >
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Create Modal */}
-            {showCreateModal && (
-                <CreateRewardModal
-                    rewardType={rewardType}
-                    setRewardType={setRewardType}
-                    pointsRewardFormData={pointsRewardFormData}
-                    setPointsRewardFormData={setPointsRewardFormData}
-                    stampsFormData={stampsFormData}
-                    setStampsFormData={setStampsFormData}
-                    creating={creating}
-                    createError={createError}
-                    hasPointsSystem={hasPointsSystem}
-                    pointsSystemConfig={pointsSystemConfig}
-                    onClose={handleCloseModal}
-                    onSubmit={handleCreateReward}
-                    onConfigurePoints={() => {
-                        setShowCreateModal(false);
-                        setShowPointsSystemModal(true);
-                    }}
-                />
-            )}
-
-            {/* Points System Configuration Modal */}
-            {showPointsSystemModal && (
-                <PointsSystemConfigModal
-                    formData={pointsSystemForm}
-                    setFormData={setPointsSystemForm}
-                    creating={creating}
-                    error={createError}
-                    isEditing={isEditingPointsSystem}
-                    onClose={() => {
-                        setShowPointsSystemModal(false);
-                        setPointsSystemForm({ amount: '', currency: 'MXN', points: '' });
-                        setCreateError(null);
-                    }}
-                    onSubmit={handleSavePointsSystem}
-                />
-            )}
-
-            {/* Edit Reward Modal */}
-            {showEditModal && editingReward && (
-                <EditRewardModal
-                    reward={editingReward}
-                    formData={editFormData}
-                    setFormData={setEditFormData}
-                    updating={updating}
-                    error={updateError}
-                    onClose={handleCloseEditModal}
-                    onSubmit={handleUpdateReward}
-                />
-            )}
-
-            {/* ── Membership Plans Section ──────────────────────────── */}
-            <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                <div className="flex items-center justify-between mb-5">
-                    <div>
-                        <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                            <svg className="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                            </svg>
-                            Planes de Membresía
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-0.5">El cajero puede activar estas membresías al escanear el QR del cliente.</p>
-                    </div>
-                    <button
-                        onClick={openNewPlanModal}
-                        className="px-4 py-2 bg-brand-primary text-white rounded-pill text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                        Nuevo Plan
-                    </button>
-                </div>
-
-                {membershipPlans.length === 0 ? (
-                    <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                        <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                        </svg>
-                        <p className="text-gray-500 font-medium">No hay planes configurados</p>
-                        <p className="text-sm text-gray-400 mt-1">Crea un plan para ofrecer membresías a tus clientes</p>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {membershipPlans.map(plan => (
-                            <div key={plan._id} className={`flex items-center gap-4 p-4 rounded-xl border ${plan.isActive ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <p className="font-semibold text-gray-800">{plan.name}</p>
-                                        {plan.isActive
-                                            ? <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">Activo</span>
-                                            : <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">Inactivo</span>
-                                        }
-                                    </div>
-                                    <p className="text-sm text-brand-onColor font-medium mt-0.5">{plan.benefit}</p>
-                                    <p className="text-xs text-gray-500 mt-0.5">{plan.durationDays} días · ${plan.price}</p>
-                                </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                    <button
-                                        onClick={() => handleTogglePlan(plan)}
-                                        title={plan.isActive ? 'Desactivar' : 'Activar'}
-                                        className="p-2 text-gray-400 hover:text-brand-primary rounded-lg hover:bg-gray-100 transition-colors"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            {plan.isActive
-                                                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            }
-                                        </svg>
-                                    </button>
-                                    <button
-                                        onClick={() => openEditPlanModal(plan)}
-                                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeletePlan(plan._id)}
-                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Plan Modal */}
-            {showPlanModal && (
-                <PlanModal
-                    plan={editingPlan}
-                    form={planForm}
-                    setForm={setPlanForm}
-                    saving={savingPlan}
-                    error={planError}
-                    onClose={() => setShowPlanModal(false)}
-                    onSubmit={handleSavePlan}
-                />
-            )}
-        </div>
-    );
-
-    function handleCloseModal() {
-        setShowCreateModal(false);
-        setRewardType(null);
-        setCreateError(null);
-        // Reset forms
-        setPointsRewardFormData({
-            name: '',
-            description: '',
-            pointsRequired: '',
-            rewardType: 'discount',
-            rewardValue: '',
-            rewardDescription: ''
-        });
-        setStampsFormData({
-            name: '',
-            description: '',
-            targetStamps: '',
-            productType: 'any',
-            productIdentifier: '',
-            stampReward: {
-                rewardType: 'free_product',
-                rewardValue: '',
-                description: ''
-            }
-        });
-    }
-
-    // async function handleCreatePointsSystem(e) {
-    //     e.preventDefault();
-    //     setCreating(true);
-    //     setCreateError(null);
-
-    //     try {
-    //         const payload = {
-    //             name: 'Sistema de Puntos',
-    //             description: 'Sistema de acumulación de puntos',
-    //             pointsConversion: {
-    //                 amount: parseFloat(pointsSystemForm.amount),
-    //                 currency: pointsSystemForm.currency,
-    //                 points: parseInt(pointsSystemForm.points)
-    //             }
-    //         };
-
-    //         await systemService.createPointsSystem(payload);
-    //         await fetchData();
-
-    //         setShowPointsSystemModal(false);
-    //         setPointsSystemForm({ amount: '', currency: 'MXN', points: '' });
-    //         setCreateError(null);
-    //     } catch (err) {
-    //         console.error('Error creating points system:', err);
-    //         setCreateError(err.message || 'Error al configurar el sistema de puntos');
-    //     } finally {
-    //         setCreating(false);
-    //     }
-    // }
-
-    async function handleCreateReward(e) {
-        e.preventDefault();
-        setCreating(true);
-        setCreateError(null);
-
-        try {
-            if (rewardType === 'points') {
-                if (!pointsSystem) {
-                    throw new Error('No se encontró el sistema de puntos');
-                }
-
-                // Determinar el valor de la recompensa según el tipo
-                let rewardValue;
-                if (pointsRewardFormData.rewardType === 'free_product') {
-                    // Para producto gratis, usar el nombre de la recompensa
-                    rewardValue = pointsRewardFormData.name;
-                } else if (pointsRewardFormData.rewardType === 'discount') {
-                    // Para descuento, convertir a número
-                    rewardValue = parseFloat(pointsRewardFormData.rewardValue);
-                } else {
-                    // Para otros tipos (cupón), usar el valor como está
-                    rewardValue = pointsRewardFormData.rewardValue;
-                }
-
-                const payload = {
-                    systemId: pointsSystem.id,
-                    name: pointsRewardFormData.name,
-                    description: pointsRewardFormData.description,
-                    rewardType: pointsRewardFormData.rewardType,
-                    rewardValue: rewardValue,
-                    pointsRequired: parseInt(pointsRewardFormData.pointsRequired)
-                };
-                await rewardService.createPointsReward(payload);
-            } else if (rewardType === 'stamps') {
-                let systemIdToUse = stampsSystem?.id;
-
-                // Si no existe un sistema de sellos, crear uno automáticamente
-                if (!systemIdToUse) {
-                    const systemData = {
-                        name: 'Sistema de Sellos',
-                        description: 'Sistema de recompensas por sellos',
-                        targetStamps: parseInt(stampsFormData.targetStamps),
-                        productType: stampsFormData.productType,
-                        productIdentifier: stampsFormData.productIdentifier || undefined
-                    };
-                    const newSystem = await systemService.createStampsSystem(systemData);
-                    systemIdToUse = newSystem.id;
-                }
-
-                const payload = {
-                    systemId: systemIdToUse,
-                    name: stampsFormData.name,
-                    description: stampsFormData.description,
-                    rewardType: stampsFormData.stampReward.rewardType,
-                    rewardValue: stampsFormData.stampReward.rewardValue ?
-                        parseFloat(stampsFormData.stampReward.rewardValue) :
-                        stampsFormData.name,
-                    stampsRequired: parseInt(stampsFormData.targetStamps)
-                };
-
-                await rewardService.createStampsReward(payload);
-            }            // Reload rewards
-            await fetchData();
-            handleCloseModal();
-        } catch (err) {
-            console.error('Error creating reward:', err);
-            setCreateError(err.message || 'Error al crear la recompensa');
-        } finally {
-            setCreating(false);
-        }
-    }
-
-    function handleOpenEditModal(reward) {
-        setEditingReward(reward);
-        setEditFormData({
-            name: reward.name || '',
-            description: reward.description || '',
-            rewardType: reward.rewardType || '',
-            rewardValue: reward.rewardValue || '',
-            pointsRequired: reward.pointsRequired || '',
-            stampsRequired: reward.stampsRequired || ''
-        });
-        setShowEditModal(true);
-    }
-
-    function handleCloseEditModal() {
-        setShowEditModal(false);
-        setEditingReward(null);
-        setUpdateError(null);
-        setEditFormData({
-            name: '',
-            description: '',
-            rewardType: '',
-            rewardValue: '',
-            pointsRequired: '',
-            stampsRequired: ''
-        });
-    }
-
-    async function handleUpdateReward(e) {
-        e.preventDefault();
-        if (!editingReward) return;
-
-        setUpdating(true);
-        setUpdateError(null);
-
-        try {
-            const payload = {
-                name: editFormData.name,
-                description: editFormData.description,
-                rewardType: editFormData.rewardType,
-                rewardValue: editFormData.rewardType === 'discount' ?
-                    parseFloat(editFormData.rewardValue) :
-                    editFormData.rewardValue
-            };
-
-            // Include points or stamps requirement based on what the reward has
-            if (editFormData.pointsRequired) {
-                payload.pointsRequired = parseInt(editFormData.pointsRequired);
-            }
-            if (editFormData.stampsRequired) {
-                payload.stampsRequired = parseInt(editFormData.stampsRequired);
-            }
-
-            await rewardService.updateReward(editingReward.id, payload);
-            await fetchData();
-            handleCloseEditModal();
-        } catch (err) {
-            console.error('Error updating reward:', err);
-            setUpdateError(err.message || 'Error al actualizar la recompensa');
-        } finally {
-            setUpdating(false);
-        }
-    }
-
-    async function handleDeactivateReward(rewardId) {
-        if (!confirm('¿Estás seguro de que deseas desactivar esta recompensa?')) {
-            return;
-        }
-
-        try {
-            await rewardService.updateReward(rewardId, { isActive: false });
-            await fetchData();
-        } catch (err) {
-            console.error('Error deactivating reward:', err);
-            alert(err.message || 'Error al desactivar la recompensa');
-        }
-    }
-
-    async function handleActivateReward(rewardId) {
-        try {
-            await rewardService.updateReward(rewardId, { isActive: true });
-            await fetchData();
-        } catch (err) {
-            console.error('Error activating reward:', err);
-            alert(err.message || 'Error al activar la recompensa');
-        }
-    }
+// ─── Constants ────────────────────────────────────────────────────────────────
+const REWARD_TYPE_LABELS = {
+  discount:     'Descuento',
+  free_product: 'Prod. gratis',
+  coupon:       'Cupón',
+  cashback:     'Cashback',
 };
 
-// Points System Configuration Modal Component
-function PointsSystemConfigModal({ formData, setFormData, creating, error, isEditing, onClose, onSubmit }) {
+const parseErr = (e) =>
+  typeof e === 'string' ? e : e?.response?.data?.message ?? e?.message ?? 'Ocurrió un error';
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+function CoinIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function StampIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+
+function CloseBtn({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="p-1.5 rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors flex-shrink-0"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  );
+}
+
+function Spinner({ light = false }) {
+  return (
+    <span
+      className={`animate-spin rounded-full h-3.5 w-3.5 border-2 inline-block ${
+        light ? 'border-white border-t-transparent' : 'border-brand-primary border-t-transparent'
+      }`}
+    />
+  );
+}
+
+function FieldLabel({ children, required }) {
+  return (
+    <label className="block text-[12px] font-semibold text-neutral-600 mb-1.5">
+      {children} {required && <span className="text-accent-danger">*</span>}
+    </label>
+  );
+}
+
+function Input({ className = '', ...props }) {
+  return (
+    <input
+      className={`w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-colors ${className}`}
+      {...props}
+    />
+  );
+}
+
+function Select({ className = '', children, ...props }) {
+  return (
+    <select
+      className={`w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-colors bg-white ${className}`}
+      {...props}
+    >
+      {children}
+    </select>
+  );
+}
+
+function Textarea({ className = '', ...props }) {
+  return (
+    <textarea
+      className={`w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-[13px] text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-colors resize-none ${className}`}
+      {...props}
+    />
+  );
+}
+
+function ErrorNote({ text }) {
+  if (!text) return null;
+  return (
+    <p className="text-[12px] text-accent-danger bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5">
+      {text}
+    </p>
+  );
+}
+
+// ─── Modal Shell ──────────────────────────────────────────────────────────────
+function ModalShell({ title, subtitle, onClose, children, wide }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div
+        className={`bg-surface w-full ${
+          wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'
+        } sm:rounded-2xl shadow-popover overflow-hidden max-h-[92dvh] overflow-y-auto rounded-t-2xl`}
+      >
+        <div className="px-5 py-4 border-b border-neutral-100 flex items-start justify-between gap-3 sticky top-0 bg-surface z-10">
+          <div>
+            <h3 className="text-[16px] font-extrabold text-neutral-900">{title}</h3>
+            {subtitle && <p className="text-[12px] text-neutral-400 mt-0.5">{subtitle}</p>}
+          </div>
+          <CloseBtn onClick={onClose} />
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─── Points System Banner ─────────────────────────────────────────────────────
+function PointsSystemBanner({ config, onConfigure, onEdit }) {
+  if (!config) {
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl shadow-popover max-w-lg w-full my-8">
-                <div className="p-6 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-2xl font-bold text-gray-800">{isEditing ? 'Editar Sistema de Puntos' : 'Configurar Sistema de Puntos'}</h3>
-                            <p className="text-sm text-gray-600 mt-1">Define cómo los clientes acumulan puntos</p>
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <CoinIcon className="w-4 h-4 text-amber-600" />
+          </div>
+          <div>
+            <p className="text-[13px] font-bold text-amber-800">Sin sistema de puntos</p>
+            <p className="text-[12px] text-amber-600">Configura cómo los clientes acumulan puntos por compra</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onConfigure}
+          className="flex-shrink-0 px-3.5 py-2 rounded-pill bg-amber-500 text-white text-[12px] font-bold hover:opacity-90 transition-opacity"
+        >
+          Configurar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-brand-primary/20 bg-brand-primary/5 px-5 py-4">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-full bg-brand-primary/10 flex items-center justify-center flex-shrink-0">
+          <CoinIcon className="w-4 h-4 text-brand-primary" />
+        </div>
+        <div>
+          <p className="text-[13px] font-bold text-neutral-800">Sistema de puntos activo</p>
+          <p className="text-[12px] text-neutral-500">
+            ${config.amount} {config.currency} ={' '}
+            <span className="font-semibold text-brand-primary">{config.points} puntos</span>
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="flex-shrink-0 px-3.5 py-2 rounded-pill border border-brand-primary/30 text-brand-primary text-[12px] font-bold hover:bg-brand-primary/5 transition-colors"
+      >
+        Editar
+      </button>
+    </div>
+  );
+}
+
+// ─── Skeleton rows ────────────────────────────────────────────────────────────
+function SkeletonRow() {
+  return (
+    <div className="px-5 py-4 animate-pulse flex items-center gap-3">
+      <div className="w-9 h-9 rounded-full bg-neutral-100 flex-shrink-0" />
+      <div className="flex-1 space-y-2">
+        <div className="h-3 w-36 rounded bg-neutral-100" />
+        <div className="h-2.5 w-24 rounded bg-neutral-100" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Reward Card ──────────────────────────────────────────────────────────────
+function RewardCard({ reward, onEdit, onToggleActive }) {
+  const [pendingToggle, setPendingToggle] = useState(false);
+  const [toggling, setToggling]           = useState(false);
+
+  const isPoints   = reward.pointsRequired != null;
+  const req        = isPoints ? reward.pointsRequired : reward.stampsRequired;
+  const unit       = isPoints ? 'puntos' : 'sellos';
+  const typeLabel  = REWARD_TYPE_LABELS[reward.rewardType];
+
+  const handleConfirm = async () => {
+    setToggling(true);
+    try {
+      await onToggleActive(reward.id ?? reward._id, !reward.isActive);
+    } finally {
+      setToggling(false);
+      setPendingToggle(false);
+    }
+  };
+
+  return (
+    <div className={`px-5 py-4 transition-opacity ${!reward.isActive ? 'opacity-55' : ''}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div
+            className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${
+              isPoints ? 'bg-brand-primary/10' : 'bg-green-100'
+            }`}
+          >
+            {isPoints
+              ? <CoinIcon className="w-4 h-4 text-brand-primary" />
+              : <StampIcon className="w-4 h-4 text-green-600" />
+            }
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-[13px] font-bold text-neutral-800 leading-tight">{reward.name}</p>
+              {!reward.isActive && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neutral-100 text-neutral-500">
+                  Inactiva
+                </span>
+              )}
+            </div>
+            {reward.description && (
+              <p className="text-[12px] text-neutral-500 mt-0.5 leading-snug line-clamp-1">
+                {reward.description}
+              </p>
+            )}
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <span
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold ${
+                  isPoints ? 'bg-brand-primary/10 text-brand-primary' : 'bg-green-100 text-green-700'
+                }`}
+              >
+                {isPoints ? <CoinIcon className="w-3 h-3" /> : <StampIcon className="w-3 h-3" />}
+                {req} {unit}
+              </span>
+              {typeLabel && (
+                <span className="text-[11px] text-neutral-400">{typeLabel}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => onEdit(reward)}
+            title="Editar"
+            className="p-1.5 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingToggle(true)}
+            title={reward.isActive ? 'Desactivar' : 'Activar'}
+            className={`p-1.5 rounded-lg border transition-colors ${
+              reward.isActive
+                ? 'border-neutral-200 text-neutral-500 hover:bg-red-50 hover:border-red-200 hover:text-red-500'
+                : 'border-neutral-200 text-neutral-500 hover:bg-green-50 hover:border-green-200 hover:text-green-600'
+            }`}
+          >
+            {reward.isActive ? (
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {pendingToggle && (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-[12px] font-semibold text-neutral-600">
+            {reward.isActive ? '¿Desactivar recompensa?' : '¿Activar recompensa?'}
+          </span>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={toggling}
+            className={`px-2.5 py-1 rounded-pill text-white text-[11px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 ${
+              reward.isActive ? 'bg-accent-danger' : 'bg-accent-success'
+            }`}
+          >
+            {toggling ? <Spinner light /> : 'Confirmar'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingToggle(false)}
+            disabled={toggling}
+            className="px-2.5 py-1 rounded-pill border border-neutral-200 text-[11px] font-semibold text-neutral-600 hover:bg-neutral-50"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Rewards Panel ────────────────────────────────────────────────────────────
+function RewardsPanel({ rewards, loading, onEdit, onToggleActive, onNew }) {
+  const [showInactive, setShowInactive] = useState(false);
+
+  const active   = rewards.filter((r) => r.isActive);
+  const inactive = rewards.filter((r) => !r.isActive);
+
+  return (
+    <div className="bg-surface rounded-xl shadow-card overflow-hidden">
+      <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
+        <div>
+          <h2 className="text-[14px] font-bold text-neutral-800">Recompensas</h2>
+          {!loading && (
+            <p className="text-[11px] text-neutral-400 mt-0.5">
+              {active.length} activa{active.length !== 1 ? 's' : ''}
+              {inactive.length > 0 && `, ${inactive.length} inactiva${inactive.length !== 1 ? 's' : ''}`}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onNew}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-pill bg-brand-primary text-brand-onColor text-[12px] font-bold hover:opacity-90 transition-opacity"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Nueva
+        </button>
+      </div>
+
+      <div className="divide-y divide-neutral-100">
+        {loading ? (
+          <><SkeletonRow /><SkeletonRow /><SkeletonRow /></>
+        ) : !rewards.length ? (
+          <div className="flex flex-col items-center gap-2 py-12 text-center px-5">
+            <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center">
+              <svg className="w-6 h-6 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
+            </div>
+            <p className="text-[13px] font-semibold text-neutral-600">Sin recompensas</p>
+            <p className="text-[12px] text-neutral-400">Crea tu primera recompensa para los clientes</p>
+            <button
+              type="button"
+              onClick={onNew}
+              className="mt-1 px-4 py-2 rounded-pill bg-brand-primary text-brand-onColor text-[12px] font-bold hover:opacity-90 transition-opacity"
+            >
+              Nueva recompensa
+            </button>
+          </div>
+        ) : (
+          <>
+            {active.map((r) => (
+              <RewardCard
+                key={r.id ?? r._id}
+                reward={r}
+                onEdit={onEdit}
+                onToggleActive={onToggleActive}
+              />
+            ))}
+            {inactive.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowInactive((v) => !v)}
+                  className="w-full flex items-center justify-between px-5 py-3 text-[12px] font-semibold text-neutral-500 hover:bg-neutral-50 transition-colors"
+                >
+                  <span>
+                    {inactive.length} inactiva{inactive.length !== 1 ? 's' : ''}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${showInactive ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showInactive &&
+                  inactive.map((r) => (
+                    <RewardCard
+                      key={r.id ?? r._id}
+                      reward={r}
+                      onEdit={onEdit}
+                      onToggleActive={onToggleActive}
+                    />
+                  ))}
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Membership Plans Panel ───────────────────────────────────────────────────
+function MembershipPlansPanel({ plans, loading, onAdd, onEdit, onToggle, onDelete }) {
+  const [pendingDelete, setPendingDelete] = useState(null);
+
+  const handleDelete = async (id) => {
+    if (pendingDelete === id) {
+      await onDelete(id);
+      setPendingDelete(null);
+    } else {
+      setPendingDelete(id);
+    }
+  };
+
+  return (
+    <div className="bg-surface rounded-xl shadow-card overflow-hidden">
+      <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
+        <div>
+          <h2 className="text-[14px] font-bold text-neutral-800">Planes de Membresía</h2>
+          {!loading && plans.length > 0 && (
+            <p className="text-[11px] text-neutral-400 mt-0.5">
+              {plans.length} plan{plans.length !== 1 ? 'es' : ''}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-pill bg-brand-primary text-brand-onColor text-[12px] font-bold hover:opacity-90 transition-opacity"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Nuevo
+        </button>
+      </div>
+
+      <div className="divide-y divide-neutral-100">
+        {loading ? (
+          <><SkeletonRow /><SkeletonRow /></>
+        ) : !plans.length ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-center px-5">
+            <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center">
+              <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              </svg>
+            </div>
+            <p className="text-[13px] font-semibold text-neutral-600">Sin planes</p>
+            <p className="text-[12px] text-neutral-400">Los planes dan beneficios diarios a los miembros</p>
+            <button
+              type="button"
+              onClick={onAdd}
+              className="mt-1 px-3 py-1.5 rounded-pill bg-brand-primary text-brand-onColor text-[12px] font-bold hover:opacity-90 transition-opacity"
+            >
+              Nuevo plan
+            </button>
+          </div>
+        ) : (
+          plans.map((plan) => (
+            <div key={plan._id} className={`px-5 py-4 transition-opacity ${!plan.isActive ? 'opacity-55' : ''}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-[13px] font-bold text-neutral-800">{plan.name}</p>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        plan.isActive ? 'bg-green-100 text-green-700' : 'bg-neutral-100 text-neutral-500'
+                      }`}
+                    >
+                      {plan.isActive ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </div>
+                  <p className="text-[12px] text-brand-primary font-semibold mt-0.5 leading-snug">
+                    {plan.benefit}
+                  </p>
+                  <p className="text-[11px] text-neutral-400 mt-0.5">
+                    {plan.durationDays} días · ${plan.price}
+                  </p>
                 </div>
 
-                <form onSubmit={onSubmit} className="p-6 space-y-6">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                            <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <div>
-                                <p className="text-sm font-semibold text-blue-800">¿Qué es esto?</p>
-                                <p className="text-xs text-blue-700 mt-1">
-                                    Esta configuración establece la equivalencia entre dinero gastado y puntos ganados.<br />
-                                    {isEditing ? (
-                                        <span className="font-bold text-red-700">Editar la configuración afectará cómo se acumulan puntos a partir de ahora.</span>
-                                    ) : (
-                                        <>Solo necesitas configurarlo una vez.</>
-                                    )}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border border-gray-200 rounded-lg p-5 bg-gradient-to-br from-amber-50 to-yellow-50">
-                        <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                            <svg className="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Conversión de Puntos
-                        </h4>
-
-                        <div className="grid grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Monto ($) <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    required
-                                    min="0"
-                                    step="0.01"
-                                    value={formData.amount}
-                                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                                    placeholder="100"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Moneda <span className="text-red-500">*</span>
-                                </label>
-                                <select
-                                    required
-                                    value={formData.currency}
-                                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                                >
-                                    <option value="MXN">MXN</option>
-                                    <option value="USD">USD</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Puntos <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    required
-                                    min="1"
-                                    value={formData.points}
-                                    onChange={(e) => setFormData({ ...formData, points: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                                    placeholder="10"
-                                />
-                            </div>
-                        </div>
-
-                        {formData.amount && formData.points && (
-                            <div className="mt-4 p-3 bg-white rounded-lg border border-amber-200">
-                                <p className="text-sm font-semibold text-gray-700 mb-1">Vista previa:</p>
-                                <p className="text-sm text-gray-600">
-                                    Por cada <span className="font-bold text-brand-primary">${formData.amount} {formData.currency}</span> gastados,
-                                    el cliente recibirá <span className="font-bold text-brand-primary">{formData.points} puntos</span>
-                                </p>
-                            </div>
-                        )}
-                    </div>
-
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                            {error}
-                        </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onToggle(plan)}
+                    title={plan.isActive ? 'Desactivar' : 'Activar'}
+                    className="p-1.5 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 transition-colors"
+                  >
+                    {plan.isActive ? (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
                     )}
-
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            disabled={creating}
-                            className="px-6 py-2 text-gray-700 font-semibold hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={creating}
-                            className="px-6 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            {creating ? (
-                                <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                    {isEditing ? 'Guardando...' : 'Configurando...'}
-                                </>
-                            ) : (
-                                <>
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    {isEditing ? 'Guardar Cambios' : 'Guardar Configuración'}
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// Modal Component
-function CreateRewardModal({
-    rewardType,
-    setRewardType,
-    pointsRewardFormData,
-    setPointsRewardFormData,
-    stampsFormData,
-    setStampsFormData,
-    creating,
-    createError,
-    hasPointsSystem,
-    pointsSystemConfig,
-    onClose,
-    onSubmit,
-    onConfigurePoints
-}) {
-    return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl shadow-popover max-w-2xl w-full my-8">
-                <div className="p-6 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-2xl font-bold text-gray-800">Crear Nueva Recompensa</h3>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div className="p-6">
-                    {!rewardType ? (
-                        <TypeSelection
-                            setRewardType={setRewardType}
-                            hasPointsSystem={hasPointsSystem}
-                            onConfigurePoints={onConfigurePoints}
-                        />
-                    ) : rewardType === 'points' ? (
-                        <PointsRewardForm
-                            formData={pointsRewardFormData}
-                            setFormData={setPointsRewardFormData}
-                            pointsSystemConfig={pointsSystemConfig}
-                            onSubmit={onSubmit}
-                            creating={creating}
-                            error={createError}
-                            onBack={() => setRewardType(null)}
-                        />
-                    ) : rewardType === 'stamps' ? (
-                        <StampsRewardForm
-                            formData={stampsFormData}
-                            setFormData={setStampsFormData}
-                            onSubmit={onSubmit}
-                            creating={creating}
-                            error={createError}
-                            onBack={() => setRewardType(null)}
-                        />
-                    ) : null}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// Type Selection Component
-function TypeSelection({ setRewardType, hasPointsSystem, onConfigurePoints }) {
-    return (
-        <div className="space-y-4">
-            <p className="text-gray-600 mb-6">Selecciona el tipo de recompensa que deseas crear:</p>
-
-            <button
-                onClick={() => hasPointsSystem ? setRewardType('points') : null}
-                disabled={!hasPointsSystem}
-                className={`w-full p-6 border-2 rounded-xl transition-all duration-180 text-left group ${hasPointsSystem
-                    ? 'border-gray-200 hover:border-brand-primary hover:bg-brand-muted cursor-pointer'
-                    : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                    }`}
-            >
-                <div className="flex items-start space-x-4">
-                    <div className={`rounded-full w-12 h-12 flex items-center justify-center flex-shrink-0 transition-transform ${hasPointsSystem
-                        ? 'bg-brand-primary text-white group-hover:scale-110'
-                        : 'bg-gray-300 text-gray-500'
-                        }`}>
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div className="flex-1">
-                        <h4 className="text-lg font-bold text-gray-800 mb-1">Sistema de Puntos</h4>
-                        <p className="text-sm text-gray-600">Los clientes acumulan puntos por cada compra y pueden canjearlos por recompensas específicas.</p>
-                        {!hasPointsSystem ? (
-                            <div className="mt-3 flex items-center gap-2">
-                                <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                                <p className="text-xs text-red-600 font-semibold">Primero configura tu sistema de puntos</p>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onConfigurePoints();
-                                    }}
-                                    className="text-xs text-brand-primary font-semibold hover:underline ml-2"
-                                >
-                                    Configurar ahora →
-                                </button>
-                            </div>
-                        ) : (
-                            <p className="text-xs text-brand-primary font-semibold mt-2">✓ Sistema configurado</p>
-                        )}
-                    </div>
-                </div>
-            </button>
-
-            <button
-                onClick={() => setRewardType('stamps')}
-                className="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-accent-success hover:bg-green-50 transition-all duration-180 text-left group"
-            >
-                <div className="flex items-start space-x-4">
-                    <div className="bg-accent-success text-white rounded-full w-12 h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h4 className="text-lg font-bold text-gray-800 mb-1">Sistema de Estampas</h4>
-                        <p className="text-sm text-gray-600">Los clientes reciben una estampa por compra y obtienen una recompensa al completar el objetivo.</p>
-                        <p className="text-xs text-accent-success font-semibold mt-2">Ejemplo: 10 cafés = 1 café gratis</p>
-                    </div>
-                </div>
-            </button>
-        </div>
-    );
-}
-
-// Points Reward Form Component
-function PointsRewardForm({ formData, setFormData, pointsSystemConfig, onSubmit, creating, error, onBack }) {
-    return (
-        <form onSubmit={onSubmit} className="space-y-6">
-            {/* Info del sistema de puntos configurado */}
-            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onEdit(plan)}
+                    title="Editar"
+                    className="p-1.5 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
-                    <div>
-                        <p className="text-sm font-semibold text-gray-800">Sistema de Puntos Configurado</p>
-                        <p className="text-xs text-gray-600 mt-1">
-                            {pointsSystemConfig?.amount} {pointsSystemConfig?.currency} = {pointsSystemConfig?.points} puntos
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Título de la Recompensa <span className="text-red-500">*</span>
-                </label>
-                <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                    placeholder="Ej: Descuento de $50"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Descripción <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                    required
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                    rows="3"
-                    placeholder="Describe qué obtiene el cliente con esta recompensa"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Meta de Puntos <span className="text-red-500">*</span>
-                </label>
-                <input
-                    type="number"
-                    required
-                    min="1"
-                    value={formData.pointsRequired}
-                    onChange={(e) => setFormData({ ...formData, pointsRequired: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                    placeholder="100"
-                />
-                <p className="text-xs text-gray-500 mt-1">¿Cuántos puntos necesita el cliente para obtener esta recompensa?</p>
-            </div>
-
-            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                <h4 className="font-semibold text-gray-800 mb-4">Detalles de la Recompensa</h4>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Tipo de Recompensa <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            required
-                            value={formData.rewardType}
-                            onChange={(e) => setFormData({ ...formData, rewardType: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                        >
-                            <option value="discount">Descuento</option>
-                            <option value="free_product">Producto Gratis</option>
-                            <option value="coupon">Cupón</option>
-                        </select>
-                    </div>
-
-                    {formData.rewardType !== 'free_product' && (
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Valor de la Recompensa <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                required
-                                min="0"
-                                step="0.01"
-                                value={formData.rewardValue}
-                                onChange={(e) => setFormData({ ...formData, rewardValue: e.target.value })}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                                placeholder="50"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                                {formData.rewardType === 'discount' ? 'Porcentaje o monto en pesos del descuento' : 'Valor del producto o cupón'}
-                            </p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                    {error}
-                </div>
-            )}
-
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                <button
+                  </button>
+                  <button
                     type="button"
-                    onClick={onBack}
-                    className="px-6 py-2 text-gray-700 font-semibold hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                    ← Volver
-                </button>
-                <button
-                    type="submit"
-                    disabled={creating}
-                    className="px-6 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {creating ? 'Creando...' : 'Crear Recompensa'}
-                </button>
+                    onClick={() => handleDelete(plan._id)}
+                    title="Eliminar"
+                    className="p-1.5 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {pendingDelete === plan._id && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-[12px] font-semibold text-neutral-600">¿Eliminar plan?</span>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(plan._id)}
+                    className="px-2.5 py-1 rounded-pill bg-accent-danger text-white text-[11px] font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    Confirmar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingDelete(null)}
+                    className="px-2.5 py-1 rounded-pill border border-neutral-200 text-[11px] font-semibold text-neutral-600 hover:bg-neutral-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
             </div>
-        </form>
-    );
+          ))
+        )}
+      </div>
+    </div>
+  );
 }
 
-// Stamps Reward Form Component
-function StampsRewardForm({ formData, setFormData, onSubmit, creating, error, onBack }) {
-    return (
-        <form onSubmit={onSubmit} className="space-y-6">
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Título de la Recompensa <span className="text-red-500">*</span>
-                </label>
-                <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-success focus:border-transparent"
-                    placeholder="Ej: Café Gratis"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Descripción <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                    required
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-success focus:border-transparent"
-                    rows="3"
-                    placeholder="Describe qué obtiene el cliente con esta recompensa"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Meta de Estampas <span className="text-red-500">*</span>
-                </label>
-                <input
-                    type="number"
-                    required
-                    min="1"
-                    value={formData.targetStamps}
-                    onChange={(e) => setFormData({ ...formData, targetStamps: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-success focus:border-transparent"
-                    placeholder="10"
-                />
-                <p className="text-xs text-gray-500 mt-1">¿Cuántas estampas necesita el cliente para obtener esta recompensa?</p>
-            </div>
-
-            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                <h4 className="font-semibold text-gray-800 mb-4">Detalles de la Recompensa</h4>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Tipo de Recompensa <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            required
-                            value={formData.stampReward.rewardType}
-                            onChange={(e) => setFormData({
-                                ...formData,
-                                stampReward: { ...formData.stampReward, rewardType: e.target.value }
-                            })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-success focus:border-transparent"
-                        >
-                            <option value="free_product">Producto Gratis</option>
-                            <option value="coupon">Cupón</option>
-                            <option value="discount">Descuento</option>
-                        </select>
-                    </div>
-
-                    {formData.stampReward.rewardType !== 'free_product' && (
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Valor de la Recompensa <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                required
-                                min="0"
-                                step="0.01"
-                                value={formData.stampReward.rewardValue}
-                                onChange={(e) => setFormData({
-                                    ...formData,
-                                    stampReward: { ...formData.stampReward, rewardValue: e.target.value }
-                                })}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-success focus:border-transparent"
-                                placeholder="50"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                                {formData.stampReward.rewardType === 'discount' ? 'Porcentaje o monto en pesos del descuento' : 'Valor del cupón'}
-                            </p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                    {error}
-                </div>
-            )}
-
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                <button
-                    type="button"
-                    onClick={onBack}
-                    className="px-6 py-2 text-gray-700 font-semibold hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                    ← Volver
-                </button>
-                <button
-                    type="submit"
-                    disabled={creating}
-                    className="px-6 py-3 bg-accent-success text-white rounded-pill font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {creating ? 'Creando...' : 'Crear Recompensa'}
-                </button>
-            </div>
-        </form>
-    );
-}
-
-// Edit Reward Modal Component
-function EditRewardModal({ reward, formData, setFormData, updating, error, onClose, onSubmit }) {
-    const isPointsReward = reward.pointsRequired !== undefined && reward.pointsRequired !== null;
-    const isStampsReward = reward.stampsRequired !== undefined && reward.stampsRequired !== null;
-
-    return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl shadow-popover max-w-2xl w-full my-8">
-                <div className="p-6 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-2xl font-bold text-gray-800">Editar Recompensa</h3>
-                            <p className="text-sm text-gray-600 mt-1">
-                                {isPointsReward ? 'Recompensa por puntos' : 'Recompensa por sellos'}
-                            </p>
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <form onSubmit={onSubmit} className="p-6 space-y-6">
-                    {/* Nombre */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Nombre de la Recompensa <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            required
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                            placeholder="Ej: Café Gratis"
-                        />
-                    </div>
-
-                    {/* Descripción */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Descripción
-                        </label>
-                        <textarea
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent resize-none"
-                            rows="3"
-                            placeholder="Describe los detalles de la recompensa"
-                        />
-                    </div>
-
-                    {/* Tipo de Recompensa */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Tipo de Recompensa <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            required
-                            value={formData.rewardType}
-                            onChange={(e) => setFormData({ ...formData, rewardType: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                        >
-                            <option value="discount">💰 Descuento</option>
-                            <option value="free_product">🎁 Producto Gratis</option>
-                            <option value="coupon">🎟️ Cupón</option>
-                            <option value="cashback">💵 Cashback</option>
-                        </select>
-                    </div>
-
-                    {/* Valor de la Recompensa */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Valor de la Recompensa <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type={formData.rewardType === 'discount' || formData.rewardType === 'cashback' ? 'number' : 'text'}
-                            required
-                            min={formData.rewardType === 'discount' || formData.rewardType === 'cashback' ? '0' : undefined}
-                            step={formData.rewardType === 'discount' || formData.rewardType === 'cashback' ? '0.01' : undefined}
-                            value={formData.rewardValue}
-                            onChange={(e) => setFormData({ ...formData, rewardValue: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                            placeholder={
-                                formData.rewardType === 'discount' ? '10 (para 10% o $10)' :
-                                    formData.rewardType === 'free_product' ? 'Nombre del producto gratis' :
-                                        formData.rewardType === 'cashback' ? '50 (pesos)' :
-                                            'Descripción del cupón'
-                            }
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                            {formData.rewardType === 'discount' && 'Porcentaje (%) o monto fijo ($) de descuento'}
-                            {formData.rewardType === 'free_product' && 'Nombre del producto que se regala'}
-                            {formData.rewardType === 'cashback' && 'Cantidad de dinero a devolver en pesos'}
-                            {formData.rewardType === 'coupon' && 'Descripción de lo que incluye el cupón'}
-                        </p>
-                    </div>
-
-                    {/* Objetivo (Puntos o Sellos) */}
-                    {isPointsReward && (
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Puntos Requeridos <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                required
-                                min="1"
-                                value={formData.pointsRequired}
-                                onChange={(e) => setFormData({ ...formData, pointsRequired: e.target.value })}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                                placeholder="100"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                                Cantidad de puntos que debe acumular el cliente para canjear esta recompensa
-                            </p>
-                        </div>
-                    )}
-
-                    {isStampsReward && (
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Sellos Requeridos <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                required
-                                min="1"
-                                value={formData.stampsRequired}
-                                onChange={(e) => setFormData({ ...formData, stampsRequired: e.target.value })}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                                placeholder="10"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                                Cantidad de sellos que debe acumular el cliente para canjear esta recompensa
-                            </p>
-                        </div>
-                    )}
-
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                            {error}
-                        </div>
-                    )}
-
-                    <div className="flex gap-3 pt-4 border-t border-gray-200">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-pill font-semibold hover:bg-gray-300 transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={updating}
-                            className="flex-1 px-6 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {updating ? 'Guardando...' : 'Guardar Cambios'}
-                        </button>
-                    </div>
-                </form>
-            </div>
+// ─── Points System Modal ──────────────────────────────────────────────────────
+function PointsSystemModal({ formData, setFormData, saving, error, isEditing, onClose, onSubmit }) {
+  return (
+    <ModalShell
+      title={isEditing ? 'Editar sistema de puntos' : 'Configurar sistema de puntos'}
+      subtitle="Define cuántos puntos gana el cliente por cada compra"
+      onClose={onClose}
+    >
+      <form onSubmit={onSubmit} className="px-5 py-5 space-y-5">
+        <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 flex items-start gap-3">
+          <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-[12px] text-amber-700">
+            Establece la equivalencia entre dinero gastado y puntos ganados.{' '}
+            {isEditing
+              ? <span className="font-semibold">Los cambios aplican a acumulaciones futuras.</span>
+              : 'Solo necesitas configurarlo una vez.'}
+          </p>
         </div>
-    );
+
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <FieldLabel required>Monto ($)</FieldLabel>
+            <Input
+              type="number"
+              required
+              min="0"
+              step="0.01"
+              placeholder="100"
+              value={formData.amount}
+              onChange={(e) => setFormData((p) => ({ ...p, amount: e.target.value }))}
+            />
+          </div>
+          <div>
+            <FieldLabel required>Moneda</FieldLabel>
+            <Select
+              required
+              value={formData.currency}
+              onChange={(e) => setFormData((p) => ({ ...p, currency: e.target.value }))}
+            >
+              <option value="MXN">MXN</option>
+              <option value="USD">USD</option>
+            </Select>
+          </div>
+          <div>
+            <FieldLabel required>Puntos</FieldLabel>
+            <Input
+              type="number"
+              required
+              min="1"
+              placeholder="10"
+              value={formData.points}
+              onChange={(e) => setFormData((p) => ({ ...p, points: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        {formData.amount && formData.points && (
+          <div className="rounded-xl bg-brand-primary/5 border border-brand-primary/15 px-4 py-3">
+            <p className="text-[12px] text-neutral-600">
+              Por cada{' '}
+              <span className="font-bold text-brand-primary">${formData.amount} {formData.currency}</span>{' '}
+              gastados, el cliente recibe{' '}
+              <span className="font-bold text-brand-primary">{formData.points} puntos</span>
+            </p>
+          </div>
+        )}
+
+        <ErrorNote text={error} />
+
+        <div className="flex gap-3 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 px-4 py-2.5 rounded-pill border border-neutral-200 text-[13px] font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-pill bg-brand-primary text-brand-onColor text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {saving && <Spinner light />}
+            {isEditing ? 'Guardar cambios' : 'Guardar configuración'}
+          </button>
+        </div>
+      </form>
+    </ModalShell>
+  );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Membership Plan Modal
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Create Reward Modal ──────────────────────────────────────────────────────
+function CreateRewardModal({
+  rewardType, setRewardType,
+  pointsForm, setPointsForm,
+  stampsForm, setStampsForm,
+  saving, error,
+  hasPointsSystem, pointsSystemConfig,
+  onClose, onSubmit, onConfigurePoints,
+}) {
+  return (
+    <ModalShell title="Nueva recompensa" onClose={onClose} wide>
+      {!rewardType ? (
+        <div className="px-5 py-5 space-y-3">
+          <p className="text-[13px] text-neutral-500">Elige el tipo de recompensa:</p>
+
+          <button
+            type="button"
+            onClick={() => hasPointsSystem && setRewardType('points')}
+            disabled={!hasPointsSystem}
+            className={`w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left transition-all ${
+              hasPointsSystem
+                ? 'border-neutral-200 hover:border-brand-primary hover:bg-brand-primary/[0.03] cursor-pointer'
+                : 'border-neutral-100 bg-neutral-50 cursor-not-allowed opacity-60'
+            }`}
+          >
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${hasPointsSystem ? 'bg-brand-primary/10' : 'bg-neutral-200'}`}>
+              <CoinIcon className={`w-5 h-5 ${hasPointsSystem ? 'text-brand-primary' : 'text-neutral-400'}`} />
+            </div>
+            <div className="flex-1">
+              <p className="text-[13px] font-bold text-neutral-800">Sistema de Puntos</p>
+              <p className="text-[12px] text-neutral-500 mt-0.5">Los clientes acumulan puntos por compra y los canjean por recompensas.</p>
+              {!hasPointsSystem ? (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[11px] text-accent-danger font-semibold">Configura el sistema primero</span>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onConfigurePoints(); }}
+                    className="text-[11px] text-brand-primary font-semibold hover:underline"
+                  >
+                    Configurar →
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[11px] text-accent-success font-semibold mt-1.5">
+                  ✓ ${pointsSystemConfig?.amount} {pointsSystemConfig?.currency} = {pointsSystemConfig?.points} pts
+                </p>
+              )}
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setRewardType('stamps')}
+            className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-neutral-200 hover:border-green-400 hover:bg-green-50/50 text-left transition-all cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+              <StampIcon className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-[13px] font-bold text-neutral-800">Sistema de Estampas</p>
+              <p className="text-[12px] text-neutral-500 mt-0.5">Los clientes reciben una estampa por compra y obtienen su recompensa al completar el objetivo.</p>
+              <p className="text-[11px] text-green-600 font-semibold mt-1.5">Ej: 10 cafés = 1 café gratis</p>
+            </div>
+          </button>
+        </div>
+      ) : rewardType === 'points' ? (
+        <form onSubmit={onSubmit} className="px-5 py-5 space-y-4">
+          {pointsSystemConfig && (
+            <div className="rounded-xl bg-brand-primary/5 border border-brand-primary/15 px-4 py-3 text-[12px] text-neutral-600">
+              Sistema configurado: <span className="font-semibold text-brand-primary">${pointsSystemConfig.amount} {pointsSystemConfig.currency} = {pointsSystemConfig.points} pts</span>
+            </div>
+          )}
+          <div>
+            <FieldLabel required>Nombre de la recompensa</FieldLabel>
+            <Input
+              type="text" required placeholder="Ej: Descuento de $50"
+              value={pointsForm.name}
+              onChange={(e) => setPointsForm((p) => ({ ...p, name: e.target.value }))}
+            />
+          </div>
+          <div>
+            <FieldLabel>Descripción</FieldLabel>
+            <Textarea
+              rows={2} placeholder="¿Qué obtiene el cliente?"
+              value={pointsForm.description}
+              onChange={(e) => setPointsForm((p) => ({ ...p, description: e.target.value }))}
+            />
+          </div>
+          <div>
+            <FieldLabel required>Puntos requeridos</FieldLabel>
+            <Input
+              type="number" required min="1" placeholder="100"
+              value={pointsForm.pointsRequired}
+              onChange={(e) => setPointsForm((p) => ({ ...p, pointsRequired: e.target.value }))}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <FieldLabel required>Tipo</FieldLabel>
+              <Select
+                required
+                value={pointsForm.rewardType}
+                onChange={(e) => setPointsForm((p) => ({ ...p, rewardType: e.target.value }))}
+              >
+                <option value="discount">Descuento</option>
+                <option value="free_product">Producto gratis</option>
+                <option value="coupon">Cupón</option>
+              </Select>
+            </div>
+            {pointsForm.rewardType !== 'free_product' && (
+              <div>
+                <FieldLabel required>Valor</FieldLabel>
+                <Input
+                  type="number" required min="0" step="0.01" placeholder="50"
+                  value={pointsForm.rewardValue}
+                  onChange={(e) => setPointsForm((p) => ({ ...p, rewardValue: e.target.value }))}
+                />
+              </div>
+            )}
+          </div>
+          <ErrorNote text={error} />
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={() => setRewardType(null)} className="px-4 py-2.5 rounded-pill border border-neutral-200 text-[13px] font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors">
+              ← Volver
+            </button>
+            <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-pill bg-brand-primary text-brand-onColor text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+              {saving && <Spinner light />}
+              Crear recompensa
+            </button>
+          </div>
+        </form>
+      ) : (
+        <form onSubmit={onSubmit} className="px-5 py-5 space-y-4">
+          <div>
+            <FieldLabel required>Nombre de la recompensa</FieldLabel>
+            <Input
+              type="text" required placeholder="Ej: Café gratis"
+              value={stampsForm.name}
+              onChange={(e) => setStampsForm((p) => ({ ...p, name: e.target.value }))}
+            />
+          </div>
+          <div>
+            <FieldLabel>Descripción</FieldLabel>
+            <Textarea
+              rows={2} placeholder="¿Qué obtiene el cliente?"
+              value={stampsForm.description}
+              onChange={(e) => setStampsForm((p) => ({ ...p, description: e.target.value }))}
+            />
+          </div>
+          <div>
+            <FieldLabel required>Meta de estampas</FieldLabel>
+            <Input
+              type="number" required min="1" placeholder="10"
+              value={stampsForm.targetStamps}
+              onChange={(e) => setStampsForm((p) => ({ ...p, targetStamps: e.target.value }))}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <FieldLabel required>Tipo de recompensa</FieldLabel>
+              <Select
+                required
+                value={stampsForm.stampReward.rewardType}
+                onChange={(e) => setStampsForm((p) => ({ ...p, stampReward: { ...p.stampReward, rewardType: e.target.value } }))}
+              >
+                <option value="free_product">Producto gratis</option>
+                <option value="discount">Descuento</option>
+                <option value="coupon">Cupón</option>
+              </Select>
+            </div>
+            {stampsForm.stampReward.rewardType !== 'free_product' && (
+              <div>
+                <FieldLabel required>Valor</FieldLabel>
+                <Input
+                  type="number" required min="0" step="0.01" placeholder="50"
+                  value={stampsForm.stampReward.rewardValue}
+                  onChange={(e) => setStampsForm((p) => ({ ...p, stampReward: { ...p.stampReward, rewardValue: e.target.value } }))}
+                />
+              </div>
+            )}
+          </div>
+          <ErrorNote text={error} />
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={() => setRewardType(null)} className="px-4 py-2.5 rounded-pill border border-neutral-200 text-[13px] font-semibold text-neutral-600 hover:bg-neutral-50 transition-colors">
+              ← Volver
+            </button>
+            <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-pill bg-brand-primary text-brand-onColor text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+              {saving && <Spinner light />}
+              Crear recompensa
+            </button>
+          </div>
+        </form>
+      )}
+    </ModalShell>
+  );
+}
+
+// ─── Edit Reward Modal ────────────────────────────────────────────────────────
+function EditRewardModal({ reward, formData, setFormData, saving, error, onClose, onSubmit }) {
+  if (!reward) return null;
+  const isPoints = reward.pointsRequired != null;
+
+  return (
+    <ModalShell
+      title="Editar recompensa"
+      subtitle={isPoints ? 'Recompensa por puntos' : 'Recompensa por estampas'}
+      onClose={onClose}
+    >
+      <form onSubmit={onSubmit} className="px-5 py-5 space-y-4">
+        <div>
+          <FieldLabel required>Nombre</FieldLabel>
+          <Input
+            type="text" required placeholder="Ej: Café gratis"
+            value={formData.name}
+            onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+          />
+        </div>
+        <div>
+          <FieldLabel>Descripción</FieldLabel>
+          <Textarea
+            rows={2} placeholder="Descripción de la recompensa"
+            value={formData.description}
+            onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <FieldLabel required>Tipo</FieldLabel>
+            <Select
+              required
+              value={formData.rewardType}
+              onChange={(e) => setFormData((p) => ({ ...p, rewardType: e.target.value }))}
+            >
+              <option value="discount">Descuento</option>
+              <option value="free_product">Producto gratis</option>
+              <option value="coupon">Cupón</option>
+              <option value="cashback">Cashback</option>
+            </Select>
+          </div>
+          <div>
+            <FieldLabel required>Valor</FieldLabel>
+            <Input
+              type={formData.rewardType === 'discount' || formData.rewardType === 'cashback' ? 'number' : 'text'}
+              required
+              min={formData.rewardType === 'discount' || formData.rewardType === 'cashback' ? '0' : undefined}
+              step={formData.rewardType === 'discount' || formData.rewardType === 'cashback' ? '0.01' : undefined}
+              placeholder={formData.rewardType === 'free_product' ? 'Nombre del producto' : '50'}
+              value={formData.rewardValue}
+              onChange={(e) => setFormData((p) => ({ ...p, rewardValue: e.target.value }))}
+            />
+          </div>
+        </div>
+        {isPoints ? (
+          <div>
+            <FieldLabel required>Puntos requeridos</FieldLabel>
+            <Input
+              type="number" required min="1" placeholder="100"
+              value={formData.pointsRequired}
+              onChange={(e) => setFormData((p) => ({ ...p, pointsRequired: e.target.value }))}
+            />
+          </div>
+        ) : (
+          <div>
+            <FieldLabel required>Estampas requeridas</FieldLabel>
+            <Input
+              type="number" required min="1" placeholder="10"
+              value={formData.stampsRequired}
+              onChange={(e) => setFormData((p) => ({ ...p, stampsRequired: e.target.value }))}
+            />
+          </div>
+        )}
+        <ErrorNote text={error} />
+        <div className="flex gap-3 pt-1">
+          <button type="button" onClick={onClose} disabled={saving} className="flex-1 px-4 py-2.5 rounded-pill border border-neutral-200 text-[13px] font-semibold text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-pill bg-brand-primary text-brand-onColor text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+            {saving && <Spinner light />}
+            Guardar cambios
+          </button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+// ─── Plan Modal ───────────────────────────────────────────────────────────────
 function PlanModal({ plan, form, setForm, saving, error, onClose, onSubmit }) {
-    return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl shadow-popover max-w-lg w-full my-8">
-                <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-gray-800">{plan ? 'Editar Plan' : 'Nuevo Plan de Membresía'}</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
-                <form onSubmit={onSubmit} className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre del plan *</label>
-                        <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                            placeholder="Ej: Café Premium Mensual"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Descripción *</label>
-                        <textarea required rows={2} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                            placeholder="Ej: Membresía mensual que incluye 1 café diario de cualquier tamaño"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Beneficio diario *</label>
-                        <input required value={form.benefit} onChange={e => setForm(f => ({ ...f, benefit: e.target.value }))}
-                            placeholder="Ej: 1 café gratis por día"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
-                        <p className="text-xs text-gray-500 mt-1">Texto corto que verá el cajero al canjear.</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Duración (días) *</label>
-                            <input required type="number" min="1" value={form.durationDays} onChange={e => setForm(f => ({ ...f, durationDays: e.target.value }))}
-                                placeholder="30"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Precio *</label>
-                            <input required type="number" min="0" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-                                placeholder="500"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent" />
-                        </div>
-                    </div>
-                    {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
-                    <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={onClose} className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-pill font-semibold hover:bg-gray-300 transition-colors">Cancelar</button>
-                        <button type="submit" disabled={saving} className="flex-1 px-4 py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
-                            {saving ? 'Guardando...' : plan ? 'Guardar Cambios' : 'Crear Plan'}
-                        </button>
-                    </div>
-                </form>
-            </div>
+  return (
+    <ModalShell
+      title={plan ? 'Editar plan' : 'Nuevo plan de membresía'}
+      subtitle="El cajero puede activar estos planes al escanear el QR del cliente"
+      onClose={onClose}
+    >
+      <form onSubmit={onSubmit} className="px-5 py-5 space-y-4">
+        <div>
+          <FieldLabel required>Nombre del plan</FieldLabel>
+          <Input
+            required placeholder="Ej: Café Premium Mensual"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
         </div>
-    );
+        <div>
+          <FieldLabel required>Descripción</FieldLabel>
+          <Textarea
+            required rows={2} placeholder="Ej: Membresía mensual con 1 café diario"
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+          />
+        </div>
+        <div>
+          <FieldLabel required>Beneficio diario</FieldLabel>
+          <Input
+            required placeholder="Ej: 1 café gratis por día"
+            value={form.benefit}
+            onChange={(e) => setForm((f) => ({ ...f, benefit: e.target.value }))}
+          />
+          <p className="text-[11px] text-neutral-400 mt-1">Texto corto que verá el cajero al canjear</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <FieldLabel required>Duración (días)</FieldLabel>
+            <Input
+              required type="number" min="1" placeholder="30"
+              value={form.durationDays}
+              onChange={(e) => setForm((f) => ({ ...f, durationDays: e.target.value }))}
+            />
+          </div>
+          <div>
+            <FieldLabel required>Precio ($)</FieldLabel>
+            <Input
+              required type="number" min="0" step="0.01" placeholder="500"
+              value={form.price}
+              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+            />
+          </div>
+        </div>
+        <ErrorNote text={error} />
+        <div className="flex gap-3 pt-1">
+          <button type="button" onClick={onClose} disabled={saving} className="flex-1 px-4 py-2.5 rounded-pill border border-neutral-200 text-[13px] font-semibold text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={saving} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-pill bg-brand-primary text-brand-onColor text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+            {saving && <Spinner light />}
+            {plan ? 'Guardar cambios' : 'Crear plan'}
+          </button>
+        </div>
+      </form>
+    </ModalShell>
+  );
 }
 
-export default BusinessRewards;
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
+function PageSkeleton() {
+  return (
+    <div className="pb-10 space-y-6 animate-pulse">
+      <div className="h-6 w-40 rounded bg-neutral-200" />
+      <div className="h-14 rounded-xl bg-neutral-100" />
+      <div className="h-64 rounded-xl bg-neutral-100" />
+      <div className="h-48 rounded-xl bg-neutral-100" />
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+export default function BusinessRewards() {
+  const [business,          setBusiness]          = useState(null);
+  const [rewards,           setRewards]           = useState([]);
+  const [membershipPlans,   setMembershipPlans]   = useState([]);
+  const [loadingPage,       setLoadingPage]       = useState(true);
+  const [pageError,         setPageError]         = useState('');
+
+  const [pointsSystem,      setPointsSystem]      = useState(null);
+  const [stampsSystem,      setStampsSystem]      = useState(null);
+  const [pointsSystemConfig, setPointsSystemConfig] = useState(null);
+
+  // Modals
+  const [showCreateModal,       setShowCreateModal]       = useState(false);
+  const [showPointsModal,       setShowPointsModal]       = useState(false);
+  const [isEditingPoints,       setIsEditingPoints]       = useState(false);
+  const [showEditModal,         setShowEditModal]         = useState(false);
+  const [editingReward,         setEditingReward]         = useState(null);
+  const [showPlanModal,         setShowPlanModal]         = useState(false);
+  const [editingPlan,           setEditingPlan]           = useState(null);
+
+  // Create reward form
+  const [rewardType,       setRewardType]       = useState(null);
+  const [pointsForm,       setPointsForm]       = useState({ name: '', description: '', pointsRequired: '', rewardType: 'discount', rewardValue: '' });
+  const [stampsForm,       setStampsForm]       = useState({ name: '', description: '', targetStamps: '', stampReward: { rewardType: 'free_product', rewardValue: '' } });
+  const [createSaving,     setCreateSaving]     = useState(false);
+  const [createError,      setCreateError]      = useState('');
+
+  // Edit reward form
+  const [editForm,   setEditForm]   = useState({ name: '', description: '', rewardType: '', rewardValue: '', pointsRequired: '', stampsRequired: '' });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError,  setEditError]  = useState('');
+
+  // Points system form
+  const [pointsSystemForm, setPointsSystemForm] = useState({ amount: '', currency: 'MXN', points: '' });
+  const [pointsSaving,     setPointsSaving]     = useState(false);
+  const [pointsError,      setPointsError]      = useState('');
+
+  // Plan form
+  const [planForm,   setPlanForm]   = useState({ name: '', description: '', benefit: '', durationDays: '', price: '' });
+  const [planSaving, setPlanSaving] = useState(false);
+  const [planError,  setPlanError]  = useState('');
+
+  useEffect(() => { fetchAll(); }, []);
+
+  const fetchAll = async () => {
+    try {
+      setLoadingPage(true);
+      const biz = await businessService.getMyBusiness();
+      setBusiness(biz);
+
+      const [rewardsData, systemsData, plans] = await Promise.all([
+        rewardService.getBusinessRewards(biz.id ?? biz._id, true),
+        systemService.getBusinessSystems(),
+        membershipService.getMyPlans().catch(() => []),
+      ]);
+
+      setRewards(rewardsData);
+      setMembershipPlans(plans);
+
+      const pts = systemsData.find((s) => s.type === 'points' && s.isActive);
+      setPointsSystem(pts ?? null);
+      setPointsSystemConfig(pts?.pointsConversion ?? null);
+      setStampsSystem(systemsData.find((s) => s.type === 'stamps' && s.isActive) ?? null);
+    } catch (e) {
+      setPageError(parseErr(e));
+    } finally {
+      setLoadingPage(false);
+    }
+  };
+
+  // ── Rewards ────────────────────────────────────────────────────────────────
+  const handleToggleActive = async (id, nextActive) => {
+    await rewardService.updateReward(id, { isActive: nextActive });
+    setRewards((prev) => prev.map((r) => (r.id === id || r._id === id) ? { ...r, isActive: nextActive } : r));
+  };
+
+  const openEdit = (reward) => {
+    setEditingReward(reward);
+    setEditForm({
+      name:           reward.name ?? '',
+      description:    reward.description ?? '',
+      rewardType:     reward.rewardType ?? '',
+      rewardValue:    reward.rewardValue ?? '',
+      pointsRequired: reward.pointsRequired ?? '',
+      stampsRequired: reward.stampsRequired ?? '',
+    });
+    setEditError('');
+    setShowEditModal(true);
+  };
+
+  const closeEdit = () => {
+    setShowEditModal(false);
+    setEditingReward(null);
+    setEditError('');
+  };
+
+  const handleUpdateReward = async (e) => {
+    e.preventDefault();
+    if (!editingReward) return;
+    setEditSaving(true);
+    setEditError('');
+    try {
+      const payload = {
+        name:        editForm.name,
+        description: editForm.description,
+        rewardType:  editForm.rewardType,
+        rewardValue:
+          editForm.rewardType === 'discount' || editForm.rewardType === 'cashback'
+            ? parseFloat(editForm.rewardValue)
+            : editForm.rewardValue,
+      };
+      if (editForm.pointsRequired) payload.pointsRequired = parseInt(editForm.pointsRequired);
+      if (editForm.stampsRequired) payload.stampsRequired = parseInt(editForm.stampsRequired);
+
+      const updated = await rewardService.updateReward(editingReward.id ?? editingReward._id, payload);
+      setRewards((prev) =>
+        prev.map((r) => r.id === updated.id || r._id === updated._id ? updated : r)
+      );
+      closeEdit();
+    } catch (e) {
+      setEditError(parseErr(e));
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const openCreate = () => {
+    setRewardType(null);
+    setPointsForm({ name: '', description: '', pointsRequired: '', rewardType: 'discount', rewardValue: '' });
+    setStampsForm({ name: '', description: '', targetStamps: '', stampReward: { rewardType: 'free_product', rewardValue: '' } });
+    setCreateError('');
+    setShowCreateModal(true);
+  };
+
+  const handleCreateReward = async (e) => {
+    e.preventDefault();
+    setCreateSaving(true);
+    setCreateError('');
+    try {
+      if (rewardType === 'points') {
+        if (!pointsSystem) throw new Error('No se encontró el sistema de puntos');
+        let rewardValue;
+        if (pointsForm.rewardType === 'free_product') rewardValue = pointsForm.name;
+        else if (pointsForm.rewardType === 'discount')  rewardValue = parseFloat(pointsForm.rewardValue);
+        else                                             rewardValue = pointsForm.rewardValue;
+
+        await rewardService.createPointsReward({
+          systemId:       pointsSystem.id,
+          name:           pointsForm.name,
+          description:    pointsForm.description,
+          rewardType:     pointsForm.rewardType,
+          rewardValue,
+          pointsRequired: parseInt(pointsForm.pointsRequired),
+        });
+      } else {
+        let systemId = stampsSystem?.id;
+        if (!systemId) {
+          const newSys = await systemService.createStampsSystem({
+            name:             'Sistema de Sellos',
+            description:      'Sistema de recompensas por sellos',
+            targetStamps:     parseInt(stampsForm.targetStamps),
+            productType:      'any',
+          });
+          systemId = newSys.id;
+        }
+        await rewardService.createStampsReward({
+          systemId,
+          name:           stampsForm.name,
+          description:    stampsForm.description,
+          rewardType:     stampsForm.stampReward.rewardType,
+          rewardValue:
+            stampsForm.stampReward.rewardValue
+              ? parseFloat(stampsForm.stampReward.rewardValue)
+              : stampsForm.name,
+          stampsRequired: parseInt(stampsForm.targetStamps),
+        });
+      }
+      await fetchAll();
+      setShowCreateModal(false);
+    } catch (e) {
+      setCreateError(parseErr(e));
+    } finally {
+      setCreateSaving(false);
+    }
+  };
+
+  // ── Points system ──────────────────────────────────────────────────────────
+  const openPointsModal = (editMode = false) => {
+    setIsEditingPoints(editMode);
+    setPointsSystemForm(
+      editMode && pointsSystem
+        ? { amount: pointsSystem.pointsConversion?.amount?.toString() ?? '', currency: pointsSystem.pointsConversion?.currency ?? 'MXN', points: pointsSystem.pointsConversion?.points?.toString() ?? '' }
+        : { amount: '', currency: 'MXN', points: '' }
+    );
+    setPointsError('');
+    setShowPointsModal(true);
+  };
+
+  const handleSavePointsSystem = async (e) => {
+    e.preventDefault();
+    setPointsSaving(true);
+    setPointsError('');
+    try {
+      const payload = {
+        name: 'Sistema de Puntos',
+        description: 'Sistema de acumulación de puntos',
+        pointsConversion: {
+          amount:   parseFloat(pointsSystemForm.amount),
+          currency: pointsSystemForm.currency,
+          points:   parseInt(pointsSystemForm.points),
+        },
+      };
+      if (isEditingPoints && pointsSystem) await systemService.updatePointsSystem(pointsSystem.id, payload);
+      else                                  await systemService.createPointsSystem(payload);
+      await fetchAll();
+      setShowPointsModal(false);
+    } catch (e) {
+      setPointsError(parseErr(e));
+    } finally {
+      setPointsSaving(false);
+    }
+  };
+
+  // ── Membership plans ───────────────────────────────────────────────────────
+  const openNewPlan = () => {
+    setEditingPlan(null);
+    setPlanForm({ name: '', description: '', benefit: '', durationDays: '', price: '' });
+    setPlanError('');
+    setShowPlanModal(true);
+  };
+
+  const openEditPlan = (plan) => {
+    setEditingPlan(plan);
+    setPlanForm({
+      name:        plan.name,
+      description: plan.description,
+      benefit:     plan.benefit,
+      durationDays: String(plan.durationDays),
+      price:       String(plan.price),
+    });
+    setPlanError('');
+    setShowPlanModal(true);
+  };
+
+  const handleSavePlan = async (e) => {
+    e.preventDefault();
+    setPlanSaving(true);
+    setPlanError('');
+    try {
+      const payload = {
+        name:        planForm.name.trim(),
+        description: planForm.description.trim(),
+        benefit:     planForm.benefit.trim(),
+        durationDays: Number(planForm.durationDays),
+        price:       Number(planForm.price),
+      };
+      if (editingPlan) await membershipService.updatePlan(editingPlan._id, payload);
+      else             await membershipService.createPlan(payload);
+      const plans = await membershipService.getMyPlans();
+      setMembershipPlans(plans);
+      setShowPlanModal(false);
+    } catch (e) {
+      setPlanError(parseErr(e));
+    } finally {
+      setPlanSaving(false);
+    }
+  };
+
+  const handleTogglePlan = async (plan) => {
+    try {
+      await membershipService.updatePlan(plan._id, { isActive: !plan.isActive });
+      setMembershipPlans((prev) =>
+        prev.map((p) => p._id === plan._id ? { ...p, isActive: !p.isActive } : p)
+      );
+    } catch {}
+  };
+
+  const handleDeletePlan = async (id) => {
+    try {
+      await membershipService.deletePlan(id);
+      setMembershipPlans((prev) => prev.filter((p) => p._id !== id));
+    } catch (e) {
+      setPlanError(parseErr(e));
+    }
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  if (loadingPage) return <PageSkeleton />;
+
+  if (pageError) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-16 text-center">
+        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+          <svg className="w-6 h-6 text-accent-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+        </div>
+        <p className="text-[13px] font-semibold text-neutral-700">No se pudieron cargar los datos</p>
+        <button
+          onClick={fetchAll}
+          className="px-4 py-2 rounded-pill bg-brand-primary text-brand-onColor text-[13px] font-semibold hover:opacity-90 transition-opacity"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pb-10 space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-[20px] font-extrabold text-neutral-900">Recompensas</h1>
+        <p className="text-[13px] text-neutral-400 mt-0.5">
+          Gestiona recompensas y planes de membresía de {business?.name}
+        </p>
+      </div>
+
+      {/* Points system banner */}
+      <PointsSystemBanner
+        config={pointsSystemConfig}
+        onConfigure={() => openPointsModal(false)}
+        onEdit={() => openPointsModal(true)}
+      />
+
+      {/* Rewards + Plans */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-3">
+          <RewardsPanel
+            rewards={rewards}
+            loading={false}
+            onEdit={openEdit}
+            onToggleActive={handleToggleActive}
+            onNew={openCreate}
+          />
+        </div>
+        <div className="lg:col-span-2">
+          <MembershipPlansPanel
+            plans={membershipPlans}
+            loading={false}
+            onAdd={openNewPlan}
+            onEdit={openEditPlan}
+            onToggle={handleTogglePlan}
+            onDelete={handleDeletePlan}
+          />
+        </div>
+      </div>
+
+      {/* Modals */}
+      {showCreateModal && (
+        <CreateRewardModal
+          rewardType={rewardType}
+          setRewardType={setRewardType}
+          pointsForm={pointsForm}
+          setPointsForm={setPointsForm}
+          stampsForm={stampsForm}
+          setStampsForm={setStampsForm}
+          saving={createSaving}
+          error={createError}
+          hasPointsSystem={!!pointsSystem}
+          pointsSystemConfig={pointsSystemConfig}
+          onClose={() => setShowCreateModal(false)}
+          onSubmit={handleCreateReward}
+          onConfigurePoints={() => { setShowCreateModal(false); openPointsModal(false); }}
+        />
+      )}
+
+      {showPointsModal && (
+        <PointsSystemModal
+          formData={pointsSystemForm}
+          setFormData={setPointsSystemForm}
+          saving={pointsSaving}
+          error={pointsError}
+          isEditing={isEditingPoints}
+          onClose={() => setShowPointsModal(false)}
+          onSubmit={handleSavePointsSystem}
+        />
+      )}
+
+      {showEditModal && (
+        <EditRewardModal
+          reward={editingReward}
+          formData={editForm}
+          setFormData={setEditForm}
+          saving={editSaving}
+          error={editError}
+          onClose={closeEdit}
+          onSubmit={handleUpdateReward}
+        />
+      )}
+
+      {showPlanModal && (
+        <PlanModal
+          plan={editingPlan}
+          form={planForm}
+          setForm={setPlanForm}
+          saving={planSaving}
+          error={planError}
+          onClose={() => setShowPlanModal(false)}
+          onSubmit={handleSavePlan}
+        />
+      )}
+    </div>
+  );
+}

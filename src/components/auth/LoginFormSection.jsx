@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BrandLogo } from '../ui/BrandLogo';
 import { FormInput } from '../ui/FormInput';
@@ -22,11 +23,19 @@ export function LoginFormSection({
   setRememberMe,
   onSubmit,
   onGoogleClick,
+  onCashierSubmit,
   loading,
   error,
   onSwitchToSignup,
   isMobile = false,
 }) {
+  const [mode, setMode] = useState('owner'); // 'owner' | 'cashier'
+  const isCashier = mode === 'cashier';
+
+  const handleModeChange = (newMode) => {
+    if (newMode !== mode) setMode(newMode);
+  };
+
   return (
     <div className={`w-full ${isMobile ? 'max-w-[400px]' : 'max-w-[380px] px-10'}`}>
       {/* Mobile logo */}
@@ -36,16 +45,44 @@ export function LoginFormSection({
         </div>
       )}
 
-      <div className="mb-8">
+      <div className="mb-6">
         <h2 className="text-[26px] leading-tight font-extrabold text-[#13110A] tracking-tight mb-1">
-          Bienvenido de vuelta
+          {isCashier ? 'Acceso de Cajero' : 'Bienvenido de vuelta'}
         </h2>
         <p className="text-[13px] text-[#947F4E] font-medium">
-          Ingresa tus credenciales para continuar
+          {isCashier
+            ? 'Ingresa con el correo y contraseña de sucursal'
+            : 'Ingresa tus credenciales para continuar'}
         </p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-5">
+      {/* Mode toggle */}
+      <div className="flex rounded-xl border border-[#EDE3C8] bg-[#FAFAF6] p-1 mb-5">
+        <button
+          type="button"
+          onClick={() => handleModeChange('owner')}
+          className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 ${
+            !isCashier
+              ? 'bg-white text-[#13110A] shadow-sm'
+              : 'text-[#947F4E] hover:text-[#13110A]'
+          }`}
+        >
+          Propietario
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeChange('cashier')}
+          className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 ${
+            isCashier
+              ? 'bg-white text-[#13110A] shadow-sm'
+              : 'text-[#947F4E] hover:text-[#13110A]'
+          }`}
+        >
+          Cajero
+        </button>
+      </div>
+
+      <form onSubmit={isCashier ? onCashierSubmit : onSubmit} className="space-y-5">
         {error && <AlertMessage>{error}</AlertMessage>}
 
         <FormInput
@@ -64,45 +101,67 @@ export function LoginFormSection({
         <PasswordInput
           id={`login-password${isMobile ? '-mobile' : ''}`}
           name="password"
-          label="Contraseña"
+          label={isCashier ? 'Contraseña de sucursal' : 'Contraseña'}
           value={formData.password}
           onChange={onChange}
           required
           autoComplete="current-password"
           labelRight={
-            <Link
-              to="/forgot-password"
-              className="text-[12px] font-semibold text-[#EBA626] hover:text-[#C47D10] transition-colors duration-150"
-            >
-              ¿Olvidaste tu contraseña?
-            </Link>
+            !isCashier ? (
+              <Link
+                to="/forgot-password"
+                className="text-[12px] font-semibold text-[#EBA626] hover:text-[#C47D10] transition-colors duration-150"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            ) : null
           }
         />
 
-        <Checkbox
-          checked={rememberMe}
-          onChange={setRememberMe}
-          label="Recordarme"
-        />
+        {!isCashier && (
+          <Checkbox
+            checked={rememberMe}
+            onChange={setRememberMe}
+            label="Recordarme"
+          />
+        )}
 
         <SubmitButton loading={loading} loadingText="Iniciando sesión...">
-          Iniciar Sesión
+          {isCashier ? 'Acceder como Cajero' : 'Iniciar Sesión'}
         </SubmitButton>
 
-        <AuthDivider />
+        {!isCashier && (
+          <>
+            <AuthDivider />
+            <SocialButton provider="google" onClick={onGoogleClick} disabled={loading} />
+          </>
+        )}
 
-        <SocialButton provider="google" onClick={onGoogleClick} disabled={loading} />
+        {!isCashier && (
+          <p className="text-center text-[13px] font-medium text-[#947F4E]">
+            ¿No tienes una cuenta?{' '}
+            <button
+              type="button"
+              onClick={onSwitchToSignup}
+              className="font-semibold text-[#EBA626] hover:text-[#C47D10] transition-colors duration-150"
+            >
+              Regístrate aquí
+            </button>
+          </p>
+        )}
 
-        <p className="text-center text-[13px] font-medium text-[#947F4E]">
-          ¿No tienes una cuenta?{' '}
-          <button
-            type="button"
-            onClick={onSwitchToSignup}
-            className="font-semibold text-[#EBA626] hover:text-[#C47D10] transition-colors duration-150"
-          >
-            Regístrate aquí
-          </button>
-        </p>
+        {isCashier && (
+          <p className="text-center text-[12px] text-[#947F4E]">
+            ¿Eres el propietario?{' '}
+            <button
+              type="button"
+              onClick={() => handleModeChange('owner')}
+              className="font-semibold text-[#EBA626] hover:text-[#C47D10] transition-colors duration-150"
+            >
+              Accede aquí
+            </button>
+          </p>
+        )}
       </form>
     </div>
   );

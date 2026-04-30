@@ -6,6 +6,7 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 import api from './api';
+import { clearSubscriptionCache } from './subscriptionService';
 
 // ─── Storage keys ────────────────────────────────────────────────────────────
 
@@ -86,6 +87,7 @@ const authService = {
       localStorage.removeItem(k);
       sessionStorage.removeItem(k);
     });
+    clearSubscriptionCache();
   },
 
   // ── Email check ─────────────────────────────────────────────────────────────
@@ -243,6 +245,19 @@ const authService = {
 
   getMeClient:    () => authService.getMe(),
   getMeBusiness:  () => authService.getMe(),
+
+  // ── Cashier login (email + branch password, no Firebase) ────────────────────
+
+  cashierLogin: async (email, password, rememberMe = false) => {
+    try {
+      const res = await api.post('/auth/cashier-login', { email, password });
+      const { token, refreshToken, user, role } = res.data;
+      saveSession({ token, refreshToken, user, apiRole: role }, rememberMe);
+      return res.data;
+    } catch (err) {
+      throw err.response?.data || err;
+    }
+  },
 
   resendVerification: async () => {
     const res = await api.post('/auth/resend-verification');

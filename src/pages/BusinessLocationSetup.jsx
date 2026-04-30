@@ -58,6 +58,7 @@ export default function BusinessLocationSetup() {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [needsBranchPassword, setNeedsBranchPassword] = useState(false);
 
   // Form State
   const [showForm, setShowForm] = useState(false);
@@ -66,7 +67,8 @@ export default function BusinessLocationSetup() {
     name: '',
     street: '',
     city: '',
-    state: ''
+    state: '',
+    branchPassword: '',
   });
   
   // Map State
@@ -83,8 +85,11 @@ export default function BusinessLocationSetup() {
     try {
       setLoading(true);
       const data = await businessService.getMyBusiness();
-      console.log("Locations loaded:", data.locations);
       setLocations(data.locations || []);
+      // Show branch password field when: Google account + no branch password set yet + no locations yet
+      setNeedsBranchPassword(
+        data.registeredWithGoogle === true && data.hasBranchPassword === false && (data.locations || []).length === 0
+      );
     } catch (err) {
       console.error(err);
       setError('Error al cargar la información');
@@ -142,15 +147,14 @@ export default function BusinessLocationSetup() {
       } else {
         street = location.address || '';
       }
-      setFormData({ name: location.name || '', street, city, state });
+      setFormData({ name: location.name || '', street, city, state, branchPassword: '' });
       if (location.latitude && location.longitude) {
         setMapPosition([location.latitude, location.longitude]);
       }
       setEditingId(location._id);
     } else {
-      setFormData({ name: '', street: '', city: '', state: '' });
+      setFormData({ name: '', street: '', city: '', state: '', branchPassword: '' });
       setEditingId(null);
-      // Opcional: Resetear mapPosition a una ubicación default o dejar la última
       setLocationChanged(false);
     }
     setShowForm(true);
@@ -199,10 +203,16 @@ export default function BusinessLocationSetup() {
       } else {
         // En creación, si se movió el mapa (automático o manual), enviamos coordenadas
         if (locationChanged) {
-            payload.latitude = mapPosition[0];
-            payload.longitude = mapPosition[1];
+          payload.latitude = mapPosition[0];
+          payload.longitude = mapPosition[1];
+        }
+        // Incluir branchPassword si es cuenta Google sin contraseña de sucursal configurada
+        if (needsBranchPassword && formData.branchPassword.trim()) {
+          payload.branchPassword = formData.branchPassword.trim();
         }
         updatedBiz = await businessService.addLocation(payload);
+        // Una vez creada la primera sucursal, ya no se necesita el campo
+        setNeedsBranchPassword(false);
       }
 
       setLocations(updatedBiz.locations);
@@ -293,7 +303,35 @@ export default function BusinessLocationSetup() {
                       </div>
                     </div>
                     
-                    {/* Botón eliminado porque ahora es automático, pero el indicador de carga se ve en el mapa */}
+                    {/* Contraseña de sucursal — solo para cuentas Google sin password configurado */}
+                    {needsBranchPassword && !editingId && (
+                      <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-start gap-2">
+                          <svg className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p className="text-xs text-amber-800 font-medium">
+                            Tu cuenta fue creada con Google. Define una contraseña de sucursal para que tu personal de caja pueda iniciar sesión sin acceder a tu correo.
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-1">
+                            Contraseña de Sucursal <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="password"
+                            required
+                            minLength={6}
+                            value={formData.branchPassword}
+                            onChange={e => setFormData({ ...formData, branchPassword: e.target.value })}
+                            placeholder="Mínimo 6 caracteres"
+                            className="w-full px-4 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                          />
+                          <p className="text-xs text-amber-700 mt-1">Los cajeros usarán tu correo + esta contraseña para acceder.</p>
+                        </div>
+                      </div>
+                    )}
+
                     {error && <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">{error}</div>}
                   </div>
 

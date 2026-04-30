@@ -94,6 +94,21 @@ function AuthPage() {
     }
   };
 
+  const handleCashierLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setLoginError('');
+    try {
+      const data = await authService.cashierLogin(loginData.email, loginData.password, rememberMe);
+      handleAuthSuccess(data);
+    } catch (err) {
+      const msg = err?.message || err?.error || 'Correo o contraseña de sucursal incorrectos.';
+      setLoginError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── Signup handlers ───────────────────────────────────────────────────────
 
   const handleSignupChange = (e) => {
@@ -157,14 +172,15 @@ function AuthPage() {
   };
 
   const loginProps = {
-    formData:        loginData,
-    onChange:        handleLoginChange,
+    formData:         loginData,
+    onChange:         handleLoginChange,
     rememberMe,
     setRememberMe,
-    onSubmit:        handleLoginSubmit,
-    onGoogleClick:   handleLoginGoogle,
+    onSubmit:         handleLoginSubmit,
+    onGoogleClick:    handleLoginGoogle,
+    onCashierSubmit:  handleCashierLogin,
     loading,
-    error:           loginError,
+    error:            loginError,
     onSwitchToSignup: () => switchMode('signup'),
   };
 
