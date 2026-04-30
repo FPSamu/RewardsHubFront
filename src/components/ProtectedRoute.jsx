@@ -1,14 +1,20 @@
 import { Navigate } from 'react-router-dom';
 import authService from '../services/authService';
 
-function ProtectedRoute({ children, allowedUserTypes }) {
-    const isAuthenticated = authService.isAuthenticated();
-    const userType = authService.getUserType();
+const VALID_ROLES = ['client', 'business'];
 
-    const userString = localStorage.getItem('user');
-    const user = userString ? JSON.parse(userString) : null;
+function ProtectedRoute({ children }) {
+    const isAuthenticated = authService.isAuthenticated();
+    const userType        = authService.getUserType();
+    const user            = authService.getCurrentUser();
 
     if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
+
+    // Session exists but role is missing or corrupt — wipe and force re-login
+    if (!VALID_ROLES.includes(userType)) {
+        authService.clearStorage();
         return <Navigate to="/login" replace />;
     }
 
@@ -16,8 +22,9 @@ function ProtectedRoute({ children, allowedUserTypes }) {
         return <Navigate to="/verify-pending" replace />;
     }
 
-    if (allowedUserTypes && !allowedUserTypes.includes(userType)) {
-        return <Navigate to="/login" replace />;
+    // Business accounts must stay in the business interface
+    if (userType === 'business') {
+        return <Navigate to="/business/dashboard" replace />;
     }
 
     return children;

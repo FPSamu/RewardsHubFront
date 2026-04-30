@@ -1,303 +1,269 @@
-import api from "./api";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+} from 'firebase/auth';
+import { auth, googleProvider } from '../firebase';
+import api from './api';
+import { clearSubscriptionCache } from './subscriptionService';
 
-export const authService = {
-  getUserById: async (userId) => {
-    try {
-      const response = await api.get(`/auth/${userId}`);
-      return response.data;
-    } catch (error) {
-      console.error("Error getting user:", error);
-      throw error.response?.data || error.message;
-    }
-  },
+// ─── Storage keys ────────────────────────────────────────────────────────────
 
-  // Helper interno para guardar sesión
-  _saveSession: (token, user, userType, refreshToken, rememberMe) => {
-    const storage = rememberMe ? localStorage : sessionStorage;
-    const otherStorage = rememberMe ? sessionStorage : localStorage;
+const KEYS = ['token', 'refreshToken', 'user', 'role'];
 
-    otherStorage.removeItem("token");
-    otherStorage.removeItem("user");
-    otherStorage.removeItem("userType");
-    otherStorage.removeItem("refreshToken");
+// Map API role ('user' | 'business') to the internal key used by ProtectedRoutes
+const toInternalRole = (apiRole) => (apiRole === 'user' ? 'client' : apiRole);
 
-    if (token) {
-      const cleanToken = String(token).replace(/^["']|["']$/g, "");
-      storage.setItem("token", cleanToken);
-    }
-    if (user) storage.setItem("user", JSON.stringify(user));
-    if (userType) storage.setItem("userType", userType);
-    if (refreshToken) storage.setItem("refreshToken", refreshToken);
-  },
+// ─── Firebase error → human-readable Spanish message ────────────────────────
 
-  getToken: () => {
-    return localStorage.getItem("token") || sessionStorage.getItem("token");
-  },
+const firebaseMessage = (code) => {
+  const map = {
+    'auth/user-not-found':      'No existe una cuenta con ese correo.',
+    'auth/wrong-password':      'Contraseña incorrecta.',
+    'auth/invalid-credential':  'Correo o contraseña incorrectos.',
+    'auth/email-already-in-use':'Este correo ya está registrado. Inicia sesión.',
+    'auth/weak-password':       'La contraseña debe tener al menos 6 caracteres.',
+    'auth/invalid-email':       'El correo electrónico no es válido.',
+    'auth/popup-closed-by-user':'Cerraste la ventana de Google antes de completar.',
+    'auth/network-request-failed': 'Error de red. Revisa tu conexión.',
+    'auth/too-many-requests':   'Demasiados intentos fallidos. Intenta más tarde.',
+  };
+  return map[code] || 'Error de autenticación. Intenta de nuevo.';
+};
+
+// ─── Internal helpers ─────────────────────────────────────────────────────────
+
+const getStorage = () =>
+  localStorage.getItem('token') ? localStorage : sessionStorage;
+
+const saveSession = ({ token, refreshToken, user, apiRole }, rememberMe) => {
+  if (!apiRole) throw new Error('saveSession: apiRole is required — check API response shape');
+
+  const storage = rememberMe ? localStorage  : sessionStorage;
+  const evicted = rememberMe ? sessionStorage : localStorage;
+  KEYS.forEach((k) => evicted.removeItem(k));
+  evicted.removeItem('userType');
+
+  const role = toInternalRole(apiRole);
+  if (token)        storage.setItem('token',        token);
+  if (refreshToken) storage.setItem('refreshToken', refreshToken);
+  if (user)         storage.setItem('user',         JSON.stringify(user));
+  storage.setItem('role',     role);
+  storage.setItem('userType', role);
+};
+
+// ─── Public service ───────────────────────────────────────────────────────────
+
+const authService = {
+
+  // ── Getters ────────────────────────────────────────────────────────────────
+
+  getToken: () =>
+    localStorage.getItem('token') || sessionStorage.getItem('token'),
+
+  getRefreshToken: () =>
+    localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken'),
 
   getCurrentUser: () => {
-    const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
-    if (!userStr || userStr === "undefined" || userStr === "null") return null;
+    const raw = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (!raw || raw === 'null' || raw === 'undefined') return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  },
+
+  // Returns 'client' | 'business' (internal key)
+  getUserType: () => {
+    const v = localStorage.getItem('role')
+           || sessionStorage.getItem('role')
+           || localStorage.getItem('userType')
+           || sessionStorage.getItem('userType');
+    return (!v || v === 'null' || v === 'undefined') ? null : v;
+  },
+
+  isAuthenticated: () => !!authService.getToken(),
+
+  clearStorage: () => {
+    [...KEYS, 'userType'].forEach((k) => {
+      localStorage.removeItem(k);
+      sessionStorage.removeItem(k);
+    });
+    clearSubscriptionCache();
+  },
+
+  // ── Email check ─────────────────────────────────────────────────────────────
+
+  checkEmail: async (email) => {
+    const res = await api.post('/auth/check-email', { email });
+    return res.data; // { exists, role? }
+  },
+
+  // ── Email / Password login ──────────────────────────────────────────────────
+
+  login: async (email, password, rememberMe = false) => {
     try {
-      return JSON.parse(userStr);
-    } catch (error) {
-      return null;
+      // 1. Firebase authentication
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken    = await credential.user.getIdToken();
+
+      // 2. Exchange Firebase idToken for our JWT
+      const res = await api.post('/auth/login', { idToken });
+      const { token, refreshToken, user, role } = res.data;
+
+      saveSession({ token, refreshToken, user, apiRole: role }, rememberMe);
+      return res.data;
+    } catch (err) {
+      // Translate Firebase codes → Spanish. Re-throw API errors as-is.
+      if (err.code) throw new Error(firebaseMessage(err.code));
+      throw err.response?.data || err;
     }
   },
 
-  loginClient: async (email, password, rememberMe = false) => {
+  // ── Email / Password signup ─────────────────────────────────────────────────
+
+  register: async ({ email, password, role, username }, rememberMe = true) => {
+    // 'role' must be 'user' | 'business' (API values)
     try {
-      const response = await api.post("/auth/login", { email, password });
-      const token = response.data.accessToken || response.data.token;
-      
-      if (token) {
-        authService._saveSession(
-          token, 
-          response.data.user, 
-          "client", 
-          response.data.refreshToken, 
-          rememberMe
-        );
+      // 0. Check if email already has a MongoDB account
+      const check = await authService.checkEmail(email);
+      if (check.exists) {
+        throw new Error('Este correo ya tiene una cuenta. Inicia sesión.');
       }
-      return response.data;
-    } catch (error) {
-      console.error("Error en loginClient:", error);
-      throw error.response?.data || error.message;
+
+      // 1. Create Firebase account
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      const idToken    = await credential.user.getIdToken();
+
+      // 2. Register in our backend
+      const body = { idToken, role };
+      if (username) body.username = username;
+      const res = await api.post('/auth/register', body);
+      const { token, refreshToken, user } = res.data;
+
+      saveSession({ token, refreshToken, user, apiRole: role }, rememberMe);
+      return res.data;
+    } catch (err) {
+      if (err.code) throw new Error(firebaseMessage(err.code));
+      throw err.response?.data || err;
     }
   },
 
-  loginBusiness: async (email, password, rememberMe = false) => {
+  // ── Google login ────────────────────────────────────────────────────────────
+
+  loginWithGoogle: async (rememberMe = false) => {
     try {
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const response = await api.post("/business/login", { email, password, timezone });
-      const token = response.data.accessToken || response.data.token;
-      
-      if (token) {
-        const accountData = response.data.user || response.data.business;
-        authService._saveSession(
-          token, 
-          accountData, 
-          "business", 
-          null, 
-          rememberMe
-        );
+      const credential = await signInWithPopup(auth, googleProvider);
+      const idToken    = await credential.user.getIdToken();
+
+      const res = await api.post('/auth/login', { idToken });
+      const { token, refreshToken, user, role } = res.data;
+
+      saveSession({ token, refreshToken, user, apiRole: role }, rememberMe);
+      return res.data;
+    } catch (err) {
+      if (err.code) throw new Error(firebaseMessage(err.code));
+      if (err.response?.status === 409) {
+        await signOut(auth).catch(() => {});
       }
-      return response.data;
-    } catch (error) {
-      console.error("Error en loginBusiness:", error);
-      throw error.response?.data || error.message;
+      throw err.response?.data || err;
     }
   },
 
-  login: async (email, password, rememberMe = false, userType = "client") => {
-    const endpoint = userType === "business" ? "/business/login" : "/auth/login";
+  // ── Google signup ───────────────────────────────────────────────────────────
 
+  registerWithGoogle: async (role, rememberMe = true) => {
     try {
-      const body = { email, password };
-      if (userType === "business") {
-        body.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const credential = await signInWithPopup(auth, googleProvider);
+      const idToken    = await credential.user.getIdToken();
+
+      const res = await api.post('/auth/register', { idToken, role });
+      const { token, refreshToken, user } = res.data;
+
+      saveSession({ token, refreshToken, user, apiRole: role }, rememberMe);
+      return res.data;
+    } catch (err) {
+      if (err.code) throw new Error(firebaseMessage(err.code));
+      if (err.response?.status === 409) {
+        await signOut(auth).catch(() => {});
+        throw new Error('Este correo ya tiene una cuenta. Inicia sesión.');
       }
-      const response = await api.post(endpoint, body);
-      const token = response.data.accessToken || response.data.token;
-      
-      if (token) {
-        const userData = userType === "business" 
-          ? (response.data.user || response.data.business) 
-          : response.data.user;
-
-        authService._saveSession(
-          token, 
-          userData, 
-          userType, 
-          response.data.refreshToken, 
-          rememberMe 
-        );
-      }
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
+      throw err.response?.data || err;
     }
   },
 
-  signUpClient: async (userData) => {
+  // ── Token refresh (called by api.js interceptor) ────────────────────────────
+
+  refresh: async () => {
+    const refreshToken = authService.getRefreshToken();
+    if (!refreshToken) throw new Error('No refresh token available');
+
+    const res      = await api.post('/auth/refresh', { refreshToken });
+    const storage  = getStorage();
+    storage.setItem('token',        res.data.token);
+    storage.setItem('refreshToken', res.data.refreshToken);
+    return res.data.token;
+  },
+
+  // ── Logout ──────────────────────────────────────────────────────────────────
+
+  logout: async () => {
+    const refreshToken = authService.getRefreshToken();
     try {
-      const response = await api.post("/auth/register", userData);
-      const token = response.data.accessToken || response.data.token;
-      if (token) {
-        // Registro por defecto siempre usa localStorage (true)
-        authService._saveSession(token, response.data.user, "client", null, true);
-      }
-      return response.data;
-    } catch (error) {
-      console.error("Error en signUpClient:", error);
-      throw error.response?.data || error.message;
+      if (refreshToken) await api.post('/auth/logout', { refreshToken });
+      await signOut(auth);
+    } catch (e) {
+      console.error('Logout error:', e);
+    } finally {
+      authService.clearStorage();
     }
   },
 
-  signUpBusiness: async (userData) => {
+  // ── Me ───────────────────────────────────────────────────────────────────────
+
+  getMe: async () => {
+    const res = await api.get('/auth/me');
+    if (res.data) getStorage().setItem('user', JSON.stringify(res.data));
+    return res.data;
+  },
+
+  // ── Legacy aliases (used by dashboard components) ──────────────────────────
+
+  signUpClient: (userData) =>
+    authService.register({
+      email:    userData.email,
+      password: userData.password,
+      role:     'user',
+      username: userData.username,
+    }),
+
+  signUpBusiness: (userData) =>
+    authService.register({
+      email:    userData.email,
+      password: userData.password,
+      role:     'business',
+      username: userData.name,
+    }),
+
+  getMeClient:    () => authService.getMe(),
+  getMeBusiness:  () => authService.getMe(),
+
+  // ── Cashier login (email + branch password, no Firebase) ────────────────────
+
+  cashierLogin: async (email, password, rememberMe = false) => {
     try {
-      const response = await api.post("/business/register", userData);
-      const token = response.data.accessToken || response.data.token;
-      if (token) {
-        const accountData = response.data.user || response.data.business;
-        authService._saveSession(token, accountData, "business", null, true);
-      }
-      return response.data;
-    } catch (error) {
-      console.error("Error en signUpBusiness:", error);
-      throw error.response?.data || error.message;
-    }
-  },
-
-  signUp: async (userData) => {
-    if (userData.userType === "business") {
-      return authService.signUpBusiness(userData);
-    }
-    return authService.signUpClient(userData);
-  },
-
-  resendVerificationClient: async () => {
-    try {
-      const response = await api.post("/auth/resend-verification");
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  resendVerificationBusiness: async () => {
-    try {
-      const response = await api.post("/business/resend-verification");
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
+      const res = await api.post('/auth/cashier-login', { email, password });
+      const { token, refreshToken, user, role } = res.data;
+      saveSession({ token, refreshToken, user, apiRole: role }, rememberMe);
+      return res.data;
+    } catch (err) {
+      throw err.response?.data || err;
     }
   },
 
   resendVerification: async () => {
-    const userType = authService.getUserType();
-    if (userType === "business") {
-      return authService.resendVerificationBusiness();
-    }
-    return authService.resendVerificationClient();
-  },
-
-  refreshClient: async (refreshToken) => {
-    try {
-      const response = await api.post("/auth/refresh", { refreshToken });
-      const token = response.data.accessToken || response.data.token;
-      if (token) {
-        // Actualizar donde exista
-        const storage = localStorage.getItem("token") ? localStorage : sessionStorage;
-        storage.setItem("token", token);
-      }
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  refreshBusiness: async (refreshToken) => {
-    try {
-      const response = await api.post("/business/refresh", { refreshToken });
-      const token = response.data.accessToken || response.data.token;
-      if (token) {
-        const storage = localStorage.getItem("token") ? localStorage : sessionStorage;
-        storage.setItem("token", token);
-      }
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  logoutClient: async () => {
-    try {
-      await api.post("/auth/logout");
-    } catch (error) {
-      console.error("Error en logout:", error);
-    } finally {
-      authService.clearStorage();
-    }
-  },
-
-  logoutBusiness: async () => {
-    try {
-      await api.post("/business/logout");
-    } catch (error) {
-      console.error("Error en logout:", error);
-    } finally {
-      authService.clearStorage();
-    }
-  },
-
-  logout: async () => {
-    const userType = localStorage.getItem("userType") || sessionStorage.getItem("userType");
-    const endpoint = userType === "business" ? "/business/logout" : "/auth/logout";
-    
-    try {
-      await api.post(endpoint);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      localStorage.clear();
-      sessionStorage.clear();
-    }
-  },
-
-  clearStorage: () => {
-    const keys = ["token", "user", "userType", "refreshToken"];
-    keys.forEach(key => {
-        localStorage.removeItem(key);
-        sessionStorage.removeItem(key);
-    });
-  },
-
-  getUserType: () => {
-    const userType = localStorage.getItem("userType") || sessionStorage.getItem("userType");
-    if (!userType || userType === "undefined" || userType === "null") {
-      return null;
-    }
-    return userType;
-  },
-
-  isAuthenticated: () => {
-    return !!(localStorage.getItem("token") || sessionStorage.getItem("token"));
-  },
-
-  getMeClient: async () => {
-    try {
-      const response = await api.get("/auth/me");
-      if (response.data) {
-        const storage = sessionStorage.getItem("token") ? sessionStorage : localStorage;
-        storage.setItem("user", JSON.stringify(response.data));
-      }
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  getMeBusiness: async () => {
-    try {
-      const response = await api.get("/business/me");
-      const data = response.data.business || response.data;
-      if (data) {
-        const storage = sessionStorage.getItem("token") ? sessionStorage : localStorage;
-        storage.setItem("user", JSON.stringify(data));
-      }
-      return data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  getMe: async () => {
-    const userType = authService.getUserType();
-    if (userType === "business") {
-      return authService.getMeBusiness();
-    }
-    return authService.getMeClient();
+    const res = await api.post('/auth/resend-verification');
+    return res.data;
   },
 };
 
+export { authService };
 export default authService;

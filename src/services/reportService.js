@@ -1,6 +1,30 @@
 import api from "./api";
 
+async function parseBlobError(error) {
+  if (error.response?.data instanceof Blob) {
+    try {
+      const text = await error.response.data.text();
+      const data = JSON.parse(text);
+      throw new Error(data.message || data.error || text);
+    } catch {
+      throw new Error('Error al generar el reporte');
+    }
+  }
+  throw new Error(error.response?.data?.message || error.response?.data?.error || error.message || 'Error al generar el reporte');
+}
+
 export const reportService = {
+  generateReport: async ({ startDate, endDate, locationIds = [] }) => {
+    try {
+      const body = { startDate, endDate };
+      if (locationIds.length > 0) body.locationIds = locationIds;
+      const response = await api.post('/business/reports/generate', body, { responseType: 'blob' });
+      return response.data;
+    } catch (error) {
+      await parseBlobError(error);
+    }
+  },
+
   // Generar reporte de transacciones por turno
   generateShiftReport: async (shiftId, date) => {
     try {

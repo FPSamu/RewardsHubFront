@@ -1,11 +1,24 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../firebase';
 import SEO from '../components/SEO';
+import { AuthCard } from '../components/auth/AuthCard';
+import { BrandLogo } from '../components/ui/BrandLogo';
+import { FormInput } from '../components/ui/FormInput';
+import { AlertMessage } from '../components/ui/AlertMessage';
+import { SubmitButton } from '../components/ui/SubmitButton';
+
+const EmailIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+    <polyline points="22,6 12,13 2,6" />
+  </svg>
+);
 
 const ForgotPassword = () => {
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState('idle'); // 'idle', 'loading', 'success', 'error'
+  const [email,   setEmail]   = useState('');
+  const [status,  setStatus]  = useState('idle'); // 'idle' | 'loading' | 'success' | 'error'
   const [message, setMessage] = useState('');
 
   const handleSubmit = async (e) => {
@@ -14,91 +27,74 @@ const ForgotPassword = () => {
     setMessage('');
 
     try {
-      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      // Nota el prefijo /auth que es crucial
-      await axios.post(`${backendUrl}/auth/forgot-password`, { email });
-      await axios.post(`${backendUrl}/business/forgot-password`, { email });
-
+      await sendPasswordResetEmail(auth, email);
       setStatus('success');
       setMessage('Si existe una cuenta con ese email, recibirás un enlace para restablecer tu contraseña.');
     } catch (error) {
       console.error(error);
-      setStatus('error');
-      setMessage('Hubo un problema al intentar enviar el correo. Por favor intenta de nuevo.');
+      // Always show a neutral message to avoid email enumeration
+      setStatus('success');
+      setMessage('Si existe una cuenta con ese email, recibirás un enlace para restablecer tu contraseña.');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      {/* SEO Meta Tags */}
+    <AuthCard>
       <SEO
         title="Recuperar Contraseña - RewardsHub"
-        description="¿Olvidaste tu contraseña de RewardsHub? Recupera el acceso a tu cuenta ingresando tu correo electrónico. Te enviaremos instrucciones para restablecer tu contraseña."
-        keywords="recuperar contraseña, olvidar contraseña, restablecer contraseña, rewardsHub, reset password"
+        description="¿Olvidaste tu contraseña de RewardsHub? Recupera el acceso a tu cuenta ingresando tu correo electrónico."
+        keywords="recuperar contraseña, olvidar contraseña, restablecer contraseña, rewardsHub"
         type="website"
       />
 
-      <div className="max-w-md w-full bg-surface shadow-card rounded-xl p-8">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Recuperar Contraseña</h2>
-          <p className="mt-2 text-gray-600">Ingresa tu email y te enviaremos las instrucciones.</p>
-        </div>
-
-        {status === 'success' ? (
-          <div className="text-center">
-            <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent-success/20 text-accent-success-onColor">
-              <svg className="w-8 h-8 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-              </svg>
-            </div>
-            <p className="text-gray-800 font-medium mb-6">{message}</p>
-            <Link
-              to="/login"
-              className="text-brand-primary font-semibold hover:underline"
-            >
-              Volver a Iniciar Sesión
-            </Link>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Correo Electrónico
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
-                placeholder="tu@email.com"
-              />
-            </div>
-
-            {status === 'error' && (
-              <div className="text-sm text-accent-danger text-center">
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={status === 'loading'}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-brand-onColor bg-brand-primary hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {status === 'loading' ? 'Enviando...' : 'Enviar enlace'}
-            </button>
-
-            <div className="text-center mt-4">
-              <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-brand-primary">
-                Volver a Iniciar Sesión
-              </Link>
-            </div>
-          </form>
-        )}
+      <div className="flex flex-col items-center mb-8">
+        <BrandLogo size="lg" orientation="vertical" />
+        <h2 className="mt-4 text-[22px] font-extrabold text-[#13110A] tracking-tight">Recuperar Contraseña</h2>
+        <p className="mt-1 text-[14px] text-[#947F4E] font-medium text-center">
+          Ingresa tu email y te enviaremos las instrucciones.
+        </p>
       </div>
-    </div>
+
+      {status === 'success' ? (
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#F0FBF6]">
+            <svg className="w-7 h-7 text-[#22A06B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <AlertMessage variant="success">{message}</AlertMessage>
+          <Link to="/login" className="inline-block text-[14px] font-semibold text-[#EBA626] hover:text-[#C47D10] transition-colors duration-150">
+            Volver a Iniciar Sesión
+          </Link>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {status === 'error' && <AlertMessage>{message}</AlertMessage>}
+
+          <FormInput
+            id="email"
+            type="email"
+            label="Correo Electrónico"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tu@email.com"
+            required
+            autoComplete="email"
+            icon={<EmailIcon />}
+          />
+
+          <SubmitButton loading={status === 'loading'} loadingText="Enviando...">
+            Enviar enlace
+          </SubmitButton>
+
+          <p className="text-center">
+            <Link to="/login" className="text-[13px] font-semibold text-[#947F4E] hover:text-[#EBA626] transition-colors duration-150">
+              ← Volver a Iniciar Sesión
+            </Link>
+          </p>
+        </form>
+      )}
+    </AuthCard>
   );
 };
 

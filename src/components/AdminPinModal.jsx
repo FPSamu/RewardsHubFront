@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import api from '../services/api';
 import * as adminPinService from '../services/adminPinService';
+import authService from '../services/authService';
+import { censorEmail } from '../utils/format';
 
 /**
  * Modal that asks for the admin PIN before any write operation.
@@ -15,7 +17,7 @@ export default function AdminPinModal({ onSuccess, onClose }) {
   const [pin, setPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
-  const [resetPassword, setResetPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -40,11 +42,12 @@ export default function AdminPinModal({ onSuccess, onClose }) {
 
   const handleReset = async (e) => {
     e.preventDefault();
-    if (!resetPassword.trim()) return;
     setLoading(true);
     setError('');
     try {
-      await api.post('/business/admin-pin/reset', { password: resetPassword.trim() });
+      const userEmail = authService.getCurrentUser()?.email ?? '';
+      await api.post('/business/admin-pin/reset', {});
+      setEmail(userEmail);
       setStep('reset-sent');
     } catch (err) {
       setError(err.response?.data?.message || 'Error al enviar el PIN');
@@ -157,21 +160,8 @@ export default function AdminPinModal({ onSuccess, onClose }) {
         {step === 'reset' && (
           <form onSubmit={handleReset} className="space-y-4">
             <p className="text-sm text-gray-600">
-              Ingresa la contraseña de tu cuenta para verificar tu identidad.
-              Te enviaremos un nuevo PIN temporal por email.
+              Te enviaremos un PIN temporal a tu correo registrado. Úsalo para ingresar y luego crea uno nuevo.
             </p>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Contraseña de la cuenta</label>
-              <input
-                type="password"
-                value={resetPassword}
-                onChange={(e) => setResetPassword(e.target.value)}
-                placeholder="Tu contraseña de acceso"
-                autoFocus
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-              />
-            </div>
 
             {error && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -181,7 +171,7 @@ export default function AdminPinModal({ onSuccess, onClose }) {
 
             <button
               type="submit"
-              disabled={loading || !resetPassword.trim()}
+              disabled={loading}
               className="w-full py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
@@ -208,10 +198,11 @@ export default function AdminPinModal({ onSuccess, onClose }) {
               </svg>
             </div>
             <p className="text-sm text-gray-600">
-              Te enviamos un PIN temporal a tu correo. Úsalo para ingresar y luego crea uno nuevo.
+              Correo con instrucciones para recuperar tu PIN enviado a
             </p>
+            <p className="text-sm font-semibold text-gray-800 break-all">{censorEmail(email)}</p>
             <button
-              onClick={() => { setStep('verify'); setPin(''); setResetPassword(''); setError(''); }}
+              onClick={() => { setStep('verify'); setPin(''); setError(''); }}
               className="w-full py-3 bg-brand-primary text-white rounded-pill font-semibold hover:opacity-90 transition-opacity"
             >
               Ingresar PIN

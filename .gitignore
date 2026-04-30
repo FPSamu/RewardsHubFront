@@ -30,3 +30,6 @@ dist-ssr
 *.sw?
 
 src/backendFiles
+
+.agents/
+.claude/

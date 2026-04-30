@@ -11,17 +11,20 @@ function BusinessProtectedRoute({ children }) {
     const isAuthenticated = authService.isAuthenticated();
     const userType = authService.getUserType();
 
-    const userString = localStorage.getItem('user');
-    const user = userString ? JSON.parse(userString) : null;
+    // Use the raw string as dependency — avoids a new object on every render
+    const userString = localStorage.getItem('user') || sessionStorage.getItem('user');
+    const user = userString ? (() => { try { return JSON.parse(userString); } catch { return null; } })() : null;
+    const isVerified = user?.isVerified ?? true;
 
     useEffect(() => {
         const checkSubscription = async () => {
-            if (!isAuthenticated || userType !== 'business' || (user && !user.isVerified)) {
+            if (!isAuthenticated || userType !== 'business' || !isVerified) {
                 setLoading(false);
                 return;
             }
 
             try {
+                // getSubscriptionStatus reads from localStorage cache when available
                 const status = await subscriptionService.getSubscriptionStatus();
                 setSubscriptionStatus(status);
             } catch (error) {
@@ -33,7 +36,8 @@ function BusinessProtectedRoute({ children }) {
         };
 
         checkSubscription();
-    }, [isAuthenticated, userType, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // run once on mount — cache handles subsequent navigations
 
     // Not authenticated
     if (!isAuthenticated) {
@@ -49,18 +53,6 @@ function BusinessProtectedRoute({ children }) {
         return <Navigate to="/verify-pending" replace />;
     }
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-                    <p className="text-gray-600">Cargando información del negocio...</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Loading subscription status
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">

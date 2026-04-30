@@ -37,7 +37,9 @@ export const businessService = {
   getMyBusiness: async () => {
     try {
       const response = await api.get("/business/me");
-      return response.data;
+      const data = response.data;
+      // Backend sends "username" as the business display name
+      return { ...data, name: data.username ?? data.name };
     } catch (error) {
       throw error.response?.data || error.message;
     }
@@ -63,6 +65,15 @@ export const businessService = {
     }
   },
 
+  setMainLocation: async (locationId) => {
+    try {
+      const response = await api.patch(`/business/locations/${locationId}/main`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Eliminar sucursal
   deleteLocation: async (locationId) => {
     try {
@@ -73,11 +84,45 @@ export const businessService = {
     }
   },
 
+  addShift: async (locationId, data) => {
+    try {
+      const response = await api.post(`/business/locations/${locationId}/shifts`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  deleteShift: async (locationId, shiftId) => {
+    try {
+      const response = await api.delete(`/business/locations/${locationId}/shifts/${shiftId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  setBranchPassword: async (password) => {
+    try {
+      const response = await api.put('/business/branch-password', { password });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Update business information (Nombre, Categoría, Descripción)
   updateBusinessInfo: async (updates) => {
     try {
-      const response = await api.put("/business/me", updates);
-      return response.data;
+      // Frontend uses "name"; backend expects "username"
+      const payload = { ...updates };
+      if ('name' in payload) {
+        payload.username = payload.name;
+        delete payload.name;
+      }
+      const response = await api.put("/business/me", payload);
+      const data = response.data;
+      return { ...data, name: data.username ?? data.name };
     } catch (error) {
       throw error.response?.data || error.message;
     }
@@ -94,6 +139,16 @@ export const businessService = {
           "Content-Type": "multipart/form-data",
         },
       });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Update branch password (requires admin PIN via x-admin-token header)
+  updateBranchPassword: async (password) => {
+    try {
+      const response = await api.put('/business/branch-password', { password });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
