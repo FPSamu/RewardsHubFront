@@ -1,853 +1,587 @@
-import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useState, useEffect, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import businessService from '../services/businessService';
 import userPointsService from '../services/userPointsService';
 import rewardService from '../services/rewardService';
+import { BusinessAvatar } from '../components/client/shared/BusinessAvatar';
 
-// Fix for default marker icon in Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+// ─── Leaflet markers ─────────────────────────────────────────────────────────
+
+const USER_ICON = L.divIcon({
+  className: '',
+  html: `
+    <div style="position:relative;width:22px;height:22px">
+      <div style="
+        position:absolute;inset:0;border-radius:50%;
+        background:rgba(99,102,241,0.25);
+        animation:mapPulse 2s ease-out infinite;
+      "></div>
+      <div style="
+        position:absolute;inset:3px;border-radius:50%;
+        background:#6366f1;border:2.5px solid white;
+        box-shadow:0 2px 6px rgba(99,102,241,0.5);
+      "></div>
+    </div>`,
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
 });
 
-// Custom icon for user location (red with person symbol)
-const userIcon = L.divIcon({
-    className: 'custom-user-marker',
+const PIN_COLORS = {
+  reward:   '#10b981',
+  visited:  '#6366f1',
+  default:  '#9ca3af',
+};
+
+// Initial fallback when there's no logo
+function nameInitial(name) {
+  return (name?.[0] ?? '?').toUpperCase();
+}
+
+function createPin(type, logoUrl, name) {
+  const color      = PIN_COLORS[type] ?? PIN_COLORS.default;
+  const borderSize = type === 'reward' ? '2.5px' : '2px';
+  const shadow     = type === 'reward'
+    ? '0 2px 8px rgba(16,185,129,0.4)'
+    : '0 2px 8px rgba(0,0,0,0.2)';
+
+  const inner = logoUrl
+    ? `<img src="${logoUrl}" style="
+        width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;
+      " />`
+    : `<div style="
+        width:100%;height:100%;border-radius:50%;
+        background:${color};
+        display:flex;align-items:center;justify-content:center;
+        color:white;font-size:13px;font-weight:700;font-family:system-ui,sans-serif;
+        line-height:1;
+      ">${nameInitial(name)}</div>`;
+
+  return L.divIcon({
+    className: '',
     html: `
-        <div style="
-            background-color: #ef4444;
-            width: 40px;
-            height: 40px;
-            border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg);
-            border: 3px solid white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        ">
-            <svg style="
-                width: 24px;
-                height: 24px;
-                transform: rotate(45deg);
-                fill: white;
-            " viewBox="0 0 24 24">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-            </svg>
-        </div>
-    `,
-    iconSize: [40, 40],
-    iconAnchor: [20, 40],
-    popupAnchor: [0, -40],
-});
+      <div style="
+        width:36px;height:36px;border-radius:50%;
+        border:${borderSize} solid ${color};
+        box-shadow:${shadow};
+        background:white;
+        overflow:hidden;
+        display:flex;align-items:center;justify-content:center;
+      ">${inner}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+  });
+}
 
-// Custom icons for businesses based on status
-const createBusinessIcon = (color, hasRewards = false, logoUrl = null) => {
-    const colorMap = {
-        green: '#10b981',
-        yellow: '#f59e0b',
-        blue: '#3b82f6',
-    };
-
-    // If logo exists, show logo in a circular marker
-    if (logoUrl) {
-        return L.divIcon({
-            className: 'custom-business-marker',
-            html: `
-                <div style="
-                    position: relative;
-                    width: 44px;
-                    height: 44px;
-                ">
-                    <div style="
-                        background-color: white;
-                        width: 44px;
-                        height: 44px;
-                        border-radius: 50% 50% 50% 0;
-                        transform: rotate(-45deg);
-                        border: 3px solid ${colorMap[color] || colorMap.blue};
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        overflow: hidden;
-                    ">
-                        <img 
-                            src="${logoUrl}" 
-                            alt="Logo"
-                            style="
-                                width: 32px;
-                                height: 32px;
-                                object-fit: cover;
-                                transform: rotate(45deg);
-                                border-radius: 4px;
-                            "
-                        />
-                    </div>
-                    ${hasRewards ? `
-                        <div style="
-                            position: absolute;
-                            top: -2px;
-                            right: -2px;
-                            background-color: #ef4444;
-                            border-radius: 50%;
-                            width: 20px;
-                            height: 20px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            border: 2px solid white;
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                        ">
-                            <span style="font-size: 11px;">🎁</span>
-                        </div>
-                    ` : ''}
-                </div>
-            `,
-            iconSize: [44, 44],
-            iconAnchor: [22, 44],
-            popupAnchor: [0, -44],
-        });
+// Inject pulse keyframe once
+if (typeof document !== 'undefined' && !document.getElementById('map-pulse-style')) {
+  const s = document.createElement('style');
+  s.id = 'map-pulse-style';
+  s.textContent = `
+    @keyframes mapPulse {
+      0%   { transform:scale(1);  opacity:.6 }
+      70%  { transform:scale(2.4);opacity:0  }
+      100% { transform:scale(1);  opacity:0  }
     }
+    .leaflet-popup-content-wrapper {
+      border-radius:14px !important;
+      box-shadow:0 4px 20px rgba(0,0,0,0.12) !important;
+      padding:0 !important;
+    }
+    .leaflet-popup-content { margin:0 !important; }
+    .leaflet-popup-tip-container { display:none !important; }
+  `;
+  document.head.appendChild(s);
+}
 
-    // Default marker without logo
-    return L.divIcon({
-        className: 'custom-business-marker',
-        html: `
-            <div style="
-                background-color: ${colorMap[color] || colorMap.blue};
-                width: 36px;
-                height: 36px;
-                border-radius: 50% 50% 50% 0;
-                transform: rotate(-45deg);
-                border: 3px solid white;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                position: relative;
-            ">
-                <svg style="
-                    width: 20px;
-                    height: 20px;
-                    transform: rotate(45deg);
-                    fill: white;
-                " viewBox="0 0 24 24">
-                    <path d="M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM2 9v2h2v9h2V11h2v9h2V11h2v9h2V11h2v9h2V11h2v9h2v-9h2V9H2z"/>
+// ─── Map helpers ──────────────────────────────────────────────────────────────
+
+function FlyTo({ target }) {
+  const map = useMap();
+  useEffect(() => {
+    if (target) map.flyTo(target, Math.max(map.getZoom(), 15), { duration: 0.8 });
+  }, [target, map]);
+  return null;
+}
+
+function RecenterBtn({ center }) {
+  const map = useMap();
+  return (
+    <button
+      onClick={() => map.flyTo(center, 14, { duration: 0.6 })}
+      className="absolute bottom-20 right-3 z-[400] w-10 h-10 bg-surface rounded-xl shadow-card flex items-center justify-center text-neutral-600 hover:bg-neutral-50 active:scale-95 transition-all"
+      title="Centrar en mi ubicación"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0-8V7m0 9v1M3 12h1m16 0h1" />
+        <circle cx="12" cy="12" r="9" strokeWidth={1.75} />
+        <circle cx="12" cy="12" r="3" strokeWidth={1.75} />
+      </svg>
+    </button>
+  );
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function MapLoading({ label }) {
+  return (
+    <div className="absolute inset-0 bg-neutral-100 flex flex-col items-center justify-center gap-3 z-10">
+      <div className="w-12 h-12 rounded-full border-4 border-neutral-200 border-t-brand-primary animate-spin" />
+      <p className="text-[13px] font-medium text-neutral-500">{label}</p>
+    </div>
+  );
+}
+
+function LocationBanner({ message }) {
+  return (
+    <div className="absolute bottom-3 left-3 right-3 z-[400] flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5 shadow-card">
+      <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      </svg>
+      <p className="text-[11px] text-amber-800 font-medium">{message}</p>
+    </div>
+  );
+}
+
+function BusinessBottomCard({ biz, userPointsMap, rewardsMap, onClose }) {
+  if (!biz) return null;
+  const userPts = userPointsMap[biz.id] ?? {};
+  const rewards = rewardsMap[biz.id] ?? [];
+  const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${biz.location?.latitude},${biz.location?.longitude}`;
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 z-[400] p-3">
+      <div className="bg-surface rounded-2xl shadow-lg overflow-hidden">
+        {/* Handle */}
+        <div className="w-8 h-1 bg-neutral-200 rounded-full mx-auto mt-3 mb-2" />
+
+        <div className="px-4 pb-4 space-y-3">
+          {/* Header row */}
+          <div className="flex items-center gap-3">
+            <BusinessAvatar
+              logoUrl={biz.logoUrl}
+              name={biz.name}
+              size="lg"
+              className="border border-neutral-200 flex-shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-bold text-neutral-900 truncate leading-tight">{biz.name}</p>
+              <p className="text-[12px] text-neutral-400 mt-0.5 truncate">
+                {biz.distance} de distancia
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 transition-colors flex-shrink-0"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Status badges row */}
+          <div className="flex flex-wrap gap-1.5">
+            {rewards.length > 0 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent-successBg text-accent-success text-[11px] font-bold rounded-full border border-accent-successBorder">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
                 </svg>
-                ${hasRewards ? `
-                    <div style="
-                        position: absolute;
-                        top: -8px;
-                        right: -8px;
-                        background-color: #ef4444;
-                        border-radius: 50%;
-                        width: 18px;
-                        height: 18px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        border: 2px solid white;
-                        transform: rotate(45deg);
-                    ">
-                        <span style="font-size: 12px;">🎁</span>
-                    </div>
-                ` : ''}
-            </div>
-        `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 36],
-        popupAnchor: [0, -36],
-    });
-};
+                {rewards.length} recompensa{rewards.length > 1 ? 's' : ''} disponible{rewards.length > 1 ? 's' : ''}
+              </span>
+            )}
+            {biz.status === 'visited' && (
+              <span className="px-2.5 py-1 bg-brand-muted text-brand-primary text-[11px] font-bold rounded-full">
+                Visitado
+              </span>
+            )}
+            {biz.status === 'not_visited' && (
+              <span className="px-2.5 py-1 bg-neutral-100 text-neutral-500 text-[11px] font-medium rounded-full">
+                Sin visitar
+              </span>
+            )}
+          </div>
 
-// Custom component to update map center when location changes
-const MapUpdater = ({ center }) => {
-    const map = useMap();
-    useEffect(() => {
-        if (center) {
-            map.setView(center, map.getZoom());
-        }
-    }, [center, map]);
-    return null;
-};
-
-const ClientMap = () => {
-    const [businesses, setBusinesses] = useState([]);
-    const [nearbyBusinesses, setNearbyBusinesses] = useState([]);
-    const [userPointsData, setUserPointsData] = useState(null);
-    const [businessesWithRewards, setBusinessesWithRewards] = useState({});
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [userLocation, setUserLocation] = useState(null);
-    const [locationError, setLocationError] = useState(null);
-    const [gettingLocation, setGettingLocation] = useState(true);
-    const [activeFilter, setActiveFilter] = useState('all');
-
-    // Get user location
-    useEffect(() => {
-        if (!navigator.geolocation) {
-            setLocationError('La geolocalización no está soportada en tu navegador');
-            setGettingLocation(false);
-            // Default to Guadalajara center if geolocation not supported
-            setUserLocation({ lat: 20.6597, lng: -103.3496 });
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                setUserLocation({
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                });
-                setLocationError(null);
-                setGettingLocation(false);
-            },
-            (error) => {
-                console.error('Error getting location:', error);
-                let errorMessage = 'No se pudo obtener tu ubicación';
-
-                switch (error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage = 'Permiso de ubicación denegado. Por favor, permite el acceso a tu ubicación.';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage = 'Información de ubicación no disponible.';
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage = 'Tiempo de espera agotado al obtener ubicación.';
-                        break;
-                }
-
-                setLocationError(errorMessage);
-                setGettingLocation(false);
-                // Default to Guadalajara center on error
-                setUserLocation({ lat: 20.6597, lng: -103.3496 });
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0,
-            }
-        );
-    }, []);
-
-    // Fetch businesses when user location is available
-    useEffect(() => {
-        const fetchBusinesses = async () => {
-            if (!userLocation) return;
-
-            try {
-                setLoading(true);
-
-                // Fetch user points to determine visited businesses
-                const pointsData = await userPointsService.getUserPoints();
-                setUserPointsData(pointsData);
-
-                // Fetch nearby businesses using user's location
-                const nearbyData = await businessService.getNearbyBusinesses(
-                    userLocation.lat,
-                    userLocation.lng,
-                    50 // 50km radius
-                );
-
-                // Create a map of visited businesses with points/stamps
-                const visitedMap = {};
-                if (pointsData && pointsData.businessPoints) {
-                    pointsData.businessPoints.forEach(bp => {
-                        visitedMap[bp.businessId] = {
-                            points: bp.points || 0,
-                            stamps: bp.stamps || 0,
-                            lastVisit: bp.lastVisit
-                        };
-                    });
-                }
-
-                // Process nearby businesses and check for available rewards
-                const businessesData = nearbyData.businesses || [];
-                setNearbyBusinesses(businessesData);
-
-                // Fetch available rewards for each business
-                const rewardsMap = {};
-                await Promise.all(
-                    businessesData.map(async (business) => {
-                        try {
-                            const userPoints = visitedMap[business.id];
-                            if (!userPoints) {
-                                rewardsMap[business.id] = [];
-                                return;
-                            }
-
-                            // Get rewards for this business
-                            const rewards = await rewardService.getBusinessRewards(business.id);
-
-                            // Filter rewards that user can redeem
-                            const availableRewards = rewards.filter(reward => {
-                                if (!reward.isActive) return false;
-
-                                // Check if user has enough points for points-based rewards
-                                if (reward.pointsRequired !== undefined && reward.pointsRequired !== null) {
-                                    return userPoints.points >= reward.pointsRequired;
-                                }
-
-                                // Check if user has enough stamps for stamps-based rewards
-                                if (reward.stampsRequired !== undefined && reward.stampsRequired !== null) {
-                                    return userPoints.stamps >= reward.stampsRequired;
-                                }
-
-                                return false;
-                            });
-
-                            rewardsMap[business.id] = availableRewards;
-                        } catch (err) {
-                            console.error(`Error fetching rewards for business ${business.id}:`, err);
-                            rewardsMap[business.id] = [];
-                        }
-                    })
-                );
-
-                setBusinessesWithRewards(rewardsMap);
-
-                // Map businesses with status and user data
-                const enrichedBusinesses = businessesData.map(business => {
-                    const businessId = business.id;
-                    const visited = visitedMap[businessId];
-                    const availableRewards = rewardsMap[businessId] || [];
-
-                    // Determine primary status
-                    // Status logic: visited if has points/stamps, not_visited otherwise
-                    // rewards_available is tracked separately
-                    let status = 'not_visited';
-                    if (visited && (visited.points > 0 || visited.stamps > 0)) {
-                        status = 'visited';
-                    }
-
-                    return {
-                        id: businessId,
-                        name: business.name,
-                        address: business.address || business.location?.formattedAddress || 'Dirección no disponible',
-                        location: business.location,
-                        status: status,
-                        points: visited ? visited.points : 0,
-                        stamps: visited ? visited.stamps : 0,
-                        distance: business.distance ? `${business.distance.toFixed(1)} km` : '-- km',
-                        availableRewards: availableRewards.length,
-                        hasRewards: availableRewards.length > 0, // Track if has rewards separately
-                    };
-                });
-
-                // DEDUPLICAR: Si hay múltiples sucursales del mismo negocio (mismo id),
-                // mantener solo una (la más cercana)
-                const uniqueBusinessesMap = new Map();
-                enrichedBusinesses.forEach(business => {
-                    const existingBusiness = uniqueBusinessesMap.get(business.id);
-
-                    // Si no existe o este está más cerca, guardarlo
-                    if (!existingBusiness) {
-                        uniqueBusinessesMap.set(business.id, business);
-                    } else {
-                        // Comparar distancias (convertir de string "X.X km" a número)
-                        const existingDistance = parseFloat(existingBusiness.distance);
-                        const currentDistance = parseFloat(business.distance);
-
-                        if (!isNaN(currentDistance) && (isNaN(existingDistance) || currentDistance < existingDistance)) {
-                            uniqueBusinessesMap.set(business.id, business);
-                        }
-                    }
-                });
-
-                // Convertir el Map de vuelta a array
-                const deduplicatedBusinesses = Array.from(uniqueBusinessesMap.values());
-
-                console.log('📊 Negocios antes de deduplicar:', enrichedBusinesses.length);
-                console.log('📊 Negocios después de deduplicar:', deduplicatedBusinesses.length);
-
-                setBusinesses(deduplicatedBusinesses);
-                setError(null);
-            } catch (err) {
-                console.error('Error fetching businesses:', err);
-                // Don't block the UI, just log the error
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchBusinesses();
-    }, [userLocation]);
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-                    <p className="text-gray-600">Cargando negocios...</p>
+          {/* Points / stamps */}
+          {((userPts.points ?? 0) > 0 || (userPts.stamps ?? 0) > 0) && (
+            <div className="flex gap-2">
+              {userPts.points > 0 && (
+                <div className="flex-1 bg-brand-muted rounded-xl p-2.5 text-center">
+                  <p className="text-[18px] font-extrabold text-brand-primary leading-none">{userPts.points}</p>
+                  <p className="text-[10px] text-brand-primary/70 font-medium mt-0.5 uppercase tracking-wide">puntos</p>
                 </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl">
-                {error}
-            </div>
-        );
-    }
-
-    // Use real data if available
-    const allBusinesses = businesses || [];
-
-    // Filter businesses based on active filter
-    const getFilteredBusinesses = () => {
-        let filtered = [];
-
-        // Calculate these arrays fresh each time to avoid stale data
-        const visited = allBusinesses.filter((b) => b.status === 'visited');
-        const notVisited = allBusinesses.filter((b) => b.status === 'not_visited');
-        const rewardsAvailable = allBusinesses.filter((b) => b.hasRewards === true);
-
-        // Filter by status
-        switch (activeFilter) {
-            case 'visited':
-                filtered = visited;
-                break;
-            case 'rewards':
-                filtered = rewardsAvailable;
-                break;
-            case 'not_visited':
-                filtered = notVisited;
-                break;
-            case 'all':
-            default:
-                filtered = allBusinesses;
-                break;
-        }
-
-        return filtered;
-    };
-
-    const filteredBusinesses = getFilteredBusinesses();
-
-    // Calculate counts for the filter buttons
-    const visited = allBusinesses.filter((b) => b.status === 'visited');
-    const notVisited = allBusinesses.filter((b) => b.status === 'not_visited');
-    const rewardsAvailable = allBusinesses.filter((b) => b.hasRewards === true);
-
-    const getStatusBadge = (status, hasRewards) => {
-        if (hasRewards) {
-            return <span className="px-3 py-1 bg-green-50 text-accent-successOnColor text-xs font-semibold rounded-pill">Recompensas Disponibles</span>;
-        }
-
-        switch (status) {
-            case 'visited':
-                return <span className="px-3 py-1 bg-brand-muted text-brand-onColor text-xs font-semibold rounded-pill">Visitado</span>;
-            case 'not_visited':
-                return <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-pill">No Visitado</span>;
-            default:
-                return null;
-        }
-    };
-
-    return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                <div className="flex items-center space-x-3 mb-2">
-                    <img
-                        src="https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png"
-                        alt="RewardsHub Logo"
-                        className="h-10 w-auto object-contain"
-                    />
-                    <h2 className="text-3xl font-bold text-gray-800 tracking-tight">Mapa de Negocios</h2>
+              )}
+              {userPts.stamps > 0 && (
+                <div className="flex-1 bg-accent-successBg rounded-xl p-2.5 text-center">
+                  <p className="text-[18px] font-extrabold text-accent-success leading-none">{userPts.stamps}</p>
+                  <p className="text-[10px] text-accent-success/70 font-medium mt-0.5 uppercase tracking-wide">sellos</p>
                 </div>
-                <p className="text-gray-600">Explora todos los negocios afiliados a RewardsHub cerca de tu ubicación</p>
+              )}
             </div>
+          )}
 
-            {/* Stats Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-brand-muted border border-brand-primary/20 rounded-xl p-6 shadow-card hover:shadow-popover transition-shadow duration-180">
-                    <h3 className="text-lg font-semibold text-brand-onColor mb-2">Visitados</h3>
-                    <p className="text-4xl font-bold text-brand-primary">{visited.length}</p>
-                </div>
-                <div className="bg-green-50 border border-accent-success/20 rounded-xl p-6 shadow-card hover:shadow-popover transition-shadow duration-180">
-                    <h3 className="text-lg font-semibold text-accent-successOnColor mb-2">Con Recompensas</h3>
-                    <p className="text-4xl font-bold text-accent-success">{rewardsAvailable.length}</p>
-                </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-card hover:shadow-popover transition-shadow duration-180">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Por Visitar</h3>
-                    <p className="text-4xl font-bold text-gray-600">{notVisited.length}</p>
-                </div>
-            </div>
-
-            {/* Map */}
-            <div className="bg-white rounded-xl shadow-card overflow-hidden border border-gray-200">
-                {locationError && (
-                    <div className="bg-yellow-50 border-b border-yellow-200 text-yellow-800 px-4 py-3">
-                        <p className="text-sm">⚠️ {locationError}</p>
-                        <p className="text-xs mt-1">Mostrando ubicación predeterminada (Guadalajara)</p>
-                    </div>
-                )}
-
-                {gettingLocation ? (
-                    <div className="h-96 flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-50">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-                            <p className="text-gray-600">Obteniendo tu ubicación...</p>
-                        </div>
-                    </div>
-                ) : userLocation ? (
-                    <MapContainer
-                        center={[userLocation.lat, userLocation.lng]}
-                        zoom={13}
-                        style={{ height: '500px', width: '100%' }}
-                        className="z-0"
-                    >
-                        <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-                        <MapUpdater center={[userLocation.lat, userLocation.lng]} />
-
-                        {/* User location marker */}
-                        <Marker
-                            position={[userLocation.lat, userLocation.lng]}
-                            icon={userIcon}
-                        >
-                            <Popup>
-                                <div className="text-center">
-                                    <p className="font-bold text-red-600">📍 Tu ubicación</p>
-                                    <p className="text-xs text-gray-600 mt-1">
-                                        {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
-                                    </p>
-                                </div>
-                            </Popup>
-                        </Marker>
-
-                        {/* Business markers */}
-                        {nearbyBusinesses.map((business) => {
-                            if (!business.location || !business.location.latitude || !business.location.longitude) {
-                                return null;
-                            }
-
-                            // Find business data to get status and rewards
-                            const businessData = businesses.find(b => b.id === business.id) || {};
-
-                            const status = businessData.status || 'not_visited';
-                            const availableRewardsCount = businessData.availableRewards || 0;
-                            const userPoints = userPointsData?.businessPoints?.find(bp => bp.businessId === business.id);
-                            const availableRewardsList = businessesWithRewards[business.id] || [];
-
-                            // Determine marker color based on status
-                            let markerColor = 'blue'; // not visited
-                            if (status === 'visited') {
-                                markerColor = 'yellow'; // visited (has points/stamps)
-                            }
-                            if (status === 'rewards_available') {
-                                markerColor = 'green'; // has available rewards
-                            }
-
-                            const hasRewards = availableRewardsCount > 0;
-                            const logoUrl = business.logoUrl || null;
-
-                            return (
-                                <Marker
-                                    key={business.id}
-                                    position={[business.location.latitude, business.location.longitude]}
-                                    icon={createBusinessIcon(markerColor, hasRewards, logoUrl)}
-                                >
-                                    <Popup>
-                                        <div className="min-w-[200px]">
-                                            <h3 className="font-bold text-brand-primary text-lg mb-2">
-                                                {business.name}
-                                            </h3>
-
-                                            {/* Status badge */}
-                                            <div className="mb-2">
-                                                {status === 'rewards_available' && (
-                                                    <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">
-                                                        🎁 {availableRewardsCount} recompensa{availableRewardsCount > 1 ? 's' : ''} disponible{availableRewardsCount > 1 ? 's' : ''}
-                                                    </span>
-                                                )}
-                                                {status === 'visited' && (
-                                                    <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded">
-                                                        ✓ Visitado
-                                                    </span>
-                                                )}
-                                                {status === 'not_visited' && (
-                                                    <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
-                                                        ○ No visitado
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="space-y-1 text-sm text-gray-700">
-                                                {business.location.formattedAddress && (
-                                                    <p className="text-xs text-gray-600">
-                                                        📍 {business.location.formattedAddress}
-                                                    </p>
-                                                )}
-                                                {business.distance && (
-                                                    <p className="text-xs text-gray-600">
-                                                        📏 {business.distance.toFixed(2)} km de distancia
-                                                    </p>
-                                                )}
-
-                                                {/* Show user's points/stamps if they have visited */}
-                                                {userPoints && (userPoints.points > 0 || userPoints.stamps > 0) && (
-                                                    <div className="mt-2 pt-2 border-t border-gray-200">
-                                                        <p className="text-xs font-semibold text-gray-700 mb-1">Tus puntos:</p>
-                                                        {userPoints.points > 0 && (
-                                                            <p className="text-xs text-gray-600">
-                                                                ⭐ {userPoints.points} puntos
-                                                            </p>
-                                                        )}
-                                                        {userPoints.stamps > 0 && (
-                                                            <p className="text-xs text-gray-600">
-                                                                🎫 {userPoints.stamps} sellos
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {/* Show available rewards list */}
-                                                {availableRewardsList.length > 0 && (
-                                                    <div className="mt-2 pt-2 border-t border-gray-200">
-                                                        <p className="text-xs font-semibold text-green-700 mb-2">
-                                                            🎁 Recompensas disponibles para canjear:
-                                                        </p>
-                                                        <div className="space-y-2">
-                                                            {availableRewardsList.map((reward, idx) => (
-                                                                <div
-                                                                    key={reward.id || idx}
-                                                                    className="bg-green-50 rounded p-2 border border-green-200"
-                                                                >
-                                                                    <p className="text-xs font-semibold text-gray-800">
-                                                                        {reward.name}
-                                                                    </p>
-                                                                    {reward.description && (
-                                                                        <p className="text-xs text-gray-600 mt-1">
-                                                                            {reward.description}
-                                                                        </p>
-                                                                    )}
-                                                                    <div className="mt-1 flex items-center justify-between">
-                                                                        <span className="text-xs text-gray-500">
-                                                                            {reward.rewardType === 'discount' && '💰 Descuento'}
-                                                                            {reward.rewardType === 'free_product' && '🎁 Producto gratis'}
-                                                                            {reward.rewardType === 'coupon' && '🎟️ Cupón'}
-                                                                            {reward.rewardType === 'cashback' && '💵 Cashback'}
-                                                                        </span>
-                                                                        <span className="text-xs font-semibold text-green-600">
-                                                                            {reward.rewardValue}
-                                                                        </span>
-                                                                    </div>
-                                                                    <p className="text-xs text-gray-500 mt-1">
-                                                                        {reward.pointsRequired && (
-                                                                            <span>Cuesta: {reward.pointsRequired} pts</span>
-                                                                        )}
-                                                                        {reward.stampsRequired && (
-                                                                            <span>Cuesta: {reward.stampsRequired} sellos</span>
-                                                                        )}
-                                                                    </p>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Open in Google Maps Button */}
-                                            <div className="mt-3 pt-3 border-t border-gray-200">
-                                                <a
-                                                    href={`https://www.google.com/maps/dir/?api=1&destination=${business.location.latitude},${business.location.longitude}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center justify-center gap-2 w-full px-3 py-2 bg-brand-primary text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    </svg>
-                                                    Abrir en Google Maps
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </Popup>
-                                </Marker>
-                            );
-                        })}
-                    </MapContainer>
-                ) : (
-                    <div className="h-96 flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-50">
-                        <div className="text-center">
-                            <svg
-                                className="w-24 h-24 text-blue-400 mx-auto mb-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                                />
-                            </svg>
-                            <h3 className="text-2xl font-bold text-gray-700 mb-2">Error al cargar el mapa</h3>
-                            <p className="text-gray-500">No se pudo obtener la ubicación</p>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Business List */}
-            <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
-                <h3 className="text-2xl font-bold text-gray-800 mb-4 tracking-tight">Lista de Negocios</h3>
-
-                {/* Status Filters */}
-                <div className="mb-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Filtrar por Estado</h4>
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                        <button
-                            onClick={() => setActiveFilter('all')}
-                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'all'
-                                ? 'bg-brand-primary text-white hover:opacity-96'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            Todos ({allBusinesses.length})
-                        </button>
-                        <button
-                            onClick={() => setActiveFilter('visited')}
-                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'visited'
-                                ? 'bg-brand-primary text-white hover:opacity-96'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            Visitados ({visited.length})
-                        </button>
-                        <button
-                            onClick={() => setActiveFilter('rewards')}
-                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'rewards'
-                                ? 'bg-brand-primary text-white hover:opacity-96'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            Con Recompensas ({rewardsAvailable.length})
-                        </button>
-                        <button
-                            onClick={() => setActiveFilter('not_visited')}
-                            className={`px-4 py-2 rounded-pill font-medium transition-all duration-180 shadow-sm whitespace-nowrap flex-shrink-0 ${activeFilter === 'not_visited'
-                                ? 'bg-brand-primary text-white hover:opacity-96'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            No Visitados ({notVisited.length})
-                        </button>
-                    </div>
-                </div>
-
-                {/* Business Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredBusinesses.length > 0 ? filteredBusinesses.map((business) => {
-                        // Find the original business data to get the logo
-                        const businessWithLogo = nearbyBusinesses.find(b => b.id === business.id);
-                        const logoUrl = businessWithLogo?.logoUrl || null;
-
-                        return (
-                            <div
-                                key={business.id}
-                                className="border border-gray-200 rounded-lg p-4 hover:shadow-popover transition-all duration-180 cursor-pointer bg-white"
-                            >
-                                {/* Business Icon & Status */}
-                                <div className="flex items-start justify-between mb-3">
-                                    {logoUrl ? (
-                                        <div className="w-12 h-12 flex-shrink-0 rounded-full overflow-hidden border-2 border-brand-primary shadow-sm">
-                                            <img
-                                                src={logoUrl}
-                                                alt={business.name}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div className="bg-brand-primary text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg shadow-sm">
-                                            {business.name.charAt(0)}
-                                        </div>
-                                    )}
-                                    {getStatusBadge(business.status, business.hasRewards)}
-                                </div>
-
-                                {/* Business Info */}
-                                <h4 className="text-lg font-bold text-gray-800 mb-1 tracking-tight">{business.name}</h4>
-                                <p className="text-xs text-gray-500 mb-3 flex items-center">
-                                    <svg
-                                        className="w-4 h-4 mr-1"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                        />
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                        />
-                                    </svg>
-                                    {business.distance}
-                                </p>
-
-                                {/* Points/Stamps Info */}
-                                {business.status === 'visited' && (
-                                    <div className="flex items-center space-x-3 pt-3 border-t border-gray-200">
-                                        {business.points > 0 && (
-                                            <div className="flex items-center text-sm">
-                                                <span className="font-semibold text-brand-primary">{business.points}</span>
-                                                <span className="text-gray-600 ml-1">puntos</span>
-                                            </div>
-                                        )}
-                                        {business.stamps > 0 && (
-                                            <div className="flex items-center text-sm">
-                                                <span className="font-semibold text-accent-success">{business.stamps}</span>
-                                                <span className="text-gray-600 ml-1">sellos</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {business.status === 'rewards_available' && (
-                                    <div className="pt-3 border-t border-gray-200">
-                                        <p className="text-sm font-semibold text-accent-success">
-                                            🎁 {business.availableRewards} recompensa(s) disponible(s)
-                                        </p>
-                                    </div>
-                                )}
-
-                                {business.status === 'not_visited' && (
-                                    <div className="pt-3 border-t border-gray-200">
-                                        <p className="text-sm text-gray-500">¡Visita este negocio y acumula puntos!</p>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    }) : (
-                        <div className="col-span-full text-center py-8 text-gray-500">
-                            <p className="text-lg font-semibold">No hay negocios en esta categoría</p>
-                            <p className="text-sm mt-2">Intenta con otro filtro</p>
-                        </div>
-                    )}
-                </div>
-            </div>
+          {/* CTA */}
+          <a
+            href={gmaps}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-2.5 bg-brand-primary text-brand-onColor rounded-xl text-[13px] font-bold hover:opacity-90 active:scale-[.98] transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Cómo llegar
+          </a>
         </div>
-    );
-};
+      </div>
+    </div>
+  );
+}
 
-export default ClientMap;
+function BusinessRow({ biz, userPointsMap, rewardsMap, onSelect }) {
+  const userPts  = userPointsMap[biz.id] ?? {};
+  const rewards  = rewardsMap[biz.id]    ?? [];
+
+  return (
+    <button
+      onClick={() => onSelect(biz)}
+      className="w-full flex items-center gap-3.5 px-0 py-3.5 text-left hover:bg-neutral-50 active:bg-neutral-100 transition-colors rounded-xl"
+    >
+      <BusinessAvatar
+        logoUrl={biz.logoUrl}
+        name={biz.name}
+        size="lg"
+        className="border border-neutral-200 flex-shrink-0"
+      />
+
+      <div className="flex-1 min-w-0">
+        <p className="text-[14px] font-semibold text-neutral-900 truncate leading-tight">{biz.name}</p>
+        <p className="text-[11px] text-neutral-400 mt-0.5">{biz.distance}</p>
+        <div className="flex flex-wrap gap-1 mt-1.5">
+          {rewards.length > 0 && (
+            <span className="text-[10px] font-bold bg-accent-successBg text-accent-success px-2 py-0.5 rounded-full">
+              {rewards.length} recompensa{rewards.length > 1 ? 's' : ''}
+            </span>
+          )}
+          {(userPts.points ?? 0) > 0 && (
+            <span className="text-[10px] font-semibold bg-brand-muted text-brand-primary px-2 py-0.5 rounded-full">
+              {userPts.points} pts
+            </span>
+          )}
+          {(userPts.stamps ?? 0) > 0 && (
+            <span className="text-[10px] font-semibold bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">
+              {userPts.stamps} sellos
+            </span>
+          )}
+        </div>
+      </div>
+
+      <svg className="w-4 h-4 text-neutral-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
+const FILTERS = [
+  { key: 'all',        label: 'Todos'         },
+  { key: 'rewards',    label: 'Recompensas'   },
+  { key: 'visited',    label: 'Visitados'     },
+  { key: 'not_visited',label: 'Sin visitar'   },
+];
+
+export default function ClientMap() {
+  const [businesses,     setBusinesses]     = useState([]);
+  const [nearbyRaw,      setNearbyRaw]      = useState([]);
+  const [userPointsMap,  setUserPointsMap]  = useState({});
+  const [rewardsMap,     setRewardsMap]     = useState({});
+  const [loading,        setLoading]        = useState(true);
+  const [userLocation,   setUserLocation]   = useState(null);
+  const [locationError,  setLocationError]  = useState(null);
+  const [gettingLoc,     setGettingLoc]     = useState(true);
+  const [activeFilter,   setActiveFilter]   = useState('all');
+  const [selected,       setSelected]       = useState(null);
+  const [flyTarget,      setFlyTarget]      = useState(null);
+
+  // ── Get user location ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setUserLocation({ lat: 20.6597, lng: -103.3496 });
+      setLocationError('Geolocalización no soportada. Mostrando Guadalajara.');
+      setGettingLoc(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setUserLocation({ lat: coords.latitude, lng: coords.longitude });
+        setGettingLoc(false);
+      },
+      () => {
+        setUserLocation({ lat: 20.6597, lng: -103.3496 });
+        setLocationError('Ubicación no disponible. Mostrando Guadalajara.');
+        setGettingLoc(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }, []);
+
+  // ── Fetch businesses ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!userLocation) return;
+
+    const fetch = async () => {
+      try {
+        setLoading(true);
+
+        const [pointsData, nearbyData] = await Promise.all([
+          userPointsService.getUserPoints(),
+          businessService.getNearbyBusinesses(userLocation.lat, userLocation.lng, 50),
+        ]);
+
+        // Build userPoints map: { businessId → { points, stamps } }
+        const ptsMap = {};
+        (pointsData?.businessPoints ?? []).forEach((bp) => {
+          ptsMap[bp.businessId] = { points: bp.points || 0, stamps: bp.stamps || 0 };
+        });
+        setUserPointsMap(ptsMap);
+
+        const rawList = nearbyData?.businesses ?? [];
+        setNearbyRaw(rawList);
+
+        // Deduplicate by id, keep closest
+        const deduped = new Map();
+        rawList.forEach((b) => {
+          const prev = deduped.get(b.id);
+          if (!prev || (b.distance ?? Infinity) < (prev.distance ?? Infinity)) {
+            deduped.set(b.id, b);
+          }
+        });
+        const uniqueList = Array.from(deduped.values());
+
+        // Enrich with status + rewards
+        const rMap = {};
+        await Promise.all(
+          uniqueList.map(async (b) => {
+            try {
+              const userPts = ptsMap[b.id];
+              if (!userPts) { rMap[b.id] = []; return; }
+              const allRewards = await rewardService.getBusinessRewards(b.id);
+              rMap[b.id] = (allRewards ?? []).filter((r) => {
+                if (!r.isActive) return false;
+                if (r.pointsRequired != null) return userPts.points >= r.pointsRequired;
+                if (r.stampsRequired != null) return userPts.stamps >= r.stampsRequired;
+                return false;
+              });
+            } catch {
+              rMap[b.id] = [];
+            }
+          })
+        );
+        setRewardsMap(rMap);
+
+        const enriched = uniqueList.map((b) => {
+          const userPts = ptsMap[b.id];
+          const hasVisited = userPts && (userPts.points > 0 || userPts.stamps > 0);
+          return {
+            id:        b.id,
+            name:      b.username ?? b.name ?? 'Negocio',
+            logoUrl:   b.logoUrl ?? null,
+            location:  b.location,
+            distance:  b.distance != null ? `${b.distance.toFixed(1)} km` : '— km',
+            distanceRaw: b.distance ?? 9999,
+            status:    hasVisited ? 'visited' : 'not_visited',
+            hasRewards: (rMap[b.id]?.length ?? 0) > 0,
+          };
+        });
+
+        setBusinesses(enriched);
+      } catch (e) {
+        console.error('Error loading map data:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetch();
+  }, [userLocation]);
+
+  // ── Select a business (from list or marker) ────────────────────────────────
+  const handleSelect = useCallback((biz) => {
+    setSelected(biz);
+    if (biz.location?.latitude && biz.location?.longitude) {
+      setFlyTarget([biz.location.latitude, biz.location.longitude]);
+    }
+  }, []);
+
+  // ── Filtered list ──────────────────────────────────────────────────────────
+  const filtered = businesses.filter((b) => {
+    if (activeFilter === 'rewards')     return b.hasRewards;
+    if (activeFilter === 'visited')     return b.status === 'visited';
+    if (activeFilter === 'not_visited') return b.status === 'not_visited';
+    return true;
+  }).sort((a, b) => a.distanceRaw - b.distanceRaw);
+
+  const counts = {
+    all:         businesses.length,
+    rewards:     businesses.filter(b => b.hasRewards).length,
+    visited:     businesses.filter(b => b.status === 'visited').length,
+    not_visited: businesses.filter(b => b.status === 'not_visited').length,
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  return (
+    <div className="pb-8">
+
+      {/* ── Map ──────────────────────────────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden"
+        style={{ height: '60vh', minHeight: '300px' }}
+      >
+        {/* Loading overlay */}
+        {(gettingLoc || loading) && (
+          <MapLoading label={gettingLoc ? 'Obteniendo tu ubicación…' : 'Cargando negocios…'} />
+        )}
+
+        {userLocation && (
+          <MapContainer
+            center={[userLocation.lat, userLocation.lng]}
+            zoom={13}
+            style={{ height: '100%', width: '100%' }}
+            zoomControl={false}
+            className="z-0"
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            />
+
+            <FlyTo target={flyTarget} />
+
+            {/* User location */}
+            <Marker position={[userLocation.lat, userLocation.lng]} icon={USER_ICON} />
+
+            {/* Business markers */}
+            {businesses.map((biz) => {
+              if (!biz.location?.latitude || !biz.location?.longitude) return null;
+              const pinType = biz.hasRewards ? 'reward' : biz.status === 'visited' ? 'visited' : 'default';
+              return (
+                <Marker
+                  key={biz.id}
+                  position={[biz.location.latitude, biz.location.longitude]}
+                  icon={createPin(pinType, biz.logoUrl, biz.name)}
+                  eventHandlers={{ click: () => handleSelect(biz) }}
+                />
+              );
+            })}
+
+            <RecenterBtn center={[userLocation.lat, userLocation.lng]} />
+          </MapContainer>
+        )}
+
+        {/* Location error banner */}
+        {locationError && !selected && (
+          <LocationBanner message={locationError} />
+        )}
+
+        {/* Selected business card */}
+        {selected && (
+          <BusinessBottomCard
+            biz={selected}
+            userPointsMap={userPointsMap}
+            rewardsMap={rewardsMap}
+            onClose={() => setSelected(null)}
+          />
+        )}
+      </div>
+
+      {/* ── Below map ──────────────────────────────────────────────────────── */}
+      <div className="px-4 space-y-4 mt-4">
+
+        {/* Stats strip */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Cercanos',     value: counts.all,         accent: 'bg-brand-muted text-brand-primary'         },
+            { label: 'Recompensas',  value: counts.rewards,     accent: 'bg-accent-successBg text-accent-success'   },
+            { label: 'Visitados',    value: counts.visited,     accent: 'bg-accent-infoBg text-accent-info'         },
+          ].map((s) => (
+            <div key={s.label} className="bg-surface rounded-xl shadow-card p-3 text-center">
+              <p className={`text-[22px] font-extrabold leading-none ${s.accent.split(' ')[1]}`}>{s.value}</p>
+              <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide mt-1">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Filter pills */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setActiveFilter(f.key)}
+              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${
+                activeFilter === f.key
+                  ? 'bg-brand-primary text-brand-onColor'
+                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
+              }`}
+            >
+              {f.label}
+              {counts[f.key] > 0 && activeFilter !== f.key && (
+                <span className="ml-1.5 text-[11px] opacity-60">{counts[f.key]}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Business list */}
+        <div className="bg-surface rounded-xl shadow-card overflow-hidden">
+          <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-[14px] font-bold text-neutral-800">Negocios cercanos</h3>
+              <p className="text-[12px] text-neutral-400 mt-0.5">Radio de 50 km desde tu ubicación</p>
+            </div>
+            <span className="text-[12px] font-semibold text-neutral-400">{filtered.length} negocios</span>
+          </div>
+
+          {loading ? (
+            <div className="divide-y divide-neutral-50">
+              {[1,2,3].map(i => (
+                <div key={i} className="flex items-center gap-3.5 px-5 py-4 animate-pulse">
+                  <div className="w-12 h-12 rounded-full bg-neutral-100 flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-28 bg-neutral-100 rounded-full" />
+                    <div className="h-2.5 w-16 bg-neutral-100 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-12 text-center px-4">
+              <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+              </div>
+              <p className="text-[13px] font-semibold text-neutral-600">Sin negocios en esta categoría</p>
+              <p className="text-[12px] text-neutral-400">Prueba con otro filtro</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-neutral-50 px-5">
+              {filtered.map((biz) => (
+                <BusinessRow
+                  key={biz.id}
+                  biz={biz}
+                  userPointsMap={userPointsMap}
+                  rewardsMap={rewardsMap}
+                  onSelect={handleSelect}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
