@@ -119,7 +119,7 @@ export default function BusinessAdminDashboard() {
 
     const fetchClients = async () => {
       try {
-        const data = await businessDashboardService.getRecentClients(5);
+        const data = await businessDashboardService.getRecentClients(20);
         if (!cancelled) setRecentClients(data);
       } catch {
         if (!cancelled) setRecentClients([]);
