@@ -4,20 +4,21 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-const goldIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+const locationPin = L.divIcon({
+  className: '',
+  html: `
+    <div style="
+      width:36px;height:36px;border-radius:50%;
+      background:#6366f1;border:3px solid white;
+      box-shadow:0 3px 10px rgba(99,102,241,0.45);
+      display:flex;align-items:center;justify-content:center;
+    ">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+      </svg>
+    </div>`,
+  iconSize: [36, 36],
+  iconAnchor: [18, 18],
 });
 
 function DraggableMarker({ position, onPositionChange }) {
@@ -27,7 +28,7 @@ function DraggableMarker({ position, onPositionChange }) {
       draggable
       position={position}
       ref={markerRef}
-      icon={goldIcon}
+      icon={locationPin}
       eventHandlers={{
         dragend() {
           const latlng = markerRef.current?.getLatLng();
@@ -90,10 +91,10 @@ export function LocationMapSection({ street, city, state, position, onPositionCh
       description="El mapa se actualiza automáticamente. Arrastra el pin para mayor precisión."
     >
       <div className="isolate relative h-[280px] rounded-lg overflow-hidden border border-neutral-200">
-        <MapContainer center={position} zoom={15} style={{ height: '100%', width: '100%' }}>
+        <MapContainer center={position} zoom={15} style={{ height: '100%', width: '100%' }} zoomControl={false}>
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
           <MapUpdater center={position} />
           <DraggableMarker position={position} onPositionChange={onPositionChange} />

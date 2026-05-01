@@ -36,7 +36,7 @@ const ClientLayout = () => {
         onLogout={handleLogout}
       />
 
-      <main className="max-w-2xl mx-auto pb-24">
+      <main className="max-w-2xl mx-auto pt-5 pb-24">
         <Outlet />
       </main>
 
