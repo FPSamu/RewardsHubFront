@@ -246,6 +246,11 @@ const authService = {
   getMeClient:    () => authService.getMe(),
   getMeBusiness:  () => authService.getMe(),
 
+  getUserById: async (userId) => {
+    const res = await api.get(`/auth/${userId}`);
+    return res.data;
+  },
+
   // ── Cashier login (email + branch password, no Firebase) ────────────────────
 
   cashierLogin: async (email, password, rememberMe = false) => {
