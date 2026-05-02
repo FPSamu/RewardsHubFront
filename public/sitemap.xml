@@ -30,7 +30,7 @@
 
     <!-- Registro Cliente -->
     <url>
-        <loc>https://rewards-hub-opal.vercel.app/signup/client</loc>
+        <loc>https://rewards-hub-opal.vercel.app/signup</loc>
         <lastmod>2025-12-13</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.9</priority>
@@ -38,7 +38,7 @@
 
     <!-- Registro Negocio -->
     <url>
-        <loc>https://rewards-hub-opal.vercel.app/signup/business</loc>
+        <loc>https://rewards-hub-opal.vercel.app/signup</loc>
         <lastmod>2025-12-13</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.9</priority>

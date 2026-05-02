@@ -136,7 +136,7 @@ function Landing() {
 
                             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-12">
                                 <Link
-                                    to="/signup/business"
+                                    to="/signup"
                                     className="group px-6 sm:px-8 py-3 sm:py-4 bg-brand-primary text-white font-semibold rounded-full hover:opacity-90 transition-all hover:shadow-xl hover:scale-105 active:scale-95 flex items-center justify-center space-x-2 text-sm sm:text-base"
                                 >
                                     <span>Soy Negocio</span>
@@ -145,7 +145,7 @@ function Landing() {
                                     </svg>
                                 </Link>
                                 <Link
-                                    to="/signup/client"
+                                    to="/signup"
                                     className="group px-6 sm:px-8 py-3 sm:py-4 bg-white text-gray-800 font-semibold rounded-full hover:shadow-xl transition-all border-2 border-gray-200 hover:border-brand-primary hover:scale-105 active:scale-95 flex items-center justify-center space-x-2 text-sm sm:text-base"
                                 >
                                     <span>Soy Cliente</span>
