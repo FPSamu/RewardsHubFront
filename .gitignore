@@ -33,3 +33,5 @@ src/backendFiles
 
 .agents/
 .claude/
+
+skills-lock.json
