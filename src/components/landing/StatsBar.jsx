@@ -50,13 +50,13 @@ export function StatsBar() {
 
       <div className="max-w-4xl mx-auto px-5">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-0 sm:divide-x sm:divide-white/10">
-          <div className="sm:px-12 flex-1">
+          <div className="w-full sm:w-auto sm:px-12 sm:flex-1">
             <StatItem value={500} suffix="+" label="Negocios afiliados" />
           </div>
-          <div className="sm:px-12 flex-1">
+          <div className="w-full sm:w-auto sm:px-12 sm:flex-1">
             <StatItem value={10000} suffix="+" label="Clientes activos" />
           </div>
-          <div className="sm:px-12 flex-1">
+          <div className="w-full sm:w-auto sm:px-12 sm:flex-1">
             <StatItem value={2000000} suffix="+" label="Puntos otorgados" />
           </div>
         </div>

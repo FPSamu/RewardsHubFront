@@ -63,7 +63,7 @@ const ClientHome = () => {
           pointsData.businessPoints.map(async (bp) => {
             try {
               const biz = await businessService.getBusinessById(bp.businessId);
-              return { ...bp, businessName: biz.name || 'Negocio', businessEmail: biz.email, businessLogoUrl: biz.logoUrl };
+              return { ...bp, businessName: biz.username ?? biz.name ?? 'Negocio', businessEmail: biz.email, businessLogoUrl: biz.logoUrl };
             } catch {
               return { ...bp, businessName: 'Negocio' };
             }
@@ -119,7 +119,18 @@ const ClientHome = () => {
       }
 
       setUserPointsData(pointsData);
-      const myMemberships = await membershipService.getMyMemberships().catch(() => []);
+      const rawMemberships = await membershipService.getMyMemberships().catch(() => []);
+      const myMemberships = await Promise.all(
+        rawMemberships.map(async (m) => {
+          if (!m.businessId) return m;
+          try {
+            const biz = await businessService.getBusinessById(m.businessId);
+            return { ...m, businessName: biz.username ?? biz.name ?? m.businessName ?? 'Negocio' };
+          } catch {
+            return m;
+          }
+        })
+      );
       setMemberships(myMemberships);
       setError(null);
     } catch (err) {
