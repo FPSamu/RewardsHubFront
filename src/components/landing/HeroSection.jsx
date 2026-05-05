@@ -156,10 +156,11 @@ export function HeroSection() {
               >
                 <span className="text-white">Recompensas que</span>
               </h1>
-              <div className="relative overflow-hidden h-[1.1em] mb-3" style={{ fontSize: 'clamp(38px, 6vw, 68px)' }}>
+              <div className="relative mb-3" style={{ fontSize: 'clamp(26px, 7.5vw, 68px)' }}>
                 <span
-                  className="block font-extrabold leading-none"
+                  className="block font-extrabold"
                   style={{
+                    lineHeight: 1.25,
                     background: 'linear-gradient(135deg, #EBA626 0%, #FFD876 50%, #EBA626 100%)',
                     backgroundClip: 'text',
                     WebkitBackgroundClip: 'text',
@@ -167,8 +168,7 @@ export function HeroSection() {
                     backgroundSize: '200% auto',
                     animation: 'shimmerText 3s linear infinite',
                     opacity: animating ? 0 : 1,
-                    transform: animating ? 'translateY(20px)' : 'translateY(0)',
-                    transition: 'opacity 0.4s ease, transform 0.4s ease',
+                    transition: 'opacity 0.35s ease',
                   }}
                 >
                   {ROTATING_TEXTS[textIdx]}
@@ -246,10 +246,12 @@ export function HeroSection() {
       </div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-40" style={{ animation: 'fadeInUp 1s ease-out 1s both' }}>
-        <p className="text-white text-[10px] font-medium uppercase tracking-widest">Scroll</p>
-        <div className="w-4 h-7 rounded-full border border-white/40 flex items-start justify-center pt-1.5">
-          <div className="w-1 h-1.5 rounded-full bg-white" style={{ animation: 'scrollDot 1.5s ease-in-out infinite' }} />
+      <div className="absolute bottom-8 inset-x-0 flex justify-center opacity-40" style={{ animation: 'fadeInUp 1s ease-out 1s both' }}>
+        <div className="flex flex-col items-center gap-1.5">
+          <p className="text-white text-[10px] font-medium uppercase tracking-widest">Scroll</p>
+          <div className="w-4 h-7 rounded-full border border-white/40 flex items-start justify-center pt-1.5">
+            <div className="w-1 h-1.5 rounded-full bg-white" style={{ animation: 'scrollDot 1.5s ease-in-out infinite' }} />
+          </div>
         </div>
       </div>
     </section>
