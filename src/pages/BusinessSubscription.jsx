@@ -100,7 +100,7 @@ const BusinessSubscription = () => {
     try {
       await subscriptionService.verifySubscription();
       setSuccess('¡Pago exitoso! Tu suscripción está activa.');
-      setTimeout(() => navigate('/business/dashboard'), 2000);
+      setTimeout(() => { window.location.href = '/business/dashboard'; }, 1500);
     } catch (err) {
       console.error('Error verifying payment:', err);
       setError('Error al verificar el pago. Por favor, contacta a soporte.');
@@ -116,13 +116,13 @@ const BusinessSubscription = () => {
 
     try {
       if (plan.id === 'lifetime_access') {
-        const { url } = await subscriptionService.createCheckoutSession('lifetime', 'lifetime');
-        if (url) {
-          window.location.href = url;
+        const result = await subscriptionService.createCheckoutSession('lifetime_access', 'lifetime_access');
+        if (result?.url) {
+          window.location.href = result.url;
         } else {
           await subscriptionService.verifySubscription();
           setSuccess('¡Suscripción lifetime activada! Redirigiendo...');
-          setTimeout(() => navigate('/business/dashboard'), 2000);
+          setTimeout(() => { window.location.href = '/business/dashboard'; }, 1500);
         }
       } else {
         const { url } = await subscriptionService.createCheckoutSession(plan.id, plan.id);
