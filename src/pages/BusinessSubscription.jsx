@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import subscriptionService from '../services/subscriptionService';
+import subscriptionService, { clearSubscriptionCache } from '../services/subscriptionService';
 import authService from '../services/authService';
 
 import { SubscriptionHeader }  from '../components/subscription/SubscriptionHeader';
@@ -96,11 +96,17 @@ const BusinessSubscription = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  const redirectAfterActivation = () => {
+    clearSubscriptionCache();
+    authService.logout();
+    window.location.href = '/login?subscribed=true';
+  };
+
   const verifyPayment = async () => {
     try {
       await subscriptionService.verifySubscription();
-      setSuccess('¡Pago exitoso! Tu suscripción está activa.');
-      setTimeout(() => { window.location.href = '/business/dashboard'; }, 1500);
+      setSuccess('¡Suscripción activada! Redirigiendo al login...');
+      setTimeout(redirectAfterActivation, 1500);
     } catch (err) {
       console.error('Error verifying payment:', err);
       setError('Error al verificar el pago. Por favor, contacta a soporte.');
@@ -121,8 +127,8 @@ const BusinessSubscription = () => {
           window.location.href = result.url;
         } else {
           await subscriptionService.verifySubscription();
-          setSuccess('¡Suscripción lifetime activada! Redirigiendo...');
-          setTimeout(() => { window.location.href = '/business/dashboard'; }, 1500);
+          setSuccess('¡Suscripción activada! Redirigiendo al login...');
+          setTimeout(redirectAfterActivation, 1500);
         }
       } else {
         const { url } = await subscriptionService.createCheckoutSession(plan.id, plan.id);
