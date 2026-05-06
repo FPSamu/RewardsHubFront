@@ -68,8 +68,14 @@ function BusinessProtectedRoute({ children }) {
     // Allow access to subscription page and location setup page without subscription check
     const isLocationSetupPage = location.pathname === '/business/location-setup';
     const isSubscriptionPage = location.pathname === '/business/subscription';
-    const needsSubscription = subscriptionStatus &&
-        (subscriptionStatus.status === 'inactive' || subscriptionStatus.status === 'cancelled');
+    const ACTIVE_STATUSES    = ['active', 'lifetime', 'trialing'];
+    const ACTIVE_MEMBERSHIPS = ['active', 'lifetime'];
+    const hasActiveSubscription = subscriptionStatus && (
+        ACTIVE_STATUSES.includes(subscriptionStatus.status) ||
+        ACTIVE_MEMBERSHIPS.includes(subscriptionStatus.membershipStatus) ||
+        subscriptionStatus.planType === 'lifetime_access'
+    );
+    const needsSubscription = subscriptionStatus && !hasActiveSubscription;
 
     // Allow access to location setup page always (for new businesses)
     if (isLocationSetupPage) {

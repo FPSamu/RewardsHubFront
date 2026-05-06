@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import authService from '../services/authService';
 import SEO from '../components/SEO';
 import { AnimatedAuthLayout } from '../components/auth/AnimatedAuthLayout';
@@ -17,6 +17,8 @@ const dashboardPath = (apiRole) =>
 function AuthPage() {
   const location = useLocation();
   const navigate  = useNavigate();
+  const [searchParams] = useSearchParams();
+  const justSubscribed = searchParams.get('subscribed') === 'true';
 
   const initialMode = location.pathname === '/signup' ? 'signup' : 'login';
 
@@ -196,8 +198,19 @@ function AuthPage() {
     onSwitchToLogin: () => switchMode('login'),
   };
 
+  const subscribedBanner = justSubscribed && (
+    <div className="w-full max-w-sm mx-auto mb-4 px-4 py-3 rounded-2xl flex items-center gap-2.5 text-[13px] font-medium"
+      style={{ background: 'rgba(34,160,107,0.12)', border: '1px solid rgba(34,160,107,0.35)', color: '#22A06B' }}>
+      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      ¡Suscripción activada! Inicia sesión para acceder a tu dashboard.
+    </div>
+  );
+
   const form = (isMobile) => (
     <div style={formContentStyle}>
+      {displayedMode === 'login' && subscribedBanner}
       {displayedMode === 'login'
         ? <LoginFormSection  {...loginProps}  isMobile={isMobile} />
         : <SignUpFormSection {...signupProps} isMobile={isMobile} />}
