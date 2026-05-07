@@ -97,8 +97,7 @@ const BusinessSubscription = () => {
   }, [searchParams]);
 
   const redirectAfterActivation = () => {
-    clearSubscriptionCache();
-    authService.logout();
+    authService.clearStorage(); // synchronous — clears localStorage + sessionStorage instantly
     window.location.href = '/login?subscribed=true';
   };
 
