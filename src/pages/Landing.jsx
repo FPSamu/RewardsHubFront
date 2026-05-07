@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { APP_URL } from '../utils/appUrl';
 import authService from '../services/authService';
 import SEO from '../components/SEO';
 import AOS from 'aos';
@@ -86,7 +87,7 @@ function Landing() {
             {
               "@type": "Organization",
               "name": "RewardsHub",
-              "url": "https://rewards-hub-opal.vercel.app/",
+              "url": APP_URL + "/",
               "logo": "https://rewards-hub-app.s3.us-east-2.amazonaws.com/app/logoRewardsHub.png",
               "description": "Plataforma universal para programas de lealtad y fidelización entre negocios y clientes",
               "foundingDate": "2024",
@@ -99,10 +100,10 @@ function Landing() {
             {
               "@type": "WebSite",
               "name": "RewardsHub",
-              "url": "https://rewards-hub-opal.vercel.app/",
+              "url": APP_URL + "/",
               "potentialAction": {
                 "@type": "SearchAction",
-                "target": "https://rewards-hub-opal.vercel.app/client/dashboard/map?search={search_term_string}",
+                "target": APP_URL + "/client/dashboard/map?search={search_term_string}",
                 "query-input": "required name=search_term_string"
               }
             }

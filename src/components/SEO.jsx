@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { APP_URL } from '../utils/appUrl';
 
 /**
  * SEO Component - Maneja meta tags dinámicos para cada página
@@ -19,7 +20,7 @@ function SEO({
     structuredData = null
 }) {
     const location = useLocation();
-    const siteUrl = 'https://rewards-hub-opal.vercel.app';
+    const siteUrl = APP_URL;
     const canonicalUrl = `${siteUrl}${location.pathname}`;
 
     useEffect(() => {

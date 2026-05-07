@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { APP_URL } from '../../utils/appUrl';
 
 const ROTATING_TEXTS = ['premian tu lealtad', 'impulsan tu negocio', 'conectan negocios'];
 
@@ -58,8 +59,7 @@ function PointsCard() {
 
 // Bottom-left — real QR code pointing to /signup
 function ScanCard() {
-  const qrUrl =
-    'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https%3A%2F%2Frewards-hub-opal.vercel.app%2Fsignup&color=EBA626&bgcolor=14100A&margin=6';
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(APP_URL + '/signup')}&color=EBA626&bgcolor=14100A&margin=6`;
   return (
     <FloatingCard
       className="p-3 w-36"
