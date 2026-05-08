@@ -1,4 +1,5 @@
 import api from "./api";
+import { getDeviceTimezone } from "../utils/timezone";
 
 export const userPointsService = {
   // Get user points data for the authenticated user
@@ -34,7 +35,10 @@ export const userPointsService = {
   // Add points/stamps to a user (business action)
   addPoints: async (data) => {
     try {
-      const response = await api.post("/user-points/add", data);
+      const response = await api.post("/user-points/add", {
+        ...data,
+        timezone: getDeviceTimezone(),
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -54,7 +58,10 @@ export const userPointsService = {
   // Subtract points/stamps from a user (business action - for redeeming rewards)
   subtractPoints: async (data) => {
     try {
-      const response = await api.post("/user-points/subtract", data);
+      const response = await api.post("/user-points/subtract", {
+        ...data,
+        timezone: getDeviceTimezone(),
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

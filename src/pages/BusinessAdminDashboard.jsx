@@ -161,7 +161,11 @@ export default function BusinessAdminDashboard() {
         <SectionTitle>Gestión</SectionTitle>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RewardsSection rewards={rewards} loading={loadingRewards} />
-          <LocationsSection locations={business?.locations} loading={!business} />
+          <LocationsSection
+            locations={business?.locations}
+            loading={!business}
+            onLocationsChange={(locs) => setBusiness((b) => b ? { ...b, locations: locs } : b)}
+          />
         </div>
       </div>
 

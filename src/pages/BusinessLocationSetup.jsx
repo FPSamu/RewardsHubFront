@@ -303,7 +303,7 @@ export default function BusinessLocationSetup() {
                       </div>
                     </div>
                     
-                    {/* Contraseña de sucursal — solo para cuentas Google sin password configurado */}
+                    {/* Contraseña de sucursal — solo para cuentas Google sin password configurado
                     {needsBranchPassword && !editingId && (
                       <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 space-y-3">
                         <div className="flex items-start gap-2">
@@ -330,7 +330,7 @@ export default function BusinessLocationSetup() {
                           <p className="text-xs text-amber-700 mt-1">Los cajeros usarán tu correo + esta contraseña para acceder.</p>
                         </div>
                       </div>
-                    )}
+                    )} */}
 
                     {error && <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">{error}</div>}
                   </div>
