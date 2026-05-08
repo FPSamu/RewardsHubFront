@@ -1,4 +1,5 @@
 import api from "./api";
+import { getDeviceTimezone } from "../utils/timezone";
 
 const deliveryService = {
   generateCode: async (payload) => {
@@ -12,7 +13,10 @@ const deliveryService = {
 
   claimCode: async (code) => {
     try {
-      const response = await api.post("/delivery/claim", { code });
+      const response = await api.post("/delivery/claim", {
+        code,
+        timezone: getDeviceTimezone(),
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

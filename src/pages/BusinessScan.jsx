@@ -88,8 +88,8 @@ const BusinessScan = () => {
                     stamps: stampSystems || []
                 });
 
-                // Fetch business rewards
-                const rewardsData = await rewardService.getBusinessRewards(businessData.id);
+                // Fetch business rewards (all, including inactive, to know if any have been created)
+                const rewardsData = await rewardService.getBusinessRewards(businessData.id, true);
                 setRewards(rewardsData);
 
                 // Fetch membership plans
@@ -379,8 +379,8 @@ const BusinessScan = () => {
             return;
         }
 
-        // 2. Validar sucursal cuando hay múltiples
-        if (business?.locations?.length > 1 && !selectedLocation) {
+        // 2. Validar sucursal cuando hay al menos una configurada
+        if (business?.locations?.length > 0 && !selectedLocation) {
             setError('Por favor selecciona una sucursal');
             return;
         }
@@ -615,8 +615,40 @@ const BusinessScan = () => {
                 </div>
             </div>
 
+            {/* ── No locations warning ───────────────────────────────────────── */}
+            {business && !business.locations?.length && (
+                <div className="bg-accent-warningBg border border-accent-warning/30 rounded-xl p-5 flex items-start gap-3">
+                    <svg className="w-5 h-5 text-accent-warning flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <div>
+                        <p className="text-[13px] font-semibold text-accent-warning">Sin sucursales configuradas</p>
+                        <p className="text-[12px] text-accent-warning/80 mt-0.5">
+                            Debes agregar al menos una sucursal antes de poder escanear códigos QR.
+                            Configúrala en <span className="font-semibold">Ajustes → Sucursales</span>.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* ── No rewards warning ────────────────────────────────────────────── */}
+            {business && !!business.locations?.length && rewards.length === 0 && (
+                <div className="bg-accent-warningBg border border-accent-warning/30 rounded-xl p-5 flex items-start gap-3">
+                    <svg className="w-5 h-5 text-accent-warning flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <div>
+                        <p className="text-[13px] font-semibold text-accent-warning">Sin recompensas creadas</p>
+                        <p className="text-[12px] text-accent-warning/80 mt-0.5">
+                            Debes crear al menos una recompensa antes de poder escanear códigos QR.
+                            Configúrala en <span className="font-semibold">Recompensas</span>.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* ── Form Step ──────────────────────────────────────────────────── */}
-            {step === 'form' && (
+            {step === 'form' && !!business?.locations?.length && rewards.length > 0 && (
                 <div className="space-y-4">
                     {/* Transaction type selector */}
                     <div className="bg-surface rounded-xl shadow-card p-5">
@@ -663,7 +695,8 @@ const BusinessScan = () => {
                     {/* Fields card */}
                     {(rewardType === 'both' || rewardType === 'delivery') && (
                         <div className="bg-surface rounded-xl shadow-card p-5 space-y-5">
-                            {/* Purchase amount */}
+                            {/* Purchase amount — only when a points system exists */}
+                            {rewardSystems.points && (
                             <div>
                                 <label htmlFor="purchaseAmount" className="block text-[12px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">
                                     Monto de compra (MXN)
@@ -692,6 +725,7 @@ const BusinessScan = () => {
                                     );
                                 })()}
                             </div>
+                            )}
 
                             {/* Stamps section */}
                             {rewardSystems.stamps.length > 0 && (
@@ -797,8 +831,8 @@ const BusinessScan = () => {
                         </div>
                     )}
 
-                    {/* Location selector */}
-                    {business?.locations?.length > 1 && (
+                    {/* Location selector — always visible */}
+                    {business && (
                         <div className="bg-surface rounded-xl shadow-card p-5">
                             <label className="block text-[12px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">
                                 Sucursal
@@ -806,15 +840,22 @@ const BusinessScan = () => {
                             <select
                                 value={selectedLocation || ''}
                                 onChange={(e) => setSelectedLocation(e.target.value)}
-                                className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all bg-white"
+                                disabled={!business.locations?.length}
+                                className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <option value="">Selecciona una sucursal</option>
-                                {business.locations.map(loc => (
-                                    <option key={loc._id} value={loc._id}>
-                                        {loc.name || loc.formattedAddress || loc.address}
-                                        {loc.isMain ? ' (Principal)' : ''}
-                                    </option>
-                                ))}
+                                {!business.locations?.length ? (
+                                    <option value="">Sin sucursales configuradas</option>
+                                ) : (
+                                    <>
+                                        <option value="">Selecciona una sucursal</option>
+                                        {business.locations.map(loc => (
+                                            <option key={loc._id} value={loc._id}>
+                                                {loc.name || loc.formattedAddress || loc.address}
+                                                {loc.isMain ? ' (Principal)' : ''}
+                                            </option>
+                                        ))}
+                                    </>
+                                )}
                             </select>
                         </div>
                     )}

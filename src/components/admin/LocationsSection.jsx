@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import businessService from '../../services/businessService';
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -39,38 +40,85 @@ function ScheduleBadges({ schedule }) {
   );
 }
 
-function LocationCard({ location, onEdit }) {
+function LocationCard({ location, onEdit, onDelete }) {
   const { street, city, state } = parseAddress(location.address);
-  const hasSchedule = location.schedule && DAY_KEYS.some((k) => location.schedule[k]?.open);
+  const [pendingDelete, setPendingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
+    try {
+      await onDelete(location._id);
+    } finally {
+      setDeleting(false);
+      setPendingDelete(false);
+    }
+  };
 
   return (
-    <div className="flex items-start justify-between gap-3 py-3.5 border-b border-neutral-50 last:border-0">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-[13px] font-bold text-neutral-800 leading-tight">{location.name}</p>
-          {location.isMain && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
-              Principal
-            </span>
-          )}
+    <div className="py-3.5 border-b border-neutral-50 last:border-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[13px] font-bold text-neutral-800 leading-tight">{location.name}</p>
+            {location.isMain && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
+                Principal
+              </span>
+            )}
+          </div>
+
+          <p className="text-[12px] text-neutral-500 mt-0.5 leading-snug">
+            {[street, city, state].filter(Boolean).join(', ')}
+          </p>
         </div>
 
-        <p className="text-[12px] text-neutral-500 mt-0.5 leading-snug">
-          {[street, city, state].filter(Boolean).join(', ')}
-        </p>
-
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => onEdit(location)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 text-[12px] font-semibold text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+            Editar
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingDelete(true)}
+            disabled={deleting}
+            title="Eliminar sucursal"
+            className="p-1.5 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors disabled:opacity-50"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => onEdit(location)}
-        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 text-[12px] font-semibold text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
-      >
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-        </svg>
-        Editar
-      </button>
+      {pendingDelete && (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-[12px] font-semibold text-neutral-600">¿Eliminar sucursal?</span>
+          <button
+            type="button"
+            onClick={handleConfirmDelete}
+            disabled={deleting}
+            className="px-2.5 py-1 rounded-pill bg-accent-danger text-white text-[11px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {deleting ? '…' : 'Confirmar'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingDelete(false)}
+            disabled={deleting}
+            className="px-2.5 py-1 rounded-pill border border-neutral-200 text-[11px] font-semibold text-neutral-600 hover:bg-neutral-50"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -110,11 +158,16 @@ function SkeletonCard() {
   );
 }
 
-export function LocationsSection({ locations, loading }) {
+export function LocationsSection({ locations, loading, onLocationsChange }) {
   const navigate = useNavigate();
 
   const handleEdit = (loc) => navigate('/business/dashboard/locations', { state: { editId: loc._id } });
   const handleAdd  = () => navigate('/business/dashboard/locations');
+
+  const handleDelete = async (id) => {
+    const updatedBiz = await businessService.deleteLocation(id);
+    if (onLocationsChange) onLocationsChange(updatedBiz.locations ?? []);
+  };
 
   return (
     <div className="bg-surface rounded-xl shadow-card overflow-hidden">
@@ -147,7 +200,7 @@ export function LocationsSection({ locations, loading }) {
           <EmptyState onAdd={handleAdd} />
         ) : (
           locations.map((loc) => (
-            <LocationCard key={loc._id} location={loc} onEdit={handleEdit} />
+            <LocationCard key={loc._id} location={loc} onEdit={handleEdit} onDelete={handleDelete} />
           ))
         )}
       </div>

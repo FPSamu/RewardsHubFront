@@ -62,6 +62,16 @@ export const rewardService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Delete a reward
+  deleteReward: async (rewardId) => {
+    try {
+      const response = await api.delete(`/rewards/${rewardId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default rewardService;

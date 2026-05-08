@@ -188,9 +188,11 @@ function SkeletonRow() {
 }
 
 // ─── Reward Card ──────────────────────────────────────────────────────────────
-function RewardCard({ reward, onEdit, onToggleActive }) {
+function RewardCard({ reward, onEdit, onToggleActive, onDelete }) {
   const [pendingToggle, setPendingToggle] = useState(false);
   const [toggling, setToggling]           = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(false);
+  const [deleting, setDeleting]           = useState(false);
 
   const isPoints   = reward.pointsRequired != null;
   const req        = isPoints ? reward.pointsRequired : reward.stampsRequired;
@@ -204,6 +206,16 @@ function RewardCard({ reward, onEdit, onToggleActive }) {
     } finally {
       setToggling(false);
       setPendingToggle(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await onDelete(reward.id ?? reward._id);
+    } finally {
+      setDeleting(false);
+      setPendingDelete(false);
     }
   };
 
@@ -264,7 +276,7 @@ function RewardCard({ reward, onEdit, onToggleActive }) {
           </button>
           <button
             type="button"
-            onClick={() => setPendingToggle(true)}
+            onClick={() => { setPendingToggle(true); setPendingDelete(false); }}
             title={reward.isActive ? 'Desactivar' : 'Activar'}
             className={`p-1.5 rounded-lg border transition-colors ${
               reward.isActive
@@ -282,8 +294,40 @@ function RewardCard({ reward, onEdit, onToggleActive }) {
               </svg>
             )}
           </button>
+          <button
+            type="button"
+            onClick={() => { setPendingDelete(true); setPendingToggle(false); }}
+            title="Eliminar"
+            className="p-1.5 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
         </div>
       </div>
+
+      {pendingDelete && (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-[12px] font-semibold text-neutral-600">¿Eliminar recompensa?</span>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="px-2.5 py-1 rounded-pill bg-accent-danger text-white text-[11px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {deleting ? <Spinner light /> : 'Confirmar'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingDelete(false)}
+            disabled={deleting}
+            className="px-2.5 py-1 rounded-pill border border-neutral-200 text-[11px] font-semibold text-neutral-600 hover:bg-neutral-50"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
 
       {pendingToggle && (
         <div className="mt-3 flex items-center gap-2">
@@ -315,7 +359,7 @@ function RewardCard({ reward, onEdit, onToggleActive }) {
 }
 
 // ─── Rewards Panel ────────────────────────────────────────────────────────────
-function RewardsPanel({ rewards, loading, onEdit, onToggleActive, onNew }) {
+function RewardsPanel({ rewards, loading, onEdit, onToggleActive, onDelete, onNew }) {
   const [showInactive, setShowInactive] = useState(false);
 
   const active   = rewards.filter((r) => r.isActive);
@@ -373,6 +417,7 @@ function RewardsPanel({ rewards, loading, onEdit, onToggleActive, onNew }) {
                 reward={r}
                 onEdit={onEdit}
                 onToggleActive={onToggleActive}
+                onDelete={onDelete}
               />
             ))}
             {inactive.length > 0 && (
@@ -402,6 +447,7 @@ function RewardsPanel({ rewards, loading, onEdit, onToggleActive, onNew }) {
                       reward={r}
                       onEdit={onEdit}
                       onToggleActive={onToggleActive}
+                      onDelete={onDelete}
                     />
                   ))}
               </>
@@ -1095,6 +1141,11 @@ export default function BusinessRewards() {
     setRewards((prev) => prev.map((r) => (r.id === id || r._id === id) ? { ...r, isActive: nextActive } : r));
   };
 
+  const handleDeleteReward = async (id) => {
+    await rewardService.deleteReward(id);
+    setRewards((prev) => prev.filter((r) => r.id !== id && r._id !== id));
+  };
+
   const openEdit = (reward) => {
     setEditingReward(reward);
     setEditForm({
@@ -1352,6 +1403,7 @@ export default function BusinessRewards() {
             loading={false}
             onEdit={openEdit}
             onToggleActive={handleToggleActive}
+            onDelete={handleDeleteReward}
             onNew={openCreate}
           />
         </div>
