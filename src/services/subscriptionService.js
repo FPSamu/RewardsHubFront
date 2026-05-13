@@ -1,4 +1,5 @@
 import api from "./api";
+import { APP_URL } from "../utils/appUrl";
 
 // ─── Local cache ──────────────────────────────────────────────────────────────
 // TTL: 10 minutes. Cleared on logout, payment success, and cancellation.
@@ -50,9 +51,19 @@ export const subscriptionService = {
   },
 
   // Create Stripe checkout session
+  // successUrl / cancelUrl are sent from the frontend so Stripe returns to the
+  // correct origin (localhost in dev, production domain in prod) instead of a
+  // URL hardcoded in the backend.
   createCheckoutSession: async (priceId, plan) => {
     try {
-      const response = await api.post("/subscription/checkout", { priceId, plan });
+      const successUrl = `${APP_URL}/business/subscription?session_id={CHECKOUT_SESSION_ID}&status=success`;
+      const cancelUrl  = `${APP_URL}/business/subscription?canceled=true`;
+      const response = await api.post("/subscription/checkout", {
+        priceId,
+        plan,
+        successUrl,
+        cancelUrl,
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -80,13 +91,16 @@ export const subscriptionService = {
     }
   },
 
-  // Verify subscription after payment — clears cache and re-fetches fresh data
+  // Verify subscription after payment — clears cache only.
+  // Do NOT write the verify response to cache: /subscription/verify may return
+  // a different shape than /subscription/status, which would cause
+  // BusinessProtectedRoute to misread hasActiveSubscription as false.
+  // The next getSubscriptionStatus() call will hit /subscription/status directly
+  // and cache the correctly-shaped data.
   verifySubscription: async () => {
     try {
       const response = await api.get("/subscription/verify");
       clearSubscriptionCache();
-      // Write the verified status immediately so next check is instant
-      if (response.data) writeCache(response.data);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
