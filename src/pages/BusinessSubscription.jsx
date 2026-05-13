@@ -96,16 +96,14 @@ const BusinessSubscription = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const redirectAfterActivation = () => {
-    authService.clearStorage(); // synchronous — clears localStorage + sessionStorage instantly
-    window.location.href = '/login?subscribed=true';
-  };
-
   const verifyPayment = async () => {
     try {
       await subscriptionService.verifySubscription();
-      setSuccess('¡Suscripción activada! Redirigiendo al login...');
-      setTimeout(redirectAfterActivation, 1500);
+      // Cache was cleared by verifySubscription(). Use a full-page redirect so
+      // BusinessProtectedRoute mounts completely fresh and calls /subscription/status
+      // directly (no stale cache, no shape-mismatch risk).
+      setSuccess('¡Suscripción activada! Redirigiendo al panel...');
+      setTimeout(() => { window.location.href = '/business/dashboard'; }, 1500);
     } catch (err) {
       console.error('Error verifying payment:', err);
       setError('Error al verificar el pago. Por favor, contacta a soporte.');
@@ -126,8 +124,8 @@ const BusinessSubscription = () => {
           window.location.href = result.url;
         } else {
           await subscriptionService.verifySubscription();
-          setSuccess('¡Suscripción activada! Redirigiendo al login...');
-          setTimeout(redirectAfterActivation, 1500);
+          setSuccess('¡Suscripción activada! Redirigiendo al panel...');
+          setTimeout(() => { window.location.href = '/business/dashboard'; }, 1500);
         }
       } else {
         const { url } = await subscriptionService.createCheckoutSession(plan.id, plan.id);
