@@ -22,6 +22,7 @@ export function LandingFooter() {
             <Link to="/signup" className="hover:text-white/70 transition-colors">Para negocios</Link>
             <Link to="/signup" className="hover:text-white/70 transition-colors">Para clientes</Link>
             <Link to="/terminos" className="hover:text-white/70 transition-colors">Términos y condiciones</Link>
+            <Link to="/privacidad" className="hover:text-white/70 transition-colors">Aviso de privacidad</Link>
           </div>
 
           {/* Copyright */}

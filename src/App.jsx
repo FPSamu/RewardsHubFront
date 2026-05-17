@@ -22,6 +22,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import BusinessProtectedRoute from './components/BusinessProtectedRoute'
 import PinProtectedRoute from './components/PinProtectedRoute'
 import TermsPage from './pages/TermsPage'
+import PrivacyPage from './pages/PrivacyPage'
 import BusinessAdminDashboard from './pages/BusinessAdminDashboard'
 import BusinessSettings from './pages/BusinessSettings'
 import BusinessLocations from './pages/BusinessLocations'
@@ -38,6 +39,7 @@ function App() {
                     <Route path="/login" element={<AuthPage />} />
                     <Route path="/signup" element={<AuthPage />} />
                     <Route path="/terminos" element={<TermsPage />} />
+                    <Route path="/privacidad" element={<PrivacyPage />} />
 
                     <Route path="/verify-pending" element={<VerifyPending />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
