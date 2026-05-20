@@ -6,6 +6,7 @@ import businessService from '../services/businessService';
 import userPointsService from '../services/userPointsService';
 import rewardService from '../services/rewardService';
 import { BusinessAvatar } from '../components/client/shared/BusinessAvatar';
+import { BusinessRewardsModal } from '../components/client/home/modals/BusinessRewardsModal';
 
 // ─── Leaflet markers ─────────────────────────────────────────────────────────
 
@@ -144,7 +145,7 @@ function LocationBanner({ message }) {
   );
 }
 
-function BusinessBottomCard({ biz, userPointsMap, rewardsMap, onClose }) {
+function BusinessBottomCard({ biz, userPointsMap, rewardsMap, onClose, onShowRewards }) {
   if (!biz) return null;
   const userPts = userPointsMap[biz.id] ?? {};
   const rewards = rewardsMap[biz.id] ?? [];
@@ -221,19 +222,30 @@ function BusinessBottomCard({ biz, userPointsMap, rewardsMap, onClose }) {
             </div>
           )}
 
-          {/* CTA */}
-          <a
-            href={gmaps}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-2.5 bg-brand-primary text-brand-onColor rounded-xl text-[13px] font-bold hover:opacity-90 active:scale-[.98] transition-all"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Cómo llegar
-          </a>
+          {/* CTA row */}
+          <div className="flex gap-2">
+            <a
+              href={gmaps}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-brand-primary text-brand-onColor rounded-xl text-[13px] font-bold hover:opacity-90 active:scale-[.98] transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Cómo llegar
+            </a>
+            <button
+              onClick={() => onShowRewards(biz)}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-accent-successBg text-accent-success rounded-xl text-[13px] font-bold hover:opacity-90 active:scale-[.98] transition-all border border-accent-successBorder"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
+              Recompensas
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -303,9 +315,12 @@ export default function ClientMap() {
   const [userLocation,   setUserLocation]   = useState(null);
   const [locationError,  setLocationError]  = useState(null);
   const [gettingLoc,     setGettingLoc]     = useState(true);
-  const [activeFilter,   setActiveFilter]   = useState('all');
-  const [selected,       setSelected]       = useState(null);
-  const [flyTarget,      setFlyTarget]      = useState(null);
+  const [activeFilter,      setActiveFilter]      = useState('all');
+  const [selected,          setSelected]          = useState(null);
+  const [flyTarget,         setFlyTarget]         = useState(null);
+  const [showRewardsModal,  setShowRewardsModal]  = useState(false);
+  const [bizRewards,        setBizRewards]        = useState([]);
+  const [loadingBizRewards, setLoadingBizRewards] = useState(false);
 
   // ── Get user location ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -409,6 +424,21 @@ export default function ClientMap() {
     fetch();
   }, [userLocation]);
 
+  // ── Show rewards modal ─────────────────────────────────────────────────────
+  const handleShowRewards = useCallback(async (biz) => {
+    setShowRewardsModal(true);
+    setBizRewards([]);
+    setLoadingBizRewards(true);
+    try {
+      const all = await rewardService.getBusinessRewards(biz.id);
+      setBizRewards((all ?? []).filter((r) => r.isActive));
+    } catch {
+      setBizRewards([]);
+    } finally {
+      setLoadingBizRewards(false);
+    }
+  }, []);
+
   // ── Select a business (from list or marker) ────────────────────────────────
   const handleSelect = useCallback((biz) => {
     setSelected(biz);
@@ -488,12 +518,13 @@ export default function ClientMap() {
         )}
 
         {/* Selected business card */}
-        {selected && (
+        {selected && !showRewardsModal && (
           <BusinessBottomCard
             biz={selected}
             userPointsMap={userPointsMap}
             rewardsMap={rewardsMap}
             onClose={() => setSelected(null)}
+            onShowRewards={handleShowRewards}
           />
         )}
       </div>
@@ -582,6 +613,21 @@ export default function ClientMap() {
           )}
         </div>
       </div>
+
+      {/* Rewards modal */}
+      {showRewardsModal && selected && (
+        <BusinessRewardsModal
+          business={{
+            businessName:    selected.name,
+            businessLogoUrl: selected.logoUrl,
+            points: userPointsMap[selected.id]?.points ?? 0,
+            stamps: userPointsMap[selected.id]?.stamps ?? 0,
+          }}
+          rewards={bizRewards}
+          loading={loadingBizRewards}
+          onClose={() => setShowRewardsModal(false)}
+        />
+      )}
     </div>
   );
 }
