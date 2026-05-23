@@ -305,6 +305,12 @@ const BusinessScan = () => {
     }, [step, processTransaction]);
 
     const handleGenerateDeliveryCode = async () => {
+        // Validar sucursal
+        if (business?.locations?.length > 0 && !selectedLocation) {
+            setError('Por favor selecciona una sucursal');
+            return;
+        }
+
         // Validaciones dinámicas
         if (!purchaseAmount && !stampQuantity) {
             setError('Ingresa el monto, la cantidad de sellos, o ambos');
@@ -337,6 +343,11 @@ const BusinessScan = () => {
         try {
             // Construir payload dinámico
             const payload = {};
+
+            if (selectedLocation) {
+                payload.branchId = selectedLocation;
+            }
+
             if (purchaseAmount) {
                 const amountVal = parseFloat(purchaseAmount);
                 if (amountVal > 0) {
@@ -427,6 +438,10 @@ const BusinessScan = () => {
                 rewardName: redeemingReward.name,
                 notes: `Canje de recompensa: ${redeemingReward.name} - ${redeemingReward.description || ''}`
             };
+
+            if (selectedLocation) {
+                requestData.locationId = selectedLocation;
+            }
 
             // Subtract points if reward requires points
             if (redeemingReward.pointsRequired !== undefined && redeemingReward.pointsRequired !== null && redeemingReward.pointsRequired > 0) {
