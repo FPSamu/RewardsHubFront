@@ -1,38 +1,71 @@
 import { useState, useEffect } from 'react';
 import workShiftService from '../../../services/workShiftService';
 
-const PRESET_COLORS = [
-  '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B',
-  '#EF4444', '#06B6D4', '#F97316', '#EC4899',
+// Days ordered Mon–Sun for display; value matches backend (0=Sun, 1=Mon … 6=Sat)
+const DAY_OPTIONS = [
+  { label: 'L', value: 1 },
+  { label: 'M', value: 2 },
+  { label: 'X', value: 3 },
+  { label: 'J', value: 4 },
+  { label: 'V', value: 5 },
+  { label: 'S', value: 6 },
+  { label: 'D', value: 0 },
 ];
 
-const EMPTY_FORM = { name: '', startTime: '08:00', endTime: '17:00', color: PRESET_COLORS[0] };
+const DAY_LABEL_MAP = { 0: 'D', 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S' };
+
+const formatDays = (days) => {
+  if (!days || days.length === 0) return 'Todos los días';
+  return [...days].sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
+    .map((d) => DAY_LABEL_MAP[d])
+    .join(' · ');
+};
+
+const EMPTY_FORM = { name: '', startTime: '08:00', endTime: '17:00', days: [] };
 
 const parseError = (err) =>
   typeof err === 'string' ? err : err?.message ?? err?.error ?? 'Error al guardar';
 
-// ─── Shared sub-components ────────────────────────────────────────────────────
+// ─── DayPicker ────────────────────────────────────────────────────────────────
 
-function ColorPicker({ value, onChange }) {
+function DayPicker({ value, onChange }) {
+  const toggle = (day) => {
+    const next = value.includes(day) ? value.filter((d) => d !== day) : [...value, day];
+    onChange(next);
+  };
+
   return (
     <div>
-      <label className="block text-[12px] font-semibold text-neutral-600 mb-2">Color</label>
-      <div className="flex gap-2 flex-wrap">
-        {PRESET_COLORS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => onChange(c)}
-            style={{ backgroundColor: c }}
-            className={`w-6 h-6 rounded-full transition-transform ${
-              value === c ? 'ring-2 ring-offset-2 ring-neutral-400 scale-110' : 'hover:scale-110'
-            }`}
-          />
-        ))}
+      <label className="block text-[12px] font-semibold text-neutral-600 mb-2">
+        Días
+        <span className="ml-1.5 font-normal text-neutral-400">
+          {value.length === 0 ? '(todos los días)' : ''}
+        </span>
+      </label>
+      <div className="flex gap-1.5">
+        {DAY_OPTIONS.map(({ label, value: day }) => {
+          const active = value.includes(day);
+          return (
+            <button
+              key={day}
+              type="button"
+              onClick={() => toggle(day)}
+              className={`w-8 h-8 rounded-full text-[12px] font-bold transition-all ${
+                active
+                  ? 'bg-brand-primary text-brand-onColor'
+                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
+
+// ─── ShiftForm ────────────────────────────────────────────────────────────────
 
 function ShiftForm({ onSave, onCancel, saving }) {
   const [form,  setForm]  = useState(EMPTY_FORM);
@@ -86,7 +119,7 @@ function ShiftForm({ onSave, onCancel, saving }) {
         </div>
       </div>
 
-      <ColorPicker value={form.color} onChange={(c) => setForm((p) => ({ ...p, color: c }))} />
+      <DayPicker value={form.days} onChange={(days) => setForm((p) => ({ ...p, days }))} />
 
       {error && <p className="text-[12px] text-accent-danger">{error}</p>}
 
@@ -111,26 +144,23 @@ function ShiftForm({ onSave, onCancel, saving }) {
   );
 }
 
+// ─── ShiftRow ─────────────────────────────────────────────────────────────────
+
 function ShiftRow({ shift, onDelete }) {
   const [pendingDel, setPendingDel] = useState(false);
 
   return (
     <div className="py-3 border-b border-neutral-50 last:border-0">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2.5 min-w-0 flex-1">
-          <span
-            className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1"
-            style={{ backgroundColor: shift.color ?? '#3B82F6' }}
-          />
-          <div className="min-w-0">
-            <p className="text-[13px] font-bold text-neutral-800 leading-tight">{shift.name}</p>
-            <p className="text-[12px] text-neutral-500 mt-0.5">
-              {shift.startTime} – {shift.endTime}
-            </p>
-            {!shift.isActive && (
-              <span className="text-[10px] font-semibold text-neutral-400">Inactivo</span>
-            )}
-          </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-bold text-neutral-800 leading-tight">{shift.name}</p>
+          <p className="text-[12px] text-neutral-500 mt-0.5">
+            {shift.startTime} – {shift.endTime}
+          </p>
+          <p className="text-[11px] text-neutral-400 mt-0.5">{formatDays(shift.days)}</p>
+          {!shift.isActive && (
+            <span className="text-[10px] font-semibold text-neutral-400">Inactivo</span>
+          )}
         </div>
 
         <div className="flex-shrink-0">
@@ -168,18 +198,15 @@ function ShiftRow({ shift, onDelete }) {
   );
 }
 
+// ─── PendingShiftRow ──────────────────────────────────────────────────────────
+
 function PendingShiftRow({ shift, onRemove }) {
   return (
     <div className="py-3 border-b border-neutral-50 last:border-0 flex items-start justify-between gap-2">
-      <div className="flex items-start gap-2.5 min-w-0 flex-1">
-        <span
-          className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1"
-          style={{ backgroundColor: shift.color ?? '#3B82F6' }}
-        />
-        <div className="min-w-0">
-          <p className="text-[13px] font-bold text-neutral-800 leading-tight">{shift.name}</p>
-          <p className="text-[12px] text-neutral-500 mt-0.5">{shift.startTime} – {shift.endTime}</p>
-        </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-bold text-neutral-800 leading-tight">{shift.name}</p>
+        <p className="text-[12px] text-neutral-500 mt-0.5">{shift.startTime} – {shift.endTime}</p>
+        <p className="text-[11px] text-neutral-400 mt-0.5">{formatDays(shift.days)}</p>
       </div>
       <button
         type="button"
@@ -193,6 +220,8 @@ function PendingShiftRow({ shift, onRemove }) {
     </div>
   );
 }
+
+// ─── EmptyShifts ──────────────────────────────────────────────────────────────
 
 function EmptyShifts({ onAdd }) {
   return (
@@ -208,19 +237,19 @@ function EmptyShifts({ onAdd }) {
   );
 }
 
+// ─── SkeletonShift ────────────────────────────────────────────────────────────
+
 function SkeletonShift() {
   return (
-    <div className="py-3 border-b border-neutral-50 last:border-0 flex items-center gap-2.5 animate-pulse">
-      <div className="w-2.5 h-2.5 rounded-full bg-neutral-200 flex-shrink-0" />
-      <div className="space-y-1.5 flex-1">
-        <div className="h-3 w-28 rounded bg-neutral-100" />
-        <div className="h-2.5 w-20 rounded bg-neutral-100" />
-      </div>
+    <div className="py-3 border-b border-neutral-50 last:border-0 animate-pulse space-y-1.5">
+      <div className="h-3 w-28 rounded bg-neutral-100" />
+      <div className="h-2.5 w-20 rounded bg-neutral-100" />
+      <div className="h-2.5 w-16 rounded bg-neutral-100" />
     </div>
   );
 }
 
-// ─── Creating mode: local pending shifts ────────────────────────────────────
+// ─── CreatingShiftsPanel ──────────────────────────────────────────────────────
 
 function CreatingShiftsPanel({ shifts, onAdd, onRemove }) {
   const [showForm, setShowForm] = useState(false);
@@ -269,13 +298,13 @@ function CreatingShiftsPanel({ shifts, onAdd, onRemove }) {
   );
 }
 
-// ─── Editing mode: shifts from API ──────────────────────────────────────────
+// ─── EditingShiftsPanel ───────────────────────────────────────────────────────
 
 function EditingShiftsPanel({ location, businessId }) {
-  const [shifts,    setShifts]    = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [showForm,  setShowForm]  = useState(false);
-  const [saving,    setSaving]    = useState(false);
+  const [shifts,   setShifts]   = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [saving,   setSaving]   = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -293,11 +322,11 @@ function EditingShiftsPanel({ location, businessId }) {
     try {
       const created = await workShiftService.create({
         businessId,
-        branchId: location._id,
+        branchId:  location._id,
         name:      formData.name,
         startTime: formData.startTime,
         endTime:   formData.endTime,
-        color:     formData.color,
+        ...(formData.days.length > 0 && { days: formData.days }),
       });
       setShifts((prev) => [...prev, created]);
       setShowForm(false);
@@ -364,7 +393,7 @@ function EditingShiftsPanel({ location, businessId }) {
   );
 }
 
-// ─── Public component ────────────────────────────────────────────────────────
+// ─── Public component ─────────────────────────────────────────────────────────
 
 export function LocationShiftsPanel({
   locations,

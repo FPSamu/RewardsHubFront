@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import reportService from '../../services/reportService';
 
 // ─── Date presets ─────────────────────────────────────────────────────────────
@@ -40,150 +40,6 @@ function SectionLabel({ children }) {
     <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-2.5">
       {children}
     </p>
-  );
-}
-
-function Checkbox({ checked, indeterminate }) {
-  return (
-    <div
-      className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-        checked || indeterminate
-          ? 'bg-brand-primary border-brand-primary'
-          : 'border-neutral-300 bg-white'
-      }`}
-    >
-      {indeterminate && !checked ? (
-        <span className="block w-2 h-0.5 bg-white rounded-full" />
-      ) : checked ? (
-        <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-      ) : null}
-    </div>
-  );
-}
-
-function LocationSelector({ locations, selected, onChange }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  if (!locations?.length) return null;
-
-  const allSelected  = selected.size === 0;
-  const someSelected = selected.size > 0 && selected.size < locations.length;
-
-  const toggle = (id) => {
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id);
-    else {
-      next.add(id);
-      if (next.size === locations.length) next.clear();
-    }
-    onChange(next);
-  };
-
-  const triggerLabel = allSelected
-    ? 'Todas las sucursales'
-    : selected.size === 1
-    ? (locations.find((l) => selected.has(l._id))?.name ?? 'Sucursal seleccionada')
-    : `${selected.size} sucursales seleccionadas`;
-
-  return (
-    <div ref={ref} className="relative">
-      <SectionLabel>Sucursales</SectionLabel>
-
-      {/* Trigger */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-white text-left hover:border-neutral-300 transition-colors"
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <svg className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span className="text-[13px] font-medium text-neutral-800 truncate">{triggerLabel}</span>
-          {!allSelected && (
-            <span className="flex-shrink-0 px-1.5 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary text-[10px] font-bold">
-              {selected.size}
-            </span>
-          )}
-        </div>
-        <svg
-          className={`w-4 h-4 text-neutral-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
-          fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {/* Dropdown */}
-      {open && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-surface rounded-xl shadow-popover border border-neutral-200 overflow-hidden z-20">
-          {/* "Todas" row */}
-          <button
-            type="button"
-            onClick={() => { onChange(new Set()); setOpen(false); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 text-[13px] font-semibold transition-colors ${
-              allSelected ? 'bg-brand-primary/[0.06] text-brand-primary' : 'text-neutral-700 hover:bg-neutral-50'
-            }`}
-          >
-            <Checkbox checked={allSelected} indeterminate={false} />
-            Todas las sucursales
-            <span className="ml-auto text-[11px] font-normal text-neutral-400">{locations.length}</span>
-          </button>
-
-          <div className="border-t border-neutral-100 max-h-48 overflow-y-auto">
-            {locations.map((loc) => {
-              const active = selected.has(loc._id);
-              return (
-                <button
-                  key={loc._id}
-                  type="button"
-                  onClick={() => toggle(loc._id)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] transition-colors ${
-                    active ? 'bg-brand-primary/[0.04] text-brand-primary' : 'text-neutral-700 hover:bg-neutral-50'
-                  }`}
-                >
-                  <Checkbox checked={active} indeterminate={false} />
-                  <span className="flex-1 text-left truncate">
-                    {loc.name || `Sucursal ${loc._id.slice(-4)}`}
-                  </span>
-                  {loc.isMain && (
-                    <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
-                      Principal
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {someSelected && (
-            <div className="border-t border-neutral-100 px-4 py-2 flex items-center justify-between">
-              <span className="text-[11px] text-neutral-400">
-                {selected.size} de {locations.length} seleccionadas
-              </span>
-              <button
-                type="button"
-                onClick={() => onChange(new Set())}
-                className="text-[11px] font-semibold text-brand-primary hover:underline"
-              >
-                Limpiar
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -247,11 +103,7 @@ function DateRangeSelector({ preset, onPreset, startDate, endDate, onStartDate, 
   );
 }
 
-function ReportSummary({ locations, selectedLocations, startDate, endDate }) {
-  const locationLabel = selectedLocations.size === 0
-    ? 'Todas las sucursales'
-    : `${selectedLocations.size} sucursal${selectedLocations.size !== 1 ? 'es' : ''}`;
-
+function ReportSummary({ startDate, endDate }) {
   if (!startDate || !endDate) return null;
 
   return (
@@ -259,9 +111,7 @@ function ReportSummary({ locations, selectedLocations, startDate, endDate }) {
       <svg className="w-4 h-4 text-brand-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
-      <p className="text-[12px] text-brand-onColor">
-        <span className="font-semibold">{locationLabel}</span>
-        {' · '}
+      <p className="text-[12px] text-brand-primary font-medium">
         {startDate === endDate ? startDate : `${startDate} al ${endDate}`}
       </p>
     </div>
@@ -270,10 +120,7 @@ function ReportSummary({ locations, selectedLocations, startDate, endDate }) {
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
-export function ReportModal({ business, onClose }) {
-  const locations = business?.locations ?? [];
-
-  const [selectedLocations, setSelectedLocations] = useState(new Set());
+export function ReportModal({ onClose }) {
   const [preset,    setPreset]    = useState('month');
   const [startDate, setStartDate] = useState(() => PRESETS.find(p => p.key === 'month').range().start);
   const [endDate,   setEndDate]   = useState(() => PRESETS.find(p => p.key === 'month').range().end);
@@ -300,11 +147,7 @@ export function ReportModal({ business, onClose }) {
     setLoading(true);
     setError('');
     try {
-      const blob = await reportService.generateReport({
-        startDate,
-        endDate,
-        locationIds: [...selectedLocations],
-      });
+      const blob = await reportService.generate({ startDate, endDate });
 
       const url  = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -363,14 +206,6 @@ export function ReportModal({ business, onClose }) {
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 px-5 py-5 space-y-5">
-          {locations.length > 0 && (
-            <LocationSelector
-              locations={locations}
-              selected={selectedLocations}
-              onChange={setSelectedLocations}
-            />
-          )}
-
           <DateRangeSelector
             preset={preset}
             onPreset={handlePreset}
@@ -380,12 +215,7 @@ export function ReportModal({ business, onClose }) {
             onEndDate={setEndDate}
           />
 
-          <ReportSummary
-            locations={locations}
-            selectedLocations={selectedLocations}
-            startDate={startDate}
-            endDate={endDate}
-          />
+          <ReportSummary startDate={startDate} endDate={endDate} />
 
           {error && (
             <p className="text-[12px] text-accent-danger bg-accent-dangerBg border border-accent-dangerBorder rounded-lg px-3 py-2">
