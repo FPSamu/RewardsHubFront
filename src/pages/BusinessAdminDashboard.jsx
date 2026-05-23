@@ -175,7 +175,7 @@ export default function BusinessAdminDashboard() {
       </div>
 
       {showReport && (
-        <ReportModal business={business} onClose={() => setShowReport(false)} />
+        <ReportModal onClose={() => setShowReport(false)} />
       )}
     </div>
   );
