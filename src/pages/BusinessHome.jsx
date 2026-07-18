@@ -5,6 +5,7 @@ import rewardService from '../services/rewardService';
 import userPointsService from '../services/userPointsService';
 import workShiftService from '../services/workShiftService';
 import reportService from '../services/reportService';
+import BranchPieChart from '../components/BranchPieChart';
 
 const BusinessHome = () => {
     const navigate = useNavigate();
@@ -18,6 +19,7 @@ const BusinessHome = () => {
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [branchStats, setBranchStats] = useState([]);
 
     // Estados para el modal de reportes
     const [showReportModal, setShowReportModal] = useState(false);
@@ -41,12 +43,22 @@ const BusinessHome = () => {
                 const businessData = await businessService.getMyBusiness();
                 setBusiness(businessData);
 
-                // Fetch rewards
-                const rewardsData = await rewardService.getBusinessRewards(businessData.id);
+                // Fetch rewards + users en paralelo; branch stats de forma independiente para no romper el dashboard si falla
+                const [rewardsData, usersData] = await Promise.all([
+                    rewardService.getBusinessRewards(businessData.id),
+                    userPointsService.getBusinessUsers(),
+                ]);
+
                 setRewards(rewardsData);
 
-                // Fetch business users with points
-                const usersData = await userPointsService.getBusinessUsers();
+                if (businessData.locations?.length >= 2) {
+                    try {
+                        const branchData = await businessService.getStatsByBranch();
+                        setBranchStats(branchData);
+                    } catch (branchErr) {
+                        console.warn('Branch stats not available:', branchErr);
+                    }
+                }
 
                 // Calculate total points distributed
                 const totalPoints = usersData.users?.reduce((sum, user) => {
@@ -438,6 +450,25 @@ const BusinessHome = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Branch Activity Chart — solo para negocios con 2+ sucursales */}
+            {business?.locations?.length >= 2 && (
+                <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="bg-brand-muted p-2.5 rounded-full">
+                            <svg className="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-800 tracking-tight">Actividad por Sucursal</h3>
+                            <p className="text-sm text-gray-500">¿Cuál sucursal está generando más movimiento?</p>
+                        </div>
+                    </div>
+                    <BranchPieChart branchStats={branchStats} locations={business.locations} />
+                </div>
+            )}
 
             {/* Recent Rewards */}
             <div className="bg-white rounded-xl shadow-card p-6 border border-gray-200">

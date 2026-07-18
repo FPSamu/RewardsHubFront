@@ -14,3 +14,13 @@ export const formatNumber = (n) => {
   if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
   return n.toLocaleString('es-MX');
 };
+
+export const formatCurrency = (n) => {
+  if (n === null || n === undefined) return '—';
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(n);
+};

@@ -1,4 +1,5 @@
 import { StatCard, SplitStatCard } from './StatCard';
+import { formatCurrency } from '../../utils/format';
 
 // Icon components
 const UsersIcon      = (props) => (
@@ -55,6 +56,33 @@ const SINGLE_CARDS = [
   },
 ];
 
+function RevenueCard({ value, loading }) {
+  return (
+    <div className="col-span-2 lg:col-span-4 bg-gradient-to-r from-accent-successBg to-emerald-50 rounded-xl border border-accent-successBorder p-5 flex items-center gap-5">
+      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-accent-success/10 ring-1 ring-accent-successBorder flex-shrink-0">
+        <svg className="w-6 h-6 text-accent-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-semibold text-accent-successOnColor/70 uppercase tracking-wide mb-0.5">
+          Ingresos generados por puntos
+        </p>
+        {loading ? (
+          <div className="h-8 w-32 rounded-md bg-accent-successBorder animate-pulse" />
+        ) : (
+          <p className="text-[30px] font-extrabold text-accent-successOnColor leading-none tracking-tight">
+            {formatCurrency(value)}
+          </p>
+        )}
+        <p className="text-[12px] text-accent-successOnColor/60 mt-1">
+          Suma del monto de compra en transacciones con sistema de puntos
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function StatsGrid({ stats, loading }) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -79,6 +107,8 @@ export function StatsGrid({ stats, loading }) {
         bottomValue={stats?.totalStampsDistributed}
         loading={loading}
       />
+
+      <RevenueCard value={stats?.totalRevenue} loading={loading} />
     </div>
   );
 }

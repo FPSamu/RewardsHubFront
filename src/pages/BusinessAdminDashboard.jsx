@@ -4,6 +4,7 @@ import { RecentClientsSection } from '../components/admin/RecentClientsSection';
 import { LocationsSection } from '../components/admin/LocationsSection';
 import { RewardsSection } from '../components/admin/RewardsSection';
 import { ReportModal } from '../components/admin/ReportModal';
+import BranchActivityCarousel from '../components/BranchActivityCarousel';
 import businessDashboardService from '../services/businessDashboardService';
 import transactionService from '../services/transactionService';
 import businessService from '../services/businessService';
@@ -76,6 +77,8 @@ export default function BusinessAdminDashboard() {
   const [business,        setBusiness]        = useState(null);
   const [recentClients,   setRecentClients]   = useState(null);
   const [rewards,         setRewards]         = useState(null);
+  const [branchStats,     setBranchStats]     = useState([]);
+  const [shiftStats,      setShiftStats]      = useState([]);
   const [loadingStats,    setLoadingStats]    = useState(true);
   const [loadingClients,  setLoadingClients]  = useState(true);
   const [loadingRewards,  setLoadingRewards]  = useState(true);
@@ -99,6 +102,16 @@ export default function BusinessAdminDashboard() {
           } else {
             setRewards([]);
             setLoadingRewards(false);
+          }
+
+          // Fetch branch + shift stats only for businesses with 2+ locations
+          if ((data.locations?.length ?? 0) >= 2) {
+            businessService.getStatsByBranch()
+              .then((r) => { if (!cancelled) setBranchStats(r); })
+              .catch(() => {});
+            businessService.getShiftStatsByBranch()
+              .then((r) => { if (!cancelled) setShiftStats(r); })
+              .catch(() => {});
           }
         }
       } catch {
@@ -168,6 +181,19 @@ export default function BusinessAdminDashboard() {
           />
         </div>
       </div>
+
+      {(business?.locations?.length ?? 0) >= 2 && (
+        <div>
+          <SectionTitle>Actividad por sucursal</SectionTitle>
+          <div className="bg-white rounded-2xl border border-neutral-100 shadow-card p-6">
+            <BranchActivityCarousel
+              branchStats={branchStats}
+              shiftStats={shiftStats}
+              locations={business.locations}
+            />
+          </div>
+        </div>
+      )}
 
       <div>
         <SectionTitle>Actividad reciente</SectionTitle>
