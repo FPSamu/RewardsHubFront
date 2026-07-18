@@ -17,6 +17,7 @@ import { RecentActivitySection }  from '../components/client/home/RecentActivity
 import { RedeemFAB }              from '../components/client/home/RedeemFAB';
 import { BusinessRewardsModal }   from '../components/client/home/modals/BusinessRewardsModal';
 import { RedeemCodeModal }        from '../components/client/home/modals/RedeemCodeModal';
+import { AppStoreModal }          from '../components/client/AppStoreModal';
 
 const ClientHome = () => {
   const [user, setUser]                   = useState(null);
@@ -223,6 +224,8 @@ const ClientHome = () => {
 
   return (
     <div className="space-y-4 py-2">
+      <AppStoreModal />
+
       {error && (
         <div className="mx-4 bg-accent-dangerBg border border-accent-dangerBorder text-accent-danger px-4 py-3 rounded-xl text-sm">
           {error}
