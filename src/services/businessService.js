@@ -164,6 +164,26 @@ export const businessService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Transacciones agrupadas por sucursal (solo negocios con 2+ locations)
+  getStatsByBranch: async () => {
+    try {
+      const response = await api.get("/business/stats/by-branch");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Transacciones agrupadas por sucursal y turno
+  getShiftStatsByBranch: async () => {
+    try {
+      const response = await api.get("/business/stats/shifts-by-branch");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default businessService;
