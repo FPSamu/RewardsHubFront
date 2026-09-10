@@ -37,11 +37,19 @@ const firebaseMessage = (code) => {
 const getStorage = () =>
   localStorage.getItem('token') ? localStorage : sessionStorage;
 
+// Las cuentas de negocio (dueño y cajero) persisten siempre en localStorage:
+// una tablet de mostrador no debe volver a ver el login solo por cerrar el
+// navegador. El refresh token dura 90 días en el backend y es revocable, así
+// que la sesión se renueva sola. El checkbox "Recordarme" solo decide para
+// clientes, que sí pueden entrar desde un dispositivo compartido.
+const shouldPersist = (apiRole, rememberMe) => rememberMe || apiRole === 'business';
+
 const saveSession = ({ token, refreshToken, user, apiRole }, rememberMe) => {
   if (!apiRole) throw new Error('saveSession: apiRole is required — check API response shape');
 
-  const storage = rememberMe ? localStorage  : sessionStorage;
-  const evicted = rememberMe ? sessionStorage : localStorage;
+  const persist = shouldPersist(apiRole, rememberMe);
+  const storage = persist ? localStorage  : sessionStorage;
+  const evicted = persist ? sessionStorage : localStorage;
   KEYS.forEach((k) => evicted.removeItem(k));
   evicted.removeItem('userType');
 
