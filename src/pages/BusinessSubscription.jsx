@@ -5,6 +5,7 @@ import authService from '../services/authService';
 
 import { SubscriptionHeader }  from '../components/subscription/SubscriptionHeader';
 import { SubscriptionHero }    from '../components/subscription/SubscriptionHero';
+import { TrialSteps }          from '../components/subscription/TrialSteps';
 import { PlanCard }            from '../components/subscription/PlanCard';
 import { TrustBar }            from '../components/subscription/TrustBar';
 import { ProcessingScreen }    from '../components/subscription/ProcessingScreen';
@@ -169,6 +170,8 @@ const BusinessSubscription = () => {
       <main className="relative z-10 max-w-5xl mx-auto px-5 pt-16 pb-20">
 
         <SubscriptionHero hasLifetimeAccess={hasLifetimeAccess} />
+
+        {!hasLifetimeAccess && <TrialSteps />}
 
         {/* Alerts */}
         {success && <AlertBanner type="success" message={success} />}

@@ -1,7 +1,7 @@
 const TRUST_ITEMS = [
+  { icon: '🎁', text: '1 mes gratis, no se cobra hasta que termine' },
   { icon: '🔒', text: 'Pago seguro con Stripe' },
   { icon: '✕', text: 'Cancela en cualquier momento' },
-  { icon: '⚡', text: 'Acceso inmediato tras el pago' },
   { icon: '💬', text: 'Soporte técnico incluido' },
 ];
 

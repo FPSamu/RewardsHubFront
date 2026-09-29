@@ -19,14 +19,20 @@ function MonthlyCard({ plan, onSubscribe, loading }) {
       style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }}
     >
       <p className="text-white/50 text-[11px] font-bold uppercase tracking-widest mb-1">Mensual</p>
-      <p className="text-white/30 text-[13px] mb-5">Empieza sin compromiso</p>
+      <p className="text-white/30 text-[13px] mb-6">Empieza sin compromiso</p>
 
-      <div className="flex items-baseline gap-1 mb-1">
-        <span className="text-white text-[46px] font-extrabold leading-none">$399</span>
-        <span className="text-white/30 text-[14px] ml-1">.00</span>
-        <span className="text-white/30 text-[13px] ml-1">/ mes</span>
+      <div className="relative mb-1">
+        <div className="pointer-events-none absolute -inset-6 rounded-full blur-2xl opacity-25"
+          style={{ background: '#34d399' }} />
+        <div className="relative flex items-baseline gap-2">
+          <span className="text-white text-[54px] font-extrabold leading-none">$0</span>
+          <span className="text-emerald-400 text-[13px] font-bold">hoy</span>
+        </div>
       </div>
-      <p className="text-white/20 text-[11px] mb-7">Facturado mensualmente · MXN</p>
+      <p className="text-emerald-400/80 text-[13px] font-semibold mb-1">Gratis tu primer mes</p>
+      <p className="text-white/25 text-[11px] mb-7">
+        Después <span className="text-white/50 font-semibold">$399.00</span> / mes · MXN
+      </p>
 
       <ul className="space-y-3 mb-8 flex-1">
         {plan.features.map((f, i) => (
@@ -42,7 +48,7 @@ function MonthlyCard({ plan, onSubscribe, loading }) {
         disabled={loading}
         className="w-full py-3.5 rounded-full border border-white/20 text-white text-[14px] font-bold hover:bg-white/8 hover:border-white/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? <Spinner /> : 'Comenzar ahora'}
+        {loading ? <Spinner /> : 'Empezar mes gratis'}
       </button>
     </div>
   );
@@ -68,14 +74,20 @@ function YearlyCard({ plan, onSubscribe, loading }) {
         style={{ background: '#EBA626' }} />
 
       <p className="text-amber-400 text-[11px] font-bold uppercase tracking-widest mb-1">Anual</p>
-      <p className="text-white/30 text-[13px] mb-5">El más popular entre negocios</p>
+      <p className="text-white/30 text-[13px] mb-6">El más popular entre negocios</p>
 
-      <div className="flex items-baseline gap-1 mb-1">
-        <span className="text-white text-[46px] font-extrabold leading-none">$299</span>
-        <span className="text-white/30 text-[14px] ml-1">.99</span>
-        <span className="text-white/30 text-[13px] ml-1">/ mes</span>
+      <div className="relative mb-1">
+        <div className="pointer-events-none absolute -inset-6 rounded-full blur-2xl opacity-25"
+          style={{ background: '#34d399' }} />
+        <div className="relative flex items-baseline gap-2">
+          <span className="text-white text-[54px] font-extrabold leading-none">$0</span>
+          <span className="text-emerald-400 text-[13px] font-bold">hoy</span>
+        </div>
       </div>
-      <p className="text-amber-400/60 text-[11px] mb-7">≈ $3,599 / año · MXN</p>
+      <p className="text-emerald-400/80 text-[13px] font-semibold mb-1">Gratis tu primer mes</p>
+      <p className="text-amber-400/50 text-[11px] mb-7">
+        Después <span className="text-amber-300/90 font-semibold">$299.99</span> / mes · ≈ $3,599/año MXN
+      </p>
 
       <ul className="space-y-3 mb-8 flex-1">
         {plan.features.map((f, i) => (
@@ -92,7 +104,7 @@ function YearlyCard({ plan, onSubscribe, loading }) {
         className="w-full py-3.5 rounded-full text-white text-[14px] font-bold transition-all hover:opacity-90 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed"
         style={{ background: 'linear-gradient(135deg, #EBA626, #d99520)' }}
       >
-        {loading ? <Spinner /> : 'Empezar plan anual'}
+        {loading ? <Spinner /> : 'Empezar mes gratis'}
       </button>
     </div>
   );
