@@ -53,7 +53,7 @@ function ClientRow({ client }) {
 
 export function AtRiskClientsSection({ clients, loading }) {
   return (
-    <div className="bg-surface rounded-xl shadow-card overflow-hidden">
+    <div className="bg-surface rounded-xl border border-neutral-100 overflow-hidden">
       <div className="px-5 py-4 border-b border-neutral-100">
         <h3 className="text-[14px] font-bold text-neutral-800">Clientes en riesgo de irse</h3>
         <p className="text-[12px] text-neutral-400 mt-0.5">No han vuelto en 30 días o más — considera mandarles una promo</p>

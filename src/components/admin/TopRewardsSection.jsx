@@ -50,14 +50,16 @@ function RewardBar({ reward, maxRedemptions, rank }) {
   );
 }
 
-export function TopRewardsSection({ rewards, loading }) {
+export function TopRewardsSection({ rewards, loading, days }) {
   const maxRedemptions = rewards?.length ? Math.max(...rewards.map((r) => r.redemptions)) : 0;
 
   return (
-    <div className="bg-surface rounded-xl shadow-card overflow-hidden">
+    <div className="bg-surface rounded-xl border border-neutral-100 overflow-hidden">
       <div className="px-5 py-4 border-b border-neutral-100">
         <h3 className="text-[14px] font-bold text-neutral-800">Recompensas más exitosas</h3>
-        <p className="text-[12px] text-neutral-400 mt-0.5">Las que más canjean tus clientes</p>
+        <p className="text-[12px] text-neutral-400 mt-0.5">
+          Las que más canjean tus clientes{days ? ` · últimos ${days} días` : ''}
+        </p>
       </div>
 
       <div className="divide-y divide-neutral-50">

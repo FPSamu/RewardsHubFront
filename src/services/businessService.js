@@ -205,10 +205,10 @@ export const businessService = {
     }
   },
 
-  // Recompensas más canjeadas
-  getTopRewards: async (limit = 5) => {
+  // Recompensas más canjeadas. `days` es opcional — sin él, es histórico.
+  getTopRewards: async (limit = 5, days) => {
     try {
-      const response = await api.get("/business/stats/top-rewards", { params: { limit } });
+      const response = await api.get("/business/stats/top-rewards", { params: { limit, days } });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -219,6 +219,16 @@ export const businessService = {
   getBranchComparison: async (days = 30) => {
     try {
       const response = await api.get("/business/stats/branch-comparison", { params: { days } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Resumen de KPIs con tendencia (periodo actual vs anterior)
+  getKpiSummary: async (days = 30) => {
+    try {
+      const response = await api.get("/business/stats/kpi-summary", { params: { days } });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

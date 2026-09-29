@@ -86,7 +86,7 @@ export function BranchComparisonSection({ comparison, locations, loading, days =
   }).sort((a, b) => b.currentCount - a.currentCount);
 
   return (
-    <div className="bg-surface rounded-xl shadow-card overflow-hidden">
+    <div className="bg-surface rounded-xl border border-neutral-100 overflow-hidden">
       <div className="px-5 py-4 border-b border-neutral-100">
         <h3 className="text-[14px] font-bold text-neutral-800">Comparación de sucursales</h3>
         <p className="text-[12px] text-neutral-400 mt-0.5">Últimos {days} días vs los {days} anteriores</p>

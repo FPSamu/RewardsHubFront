@@ -114,7 +114,7 @@ export function RewardsSection({ rewards, loading }) {
   const displayRewards = [...activeRewards, ...inactiveRewards].slice(0, 5);
 
   return (
-    <div className="bg-surface rounded-xl shadow-card overflow-hidden">
+    <div className="bg-surface rounded-xl border border-neutral-100 overflow-hidden">
       <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
         <div>
           <p className="text-[13px] font-bold text-neutral-800">Recompensas</p>

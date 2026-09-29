@@ -118,7 +118,7 @@ export function RecentClientsSection({ clients, loading }) {
   const navigate = useNavigate();
 
   return (
-    <div className="bg-surface rounded-xl shadow-card overflow-hidden">
+    <div className="bg-surface rounded-xl border border-neutral-100 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
         <div>

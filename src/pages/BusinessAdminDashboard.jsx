@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StatsGrid } from '../components/admin/StatsGrid';
+import { KpiRibbon } from '../components/admin/KpiRibbon';
 import { RecentClientsSection } from '../components/admin/RecentClientsSection';
 import { LocationsSection } from '../components/admin/LocationsSection';
 import { RewardsSection } from '../components/admin/RewardsSection';
@@ -10,33 +10,48 @@ import { TopRewardsSection } from '../components/admin/TopRewardsSection';
 import { BranchComparisonSection } from '../components/admin/BranchComparisonSection';
 import BranchActivityCarousel from '../components/BranchActivityCarousel';
 import businessDashboardService from '../services/businessDashboardService';
-import transactionService from '../services/transactionService';
 import businessService from '../services/businessService';
 import rewardService from '../services/rewardService';
 
-function DashboardHeader({ business, onReport }) {
-  return (
-    <div className="relative overflow-hidden rounded-2xl bg-brand-primary px-6 py-7 mb-6">
-      <div className="pointer-events-none absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/10" />
-      <div className="pointer-events-none absolute -bottom-12 -right-16 w-56 h-56 rounded-full bg-white/[0.07]" />
-      <div className="relative flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[13px] font-semibold text-brand-onColor/70 uppercase tracking-widest mb-1">
-            Panel de Administración
-          </p>
-          <h1 className="text-[22px] font-extrabold text-brand-onColor leading-tight">
-            {business?.name ?? 'Mi Negocio'}
-          </h1>
-          <p className="mt-1 text-[13px] text-brand-onColor/60">
-            Métricas en tiempo real de tu negocio en RewardsHub
-          </p>
-        </div>
+const PERIODS = [7, 30, 90];
+const TABS = [
+  { key: 'resumen',   label: 'Resumen' },
+  { key: 'actividad', label: 'Actividad' },
+  { key: 'gestion',   label: 'Gestión' },
+];
 
+function PageHeader({ business, period, onPeriod, onReport }) {
+  return (
+    <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+      <div>
+        <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest mb-0.5">
+          Panel de administración
+        </p>
+        <h1 className="font-display text-[22px] font-bold text-neutral-950 leading-tight">
+          {business?.name ?? 'Mi negocio'}
+        </h1>
+      </div>
+
+      <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex bg-surface border border-neutral-200 rounded-lg p-0.5 gap-0.5">
+          {PERIODS.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onPeriod(p)}
+              className={`px-3 py-1.5 rounded-md text-[12px] font-semibold transition-colors ${
+                p === period ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700'
+              }`}
+            >
+              {p}d
+            </button>
+          ))}
+        </div>
         <button
           onClick={onReport}
-          className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-brand-primary text-[13px] font-bold shadow-sm hover:bg-brand-muted transition-colors duration-150"
+          className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-neutral-200 bg-surface text-neutral-700 text-[12.5px] font-bold hover:border-neutral-400 transition-colors"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           Reporte
@@ -46,11 +61,24 @@ function DashboardHeader({ business, onReport }) {
   );
 }
 
-function SectionTitle({ children }) {
+function DashboardTabs({ active, onChange }) {
   return (
-    <h2 className="text-[13px] font-bold text-neutral-500 uppercase tracking-widest mb-3">
-      {children}
-    </h2>
+    <div className="flex gap-5 border-b border-neutral-200 mb-5 overflow-x-auto">
+      {TABS.map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          onClick={() => onChange(t.key)}
+          className={`pb-2.5 text-[13.5px] font-semibold whitespace-nowrap border-b-2 transition-colors ${
+            active === t.key
+              ? 'text-neutral-950 border-brand-hover'
+              : 'text-neutral-400 border-transparent hover:text-neutral-600'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -77,204 +105,183 @@ function ErrorBanner({ onRetry }) {
 }
 
 export default function BusinessAdminDashboard() {
-  const [stats,           setStats]           = useState(null);
+  const [tab, setTab] = useState('resumen');
+  const [period, setPeriod] = useState(30);
+  const [showReport, setShowReport] = useState(false);
+
   const [business,        setBusiness]        = useState(null);
   const [recentClients,   setRecentClients]   = useState(null);
   const [rewards,         setRewards]         = useState(null);
+  const [topRewards,      setTopRewards]      = useState(null);
   const [branchStats,     setBranchStats]     = useState([]);
   const [shiftStats,      setShiftStats]      = useState([]);
-  const [loadingStats,    setLoadingStats]    = useState(true);
   const [loadingClients,  setLoadingClients]  = useState(true);
   const [loadingRewards,  setLoadingRewards]  = useState(true);
-  const [errorStats,      setErrorStats]      = useState(false);
-  const [showReport,      setShowReport]      = useState(false);
+  const [loadingTopRewards, setLoadingTopRewards] = useState(true);
 
+  const [kpiSummary,        setKpiSummary]        = useState(null);
+  const [errorKpi,          setErrorKpi]          = useState(false);
+  const [loadingKpi,        setLoadingKpi]        = useState(true);
   const [timeSeries,        setTimeSeries]        = useState(null);
   const [loadingTimeSeries, setLoadingTimeSeries]  = useState(true);
   const [atRiskClients,     setAtRiskClients]      = useState(null);
   const [loadingAtRisk,     setLoadingAtRisk]      = useState(true);
-  const [topRewards,        setTopRewards]         = useState(null);
-  const [loadingTopRewards, setLoadingTopRewards]  = useState(true);
   const [branchComparison,       setBranchComparison]       = useState([]);
   const [loadingBranchComparison, setLoadingBranchComparison] = useState(true);
 
+  // ── One-time fetches (not period-dependent) ──────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
-    const fetchBusiness = async () => {
-      try {
-        const data = await businessService.getMyBusiness();
-        if (!cancelled) {
-          setBusiness(data);
-          const bizId = data.id ?? data._id;
-          if (bizId) {
-            rewardService.getBusinessRewards(bizId, true)
-              .then((r) => { if (!cancelled) setRewards(r); })
-              .catch(() => { if (!cancelled) setRewards([]); })
-              .finally(() => { if (!cancelled) setLoadingRewards(false); });
-          } else {
-            setRewards([]);
-            setLoadingRewards(false);
-          }
-
-          // Fetch branch + shift stats only for businesses with 2+ locations
-          if ((data.locations?.length ?? 0) >= 2) {
-            businessService.getStatsByBranch()
-              .then((r) => { if (!cancelled) setBranchStats(r); })
-              .catch(() => {});
-            businessService.getShiftStatsByBranch()
-              .then((r) => { if (!cancelled) setShiftStats(r); })
-              .catch(() => {});
-            businessService.getBranchComparison(30)
-              .then((r) => { if (!cancelled) setBranchComparison(r); })
-              .catch(() => {})
-              .finally(() => { if (!cancelled) setLoadingBranchComparison(false); });
-          } else {
-            setLoadingBranchComparison(false);
-          }
-        }
-      } catch {
-        if (!cancelled) { setRewards([]); setLoadingRewards(false); }
+    businessService.getMyBusiness().then((data) => {
+      if (cancelled) return;
+      setBusiness(data);
+      const bizId = data.id ?? data._id;
+      if (bizId) {
+        rewardService.getBusinessRewards(bizId, true)
+          .then((r) => { if (!cancelled) setRewards(r); })
+          .catch(() => { if (!cancelled) setRewards([]); })
+          .finally(() => { if (!cancelled) setLoadingRewards(false); });
+      } else {
+        setRewards([]);
+        setLoadingRewards(false);
       }
-    };
 
-    const fetchStats = async () => {
-      try {
-        const data = await businessDashboardService.getStats();
-        if (!cancelled) setStats(data);
-      } catch {
-        if (!cancelled) setErrorStats(true);
-      } finally {
-        if (!cancelled) setLoadingStats(false);
+      if ((data.locations?.length ?? 0) >= 2) {
+        businessService.getStatsByBranch().then((r) => { if (!cancelled) setBranchStats(r); }).catch(() => {});
+        businessService.getShiftStatsByBranch().then((r) => { if (!cancelled) setShiftStats(r); }).catch(() => {});
       }
-    };
+    }).catch(() => {
+      if (!cancelled) { setRewards([]); setLoadingRewards(false); }
+    });
 
-    const fetchClients = async () => {
-      try {
-        const data = await businessDashboardService.getRecentClients(20);
-        if (!cancelled) setRecentClients(data);
-      } catch {
-        if (!cancelled) setRecentClients([]);
-      } finally {
-        if (!cancelled) setLoadingClients(false);
-      }
-    };
+    businessDashboardService.getRecentClients(20)
+      .then((data) => { if (!cancelled) setRecentClients(data); })
+      .catch(() => { if (!cancelled) setRecentClients([]); })
+      .finally(() => { if (!cancelled) setLoadingClients(false); });
 
-    const fetchTimeSeries = async () => {
-      try {
-        const data = await businessService.getTimeSeriesStats(30);
-        if (!cancelled) setTimeSeries(data);
-      } catch {
-        if (!cancelled) setTimeSeries([]);
-      } finally {
-        if (!cancelled) setLoadingTimeSeries(false);
-      }
-    };
-
-    const fetchAtRiskClients = async () => {
-      try {
-        const data = await businessService.getAtRiskClients(30, 20);
-        if (!cancelled) setAtRiskClients(data);
-      } catch {
-        if (!cancelled) setAtRiskClients([]);
-      } finally {
-        if (!cancelled) setLoadingAtRisk(false);
-      }
-    };
-
-    const fetchTopRewards = async () => {
-      try {
-        const data = await businessService.getTopRewards(5);
-        if (!cancelled) setTopRewards(data);
-      } catch {
-        if (!cancelled) setTopRewards([]);
-      } finally {
-        if (!cancelled) setLoadingTopRewards(false);
-      }
-    };
-
-    fetchBusiness();
-    fetchStats();
-    fetchClients();
-    fetchTimeSeries();
-    fetchAtRiskClients();
-    fetchTopRewards();
+    // "En riesgo" usa un umbral fijo de 30 días — no depende del selector de
+    // periodo (que solo gobierna ingresos/puntos/canjes/clientes nuevos).
+    businessService.getAtRiskClients(30, 20)
+      .then((data) => { if (!cancelled) setAtRiskClients(data); })
+      .catch(() => { if (!cancelled) setAtRiskClients([]); })
+      .finally(() => { if (!cancelled) setLoadingAtRisk(false); });
 
     return () => { cancelled = true; };
   }, []);
 
-  const handleRetry = () => {
-    setErrorStats(false);
-    setLoadingStats(true);
-    businessDashboardService.getStats()
-      .then(setStats)
-      .catch(() => setErrorStats(true))
-      .finally(() => setLoadingStats(false));
+  // ── Period-dependent fetches ──────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingKpi(true);
+    setLoadingTimeSeries(true);
+    setLoadingTopRewards(true);
+    setErrorKpi(false);
+
+    businessService.getKpiSummary(period)
+      .then((data) => { if (!cancelled) setKpiSummary(data); })
+      .catch(() => { if (!cancelled) setErrorKpi(true); })
+      .finally(() => { if (!cancelled) setLoadingKpi(false); });
+
+    businessService.getTimeSeriesStats(period)
+      .then((data) => { if (!cancelled) setTimeSeries(data); })
+      .catch(() => { if (!cancelled) setTimeSeries([]); })
+      .finally(() => { if (!cancelled) setLoadingTimeSeries(false); });
+
+    businessService.getTopRewards(5, period)
+      .then((data) => { if (!cancelled) setTopRewards(data); })
+      .catch(() => { if (!cancelled) setTopRewards([]); })
+      .finally(() => { if (!cancelled) setLoadingTopRewards(false); });
+
+    if ((business?.locations?.length ?? 0) >= 2) {
+      setLoadingBranchComparison(true);
+      businessService.getBranchComparison(period)
+        .then((data) => { if (!cancelled) setBranchComparison(data); })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setLoadingBranchComparison(false); });
+    } else {
+      setLoadingBranchComparison(false);
+    }
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, business?.locations?.length]);
+
+  const handleRetryKpi = () => {
+    setErrorKpi(false);
+    setLoadingKpi(true);
+    businessService.getKpiSummary(period)
+      .then(setKpiSummary)
+      .catch(() => setErrorKpi(true))
+      .finally(() => setLoadingKpi(false));
   };
 
+  const hasMultipleBranches = (business?.locations?.length ?? 0) >= 2;
+
   return (
-    <div className="pb-8 space-y-6">
-      <DashboardHeader business={business} onReport={() => setShowReport(true)} />
+    <div className="pb-8">
+      <PageHeader business={business} period={period} onPeriod={setPeriod} onReport={() => setShowReport(true)} />
+      <DashboardTabs active={tab} onChange={setTab} />
 
-      <div>
-        <SectionTitle>Métricas rápidas</SectionTitle>
-        {errorStats ? (
-          <ErrorBanner onRetry={handleRetry} />
-        ) : (
-          <StatsGrid stats={stats} loading={loadingStats} />
-        )}
-      </div>
+      {/* ================= RESUMEN ================= */}
+      {tab === 'resumen' && (
+        <div className="space-y-5">
+          {errorKpi ? (
+            <ErrorBanner onRetry={handleRetryKpi} />
+          ) : (
+            <KpiRibbon summary={kpiSummary} timeSeries={timeSeries} loading={loadingKpi || loadingTimeSeries} days={period} />
+          )}
 
-      <div>
-        <SectionTitle>Tendencias</SectionTitle>
-        <TimeSeriesSection data={timeSeries} loading={loadingTimeSeries} days={30} />
-      </div>
+          <TimeSeriesSection data={timeSeries} loading={loadingTimeSeries} days={period} />
 
-      <div>
-        <SectionTitle>Insights de clientes</SectionTitle>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <AtRiskClientsSection clients={atRiskClients?.slice(0, 5)} loading={loadingAtRisk} />
+            <TopRewardsSection rewards={topRewards} loading={loadingTopRewards} days={period} />
+          </div>
+
+          {hasMultipleBranches && (
+            <BranchComparisonSection
+              comparison={branchComparison}
+              locations={business.locations}
+              loading={loadingBranchComparison}
+              days={period}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ================= ACTIVIDAD ================= */}
+      {tab === 'actividad' && (
+        <div className="space-y-5">
+          <RecentClientsSection clients={recentClients} loading={loadingClients} />
           <AtRiskClientsSection clients={atRiskClients} loading={loadingAtRisk} />
-          <TopRewardsSection rewards={topRewards} loading={loadingTopRewards} />
         </div>
-      </div>
+      )}
 
-      <div>
-        <SectionTitle>Gestión</SectionTitle>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RewardsSection rewards={rewards} loading={loadingRewards} />
-          <LocationsSection
-            locations={business?.locations}
-            loading={!business}
-            onLocationsChange={(locs) => setBusiness((b) => b ? { ...b, locations: locs } : b)}
-          />
-        </div>
-      </div>
+      {/* ================= GESTIÓN ================= */}
+      {tab === 'gestion' && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <RewardsSection rewards={rewards} loading={loadingRewards} />
+            <LocationsSection
+              locations={business?.locations}
+              loading={!business}
+              onLocationsChange={(locs) => setBusiness((b) => b ? { ...b, locations: locs } : b)}
+            />
+          </div>
 
-      {(business?.locations?.length ?? 0) >= 2 && (
-        <div>
-          <SectionTitle>Actividad por sucursal</SectionTitle>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl border border-neutral-100 shadow-card p-6">
+          {hasMultipleBranches && (
+            <div className="bg-white rounded-xl border border-neutral-100 p-5">
+              <p className="text-[13.5px] font-bold text-neutral-800 mb-4">Actividad por sucursal</p>
               <BranchActivityCarousel
                 branchStats={branchStats}
                 shiftStats={shiftStats}
                 locations={business.locations}
               />
             </div>
-            <BranchComparisonSection
-              comparison={branchComparison}
-              locations={business.locations}
-              loading={loadingBranchComparison}
-              days={30}
-            />
-          </div>
+          )}
         </div>
       )}
-
-      <div>
-        <SectionTitle>Actividad reciente</SectionTitle>
-        <RecentClientsSection clients={recentClients} loading={loadingClients} />
-      </div>
 
       {showReport && (
         <ReportModal onClose={() => setShowReport(false)} />

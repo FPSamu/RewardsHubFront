@@ -76,6 +76,12 @@ export default {
           "-apple-system",
           "sans-serif",
         ],
+        display: [
+          "Sora",
+          "Plus Jakarta Sans",
+          "system-ui",
+          "sans-serif",
+        ],
         mono: [
           "JetBrains Mono",
           "Fira Code",
