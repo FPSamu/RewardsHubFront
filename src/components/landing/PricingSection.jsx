@@ -36,10 +36,15 @@ export function PricingSection() {
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-14">
           <p className="text-amber-400/70 text-[11px] font-bold uppercase tracking-widest mb-3">Precios</p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-5"
+            style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.35)', boxShadow: '0 0 24px rgba(52,211,153,0.15)' }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-emerald-400 text-[12px] font-bold tracking-wide">30 días gratis · $0 hoy</span>
+          </div>
           <h2 className="text-white text-[clamp(28px,5vw,42px)] font-extrabold leading-tight mb-3">
             Planes para tu negocio
           </h2>
-          <p className="text-white/40 text-[15px]">Sin contratos ocultos. Cancela cuando quieras.</p>
+          <p className="text-white/40 text-[15px]">Primer mes gratis. Sin contratos ocultos. Cancela cuando quieras.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto">
@@ -52,13 +57,20 @@ export function PricingSection() {
             data-aos-delay="0"
           >
             <p className="text-white/50 text-[11px] font-bold uppercase tracking-widest mb-1">Mensual</p>
-            <p className="text-white/35 text-[13px] mb-5">Empieza sin compromiso</p>
+            <p className="text-white/35 text-[13px] mb-6">Empieza sin compromiso</p>
 
-            <div className="flex items-baseline gap-1.5 mb-1">
-              <span className="text-white text-[44px] font-extrabold leading-none">$399</span>
-              <span className="text-white/35 text-[14px]">.00 / mes</span>
+            <div className="relative mb-1">
+              <div className="pointer-events-none absolute -inset-6 rounded-full blur-2xl opacity-25"
+                style={{ background: '#34d399' }} />
+              <div className="relative flex items-baseline gap-2">
+                <span className="text-white text-[50px] font-extrabold leading-none">$0</span>
+                <span className="text-emerald-400 text-[13px] font-bold">hoy</span>
+              </div>
             </div>
-            <p className="text-white/25 text-[11px] mb-7">Facturado mensualmente</p>
+            <p className="text-emerald-400/80 text-[13px] font-semibold mb-1">Gratis tu primer mes</p>
+            <p className="text-white/25 text-[11px] mb-7">
+              Después <span className="text-white/45 font-semibold">$399.00</span> / mes
+            </p>
 
             <ul className="space-y-3 mb-8 flex-1">
               {MONTHLY_FEATURES.map((f, i) => (
@@ -73,7 +85,7 @@ export function PricingSection() {
               to="/signup"
               className="w-full py-3 rounded-full border border-white/20 text-white text-[14px] font-bold text-center hover:bg-white/8 transition-all"
             >
-              Comenzar ahora
+              Empezar mes gratis
             </Link>
           </div>
 
@@ -97,13 +109,20 @@ export function PricingSection() {
               style={{ background: '#EBA626' }} />
 
             <p className="text-amber-400 text-[11px] font-bold uppercase tracking-widest mb-1">Anual</p>
-            <p className="text-white/35 text-[13px] mb-5">El más popular entre negocios</p>
+            <p className="text-white/35 text-[13px] mb-6">El más popular entre negocios</p>
 
-            <div className="flex items-baseline gap-1.5 mb-1">
-              <span className="text-white text-[44px] font-extrabold leading-none">$299</span>
-              <span className="text-white/35 text-[14px]">.99 / mes</span>
+            <div className="relative mb-1">
+              <div className="pointer-events-none absolute -inset-6 rounded-full blur-2xl opacity-25"
+                style={{ background: '#34d399' }} />
+              <div className="relative flex items-baseline gap-2">
+                <span className="text-white text-[50px] font-extrabold leading-none">$0</span>
+                <span className="text-emerald-400 text-[13px] font-bold">hoy</span>
+              </div>
             </div>
-            <p className="text-amber-400/60 text-[11px] mb-7">≈ $3,599.88 / año · ahorras $1,188</p>
+            <p className="text-emerald-400/80 text-[13px] font-semibold mb-1">Gratis tu primer mes</p>
+            <p className="text-amber-400/60 text-[11px] mb-7">
+              Después <span className="text-amber-300/90 font-semibold">$299.99</span> / mes · ≈ $3,599.88 / año
+            </p>
 
             <ul className="space-y-3 mb-8 flex-1">
               {ANNUAL_EXTRAS.map((f, i) => (
@@ -119,7 +138,7 @@ export function PricingSection() {
               className="w-full py-3 rounded-full text-white text-[14px] font-bold text-center transition-all hover:opacity-90"
               style={{ background: 'linear-gradient(135deg, #EBA626, #d99520)' }}
             >
-              Empezar plan anual
+              Empezar mes gratis
             </Link>
           </div>
         </div>
