@@ -19,6 +19,13 @@ export const changePin = async (currentPin, newPin) => {
   return data;
 };
 
+// Generates a new temporary PIN and emails it to the business — also the
+// self-service way for a business with no PIN configured yet to get one.
+export const resetPin = async () => {
+  const { data } = await api.post('/business/admin-pin/reset', {});
+  return data;
+};
+
 // Dispatched by api.js when a 403 "PIN" error is received
 export const dispatchPinRequired = () => {
   window.dispatchEvent(new CustomEvent('adminPinRequired'));

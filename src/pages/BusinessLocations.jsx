@@ -58,7 +58,7 @@ function SuccessBadge({ text }) {
   );
 }
 
-export default function BusinessLocations() {
+export default function BusinessLocations({ hideHeader = false, onLocationsChange } = {}) {
   const [locations, setLocations] = useState([]);
   const [loadingPage, setLoadingPage] = useState(true);
   const [business, setBusiness] = useState(null);
@@ -117,6 +117,10 @@ export default function BusinessLocations() {
       .catch(() => {})
       .finally(() => setLoadingPage(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    onLocationsChange?.(locations);
+  }, [locations]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetForm = () => {
     setFormData({ name: '', street: '', city: '', state: '', branchPassword: '' });
@@ -231,12 +235,14 @@ export default function BusinessLocations() {
 
   return (
     <div className="pb-10 space-y-6">
-      <div>
-        <h1 className="text-[20px] font-extrabold text-neutral-900">Sucursales</h1>
-        <p className="text-[13px] text-neutral-400 mt-0.5">
-          Gestiona las ubicaciones físicas de tu negocio
-        </p>
-      </div>
+      {!hideHeader && (
+        <div>
+          <h1 className="text-[20px] font-extrabold text-neutral-900">Sucursales</h1>
+          <p className="text-[13px] text-neutral-400 mt-0.5">
+            Gestiona las ubicaciones físicas de tu negocio
+          </p>
+        </div>
+      )}
 
       {editingId && (
         <EditingBanner name={editingLocation?.name} onCancel={resetForm} />

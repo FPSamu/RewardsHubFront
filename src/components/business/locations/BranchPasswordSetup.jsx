@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import businessService from '../../../services/businessService';
 import * as adminPinService from '../../../services/adminPinService';
+import authService from '../../../services/authService';
+import { censorEmail } from '../../../utils/format';
 
 const parseError = (err) =>
   typeof err === 'string' ? err : err?.message ?? err?.error ?? 'Error al guardar la contraseña';
+
+// Avoids re-sending the email every time this screen remounts (e.g. navigating
+// back and forth in the onboarding wizard) within the same browser tab.
+const PIN_SENT_KEY = 'branchSetupPinSent';
 
 function FeatureItem({ children }) {
   return (
@@ -23,6 +29,38 @@ export function BranchPasswordSetup({ onDone }) {
   const [showPwd,   setShowPwd]   = useState(false);
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState('');
+
+  const [pinSending, setPinSending] = useState(false);
+  const [pinSent,     setPinSent]   = useState(false);
+  const [pinSendError, setPinSendError] = useState('');
+  const requestedRef = useRef(false);
+
+  const email = authService.getCurrentUser()?.email ?? '';
+
+  const sendPin = async () => {
+    setPinSending(true);
+    setPinSendError('');
+    try {
+      await adminPinService.resetPin();
+      setPinSent(true);
+      sessionStorage.setItem(PIN_SENT_KEY, '1');
+    } catch (err) {
+      setPinSendError(parseError(err));
+    } finally {
+      setPinSending(false);
+    }
+  };
+
+  useEffect(() => {
+    if (requestedRef.current) return;
+    requestedRef.current = true;
+    if (sessionStorage.getItem(PIN_SENT_KEY)) {
+      setPinSent(true);
+      return;
+    }
+    sendPin();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const mismatch   = confirm.length > 0 && confirm !== password;
   const tooShort   = password.length > 0 && password.length < 6;
@@ -64,6 +102,33 @@ export function BranchPasswordSetup({ onDone }) {
               Configúrala una vez — la usarás en todas tus sucursales
             </p>
           </div>
+        </div>
+
+        {/* PIN email status */}
+        <div className="bg-brand-primary/5 border border-brand-primary/15 rounded-xl px-4 py-3">
+          {pinSending && (
+            <p className="text-[12px] text-neutral-600 flex items-center gap-2">
+              <span className="w-3.5 h-3.5 rounded-full border-2 border-brand-primary border-t-transparent animate-spin flex-shrink-0" />
+              Enviando tu PIN temporal…
+            </p>
+          )}
+          {!pinSending && pinSent && (
+            <p className="text-[12px] text-neutral-700">
+              Te enviamos un PIN temporal a <span className="font-semibold">{censorEmail(email)}</span>. Úsalo abajo para continuar — podrás cambiarlo después.
+              {' '}
+              <button type="button" onClick={sendPin} className="text-brand-primary font-semibold hover:underline">
+                Reenviar
+              </button>
+            </p>
+          )}
+          {!pinSending && !pinSent && pinSendError && (
+            <p className="text-[12px] text-accent-danger">
+              No pudimos enviar el PIN: {pinSendError}{' '}
+              <button type="button" onClick={sendPin} className="font-semibold hover:underline">
+                Reintentar
+              </button>
+            </p>
+          )}
         </div>
 
         {/* Explanation card */}
@@ -159,14 +224,13 @@ export function BranchPasswordSetup({ onDone }) {
               <input
                 type="password"
                 value={pin}
-                onChange={(e) => { setPin(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(''); }}
+                onChange={(e) => { setPin(e.target.value.toUpperCase()); setError(''); }}
                 placeholder="Tu PIN de admin"
                 autoComplete="off"
-                inputMode="numeric"
                 className="w-full px-3 py-2.5 rounded-lg border border-neutral-200 text-[13px] text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-all tracking-widest"
               />
               <p className="mt-1.5 text-[11px] text-neutral-400">
-                Requerido para confirmar cambios de seguridad
+                El PIN que te enviamos por correo
               </p>
             </div>
 

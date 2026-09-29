@@ -17,6 +17,7 @@ import BusinessClients from './pages/BusinessClients'
 import BusinessRewards from './pages/BusinessRewards'
 import BusinessScan from './pages/BusinessScan'
 import BusinessSubscription from './pages/BusinessSubscription'
+import BusinessOnboarding from './pages/BusinessOnboarding'
 
 import ProtectedRoute from './components/ProtectedRoute'
 import BusinessProtectedRoute from './components/BusinessProtectedRoute'
@@ -66,8 +67,12 @@ function App() {
                         element={<BusinessProtectedRoute><BusinessSubscription /></BusinessProtectedRoute>}
                     />
                     <Route
+                        path="/business/onboarding"
+                        element={<BusinessProtectedRoute><BusinessOnboarding /></BusinessProtectedRoute>}
+                    />
+                    <Route
                         path="/business/location-setup"
-                        element={<Navigate to="/business/dashboard/locations" replace />}
+                        element={<Navigate to="/business/onboarding" replace />}
                     />
                     <Route
                         path="/business/dashboard"

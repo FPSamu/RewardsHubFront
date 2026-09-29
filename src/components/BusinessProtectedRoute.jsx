@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import authService from '../services/authService';
 import subscriptionService from '../services/subscriptionService';
+import businessService from '../services/businessService';
 
 function BusinessProtectedRoute({ children }) {
     const location = useLocation();
     const [loading, setLoading] = useState(true);
     const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+    const [hasLocations, setHasLocations] = useState(false);
 
     const isAuthenticated = authService.isAuthenticated();
     const userType = authService.getUserType();
@@ -25,11 +27,18 @@ function BusinessProtectedRoute({ children }) {
 
             try {
                 // getSubscriptionStatus reads from localStorage cache when available
-                const status = await subscriptionService.getSubscriptionStatus();
+                const [status, business] = await Promise.all([
+                    subscriptionService.getSubscriptionStatus().catch((error) => {
+                        console.error('Error checking subscription:', error);
+                        return { status: 'inactive' };
+                    }),
+                    businessService.getMyBusiness().catch((error) => {
+                        console.error('Error checking business locations:', error);
+                        return { locations: [] };
+                    }),
+                ]);
                 setSubscriptionStatus(status);
-            } catch (error) {
-                console.error('Error checking subscription:', error);
-                setSubscriptionStatus({ status: 'inactive' });
+                setHasLocations((business?.locations?.length ?? 0) > 0);
             } finally {
                 setLoading(false);
             }
@@ -65,8 +74,8 @@ function BusinessProtectedRoute({ children }) {
     }
 
     // Check if subscription is inactive or cancelled
-    // Allow access to subscription page and location setup page without subscription check
-    const isLocationSetupPage = location.pathname === '/business/location-setup';
+    // Allow access to the onboarding wizard and the subscription page without these checks
+    const isOnboardingPage = location.pathname === '/business/onboarding';
     const isSubscriptionPage = location.pathname === '/business/subscription';
     const ACTIVE_STATUSES    = ['active', 'lifetime', 'trialing'];
     const ACTIVE_MEMBERSHIPS = ['active', 'lifetime'];
@@ -77,9 +86,16 @@ function BusinessProtectedRoute({ children }) {
     );
     const needsSubscription = subscriptionStatus && !hasActiveSubscription;
 
-    // Allow access to location setup page always (for new businesses)
-    if (isLocationSetupPage) {
+    // The onboarding wizard is always reachable — it's where a business without a
+    // branch is sent, and it must stay visible even before they have a subscription.
+    if (isOnboardingPage) {
         return children;
+    }
+
+    // A business with no branch yet hasn't finished the minimum setup — send it to
+    // onboarding before it can reach the dashboard or the subscription page.
+    if (!hasLocations) {
+        return <Navigate to="/business/onboarding" replace />;
     }
 
     if (needsSubscription && !isSubscriptionPage) {
