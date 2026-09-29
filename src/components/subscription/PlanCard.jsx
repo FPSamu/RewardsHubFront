@@ -19,20 +19,23 @@ function MonthlyCard({ plan, onSubscribe, loading }) {
       style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }}
     >
       <p className="text-white/50 text-[11px] font-bold uppercase tracking-widest mb-1">Mensual</p>
-      <p className="text-white/30 text-[13px] mb-6">Empieza sin compromiso</p>
+      <p className="text-white/30 text-[13px] mb-5">Empieza sin compromiso</p>
 
-      <div className="relative mb-1">
-        <div className="pointer-events-none absolute -inset-6 rounded-full blur-2xl opacity-25"
-          style={{ background: '#34d399' }} />
-        <div className="relative flex items-baseline gap-2">
-          <span className="text-white text-[54px] font-extrabold leading-none">$0</span>
-          <span className="text-emerald-400 text-[13px] font-bold">hoy</span>
+      <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-5"
+        style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)' }}>
+        <span className="text-[18px] flex-shrink-0">🎁</span>
+        <div className="min-w-0">
+          <p className="text-emerald-400 text-[12.5px] font-extrabold leading-tight">Gratis tu primer mes</p>
+          <p className="text-emerald-400/55 text-[11px] leading-tight">$0.00 hoy — cancela cuando quieras</p>
         </div>
       </div>
-      <p className="text-emerald-400/80 text-[13px] font-semibold mb-1">Gratis tu primer mes</p>
-      <p className="text-white/25 text-[11px] mb-7">
-        Después <span className="text-white/50 font-semibold">$399.00</span> / mes · MXN
-      </p>
+
+      <div className="flex items-baseline gap-1 mb-1">
+        <span className="text-white text-[46px] font-extrabold leading-none">$399</span>
+        <span className="text-white/30 text-[14px] ml-1">.00</span>
+        <span className="text-white/30 text-[13px] ml-1">/ mes</span>
+      </div>
+      <p className="text-white/20 text-[11px] mb-7">A partir del segundo mes · MXN</p>
 
       <ul className="space-y-3 mb-8 flex-1">
         {plan.features.map((f, i) => (
@@ -74,20 +77,23 @@ function YearlyCard({ plan, onSubscribe, loading }) {
         style={{ background: '#EBA626' }} />
 
       <p className="text-amber-400 text-[11px] font-bold uppercase tracking-widest mb-1">Anual</p>
-      <p className="text-white/30 text-[13px] mb-6">El más popular entre negocios</p>
+      <p className="text-white/30 text-[13px] mb-5">El más popular entre negocios</p>
 
-      <div className="relative mb-1">
-        <div className="pointer-events-none absolute -inset-6 rounded-full blur-2xl opacity-25"
-          style={{ background: '#34d399' }} />
-        <div className="relative flex items-baseline gap-2">
-          <span className="text-white text-[54px] font-extrabold leading-none">$0</span>
-          <span className="text-emerald-400 text-[13px] font-bold">hoy</span>
+      <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-5"
+        style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.35)' }}>
+        <span className="text-[18px] flex-shrink-0">🎁</span>
+        <div className="min-w-0">
+          <p className="text-emerald-400 text-[12.5px] font-extrabold leading-tight">Gratis tu primer mes</p>
+          <p className="text-emerald-400/55 text-[11px] leading-tight">$0.00 hoy — cancela cuando quieras</p>
         </div>
       </div>
-      <p className="text-emerald-400/80 text-[13px] font-semibold mb-1">Gratis tu primer mes</p>
-      <p className="text-amber-400/50 text-[11px] mb-7">
-        Después <span className="text-amber-300/90 font-semibold">$299.99</span> / mes · ≈ $3,599/año MXN
-      </p>
+
+      <div className="flex items-baseline gap-1 mb-1">
+        <span className="text-white text-[46px] font-extrabold leading-none">$299</span>
+        <span className="text-white/30 text-[14px] ml-1">.99</span>
+        <span className="text-white/30 text-[13px] ml-1">/ mes</span>
+      </div>
+      <p className="text-amber-400/60 text-[11px] mb-7">A partir del segundo mes · ≈ $3,599/año MXN</p>
 
       <ul className="space-y-3 mb-8 flex-1">
         {plan.features.map((f, i) => (
