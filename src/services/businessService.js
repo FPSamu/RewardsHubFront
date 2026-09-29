@@ -184,6 +184,46 @@ export const businessService = {
       throw error.response?.data || error.message;
     }
   },
+
+  // Serie diaria de actividad (clientes nuevos, puntos, estampas, ingresos)
+  getTimeSeriesStats: async (days = 30) => {
+    try {
+      const response = await api.get("/business/stats/timeseries", { params: { days } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Clientes que no han vuelto en al menos `days` días
+  getAtRiskClients: async (days = 30, limit = 20) => {
+    try {
+      const response = await api.get("/business/stats/at-risk-clients", { params: { days, limit } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Recompensas más canjeadas
+  getTopRewards: async (limit = 5) => {
+    try {
+      const response = await api.get("/business/stats/top-rewards", { params: { limit } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Comparación de sucursales: periodo actual vs anterior
+  getBranchComparison: async (days = 30) => {
+    try {
+      const response = await api.get("/business/stats/branch-comparison", { params: { days } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 export default businessService;

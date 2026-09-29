@@ -4,6 +4,10 @@ import { RecentClientsSection } from '../components/admin/RecentClientsSection';
 import { LocationsSection } from '../components/admin/LocationsSection';
 import { RewardsSection } from '../components/admin/RewardsSection';
 import { ReportModal } from '../components/admin/ReportModal';
+import { TimeSeriesSection } from '../components/admin/TimeSeriesSection';
+import { AtRiskClientsSection } from '../components/admin/AtRiskClientsSection';
+import { TopRewardsSection } from '../components/admin/TopRewardsSection';
+import { BranchComparisonSection } from '../components/admin/BranchComparisonSection';
 import BranchActivityCarousel from '../components/BranchActivityCarousel';
 import businessDashboardService from '../services/businessDashboardService';
 import transactionService from '../services/transactionService';
@@ -85,6 +89,15 @@ export default function BusinessAdminDashboard() {
   const [errorStats,      setErrorStats]      = useState(false);
   const [showReport,      setShowReport]      = useState(false);
 
+  const [timeSeries,        setTimeSeries]        = useState(null);
+  const [loadingTimeSeries, setLoadingTimeSeries]  = useState(true);
+  const [atRiskClients,     setAtRiskClients]      = useState(null);
+  const [loadingAtRisk,     setLoadingAtRisk]      = useState(true);
+  const [topRewards,        setTopRewards]         = useState(null);
+  const [loadingTopRewards, setLoadingTopRewards]  = useState(true);
+  const [branchComparison,       setBranchComparison]       = useState([]);
+  const [loadingBranchComparison, setLoadingBranchComparison] = useState(true);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -112,6 +125,12 @@ export default function BusinessAdminDashboard() {
             businessService.getShiftStatsByBranch()
               .then((r) => { if (!cancelled) setShiftStats(r); })
               .catch(() => {});
+            businessService.getBranchComparison(30)
+              .then((r) => { if (!cancelled) setBranchComparison(r); })
+              .catch(() => {})
+              .finally(() => { if (!cancelled) setLoadingBranchComparison(false); });
+          } else {
+            setLoadingBranchComparison(false);
           }
         }
       } catch {
@@ -141,9 +160,45 @@ export default function BusinessAdminDashboard() {
       }
     };
 
+    const fetchTimeSeries = async () => {
+      try {
+        const data = await businessService.getTimeSeriesStats(30);
+        if (!cancelled) setTimeSeries(data);
+      } catch {
+        if (!cancelled) setTimeSeries([]);
+      } finally {
+        if (!cancelled) setLoadingTimeSeries(false);
+      }
+    };
+
+    const fetchAtRiskClients = async () => {
+      try {
+        const data = await businessService.getAtRiskClients(30, 20);
+        if (!cancelled) setAtRiskClients(data);
+      } catch {
+        if (!cancelled) setAtRiskClients([]);
+      } finally {
+        if (!cancelled) setLoadingAtRisk(false);
+      }
+    };
+
+    const fetchTopRewards = async () => {
+      try {
+        const data = await businessService.getTopRewards(5);
+        if (!cancelled) setTopRewards(data);
+      } catch {
+        if (!cancelled) setTopRewards([]);
+      } finally {
+        if (!cancelled) setLoadingTopRewards(false);
+      }
+    };
+
     fetchBusiness();
     fetchStats();
     fetchClients();
+    fetchTimeSeries();
+    fetchAtRiskClients();
+    fetchTopRewards();
 
     return () => { cancelled = true; };
   }, []);
@@ -171,6 +226,19 @@ export default function BusinessAdminDashboard() {
       </div>
 
       <div>
+        <SectionTitle>Tendencias</SectionTitle>
+        <TimeSeriesSection data={timeSeries} loading={loadingTimeSeries} days={30} />
+      </div>
+
+      <div>
+        <SectionTitle>Insights de clientes</SectionTitle>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <AtRiskClientsSection clients={atRiskClients} loading={loadingAtRisk} />
+          <TopRewardsSection rewards={topRewards} loading={loadingTopRewards} />
+        </div>
+      </div>
+
+      <div>
         <SectionTitle>Gestión</SectionTitle>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RewardsSection rewards={rewards} loading={loadingRewards} />
@@ -185,11 +253,19 @@ export default function BusinessAdminDashboard() {
       {(business?.locations?.length ?? 0) >= 2 && (
         <div>
           <SectionTitle>Actividad por sucursal</SectionTitle>
-          <div className="bg-white rounded-2xl border border-neutral-100 shadow-card p-6">
-            <BranchActivityCarousel
-              branchStats={branchStats}
-              shiftStats={shiftStats}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl border border-neutral-100 shadow-card p-6">
+              <BranchActivityCarousel
+                branchStats={branchStats}
+                shiftStats={shiftStats}
+                locations={business.locations}
+              />
+            </div>
+            <BranchComparisonSection
+              comparison={branchComparison}
               locations={business.locations}
+              loading={loadingBranchComparison}
+              days={30}
             />
           </div>
         </div>
