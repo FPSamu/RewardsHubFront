@@ -1,3 +1,5 @@
+import { Reveal3D, StaggerGroup, StaggerItem, OrganicBlob } from './motionPrimitives';
+
 const STEPS = [
   {
     n: '01',
@@ -8,8 +10,7 @@ const STEPS = [
     ),
     title: 'El negocio configura su programa',
     description: 'En minutos, el negocio crea su sistema de puntos o sellos, define las recompensas y activa su perfil en el mapa.',
-    color: '#EBA626',
-    bg: 'rgba(235,166,38,0.1)',
+    gradient: 'linear-gradient(135deg, #EBA626, #FF5FA2)',
   },
   {
     n: '02',
@@ -20,8 +21,7 @@ const STEPS = [
     ),
     title: 'El cliente escanea su QR',
     description: 'Con su código QR personal, el cliente escanea en caja y acumula puntos o sellos automáticamente en cada visita.',
-    color: '#22A06B',
-    bg: 'rgba(34,160,107,0.1)',
+    gradient: 'linear-gradient(135deg, #8B5CF6, #38BDF8)',
   },
   {
     n: '03',
@@ -32,71 +32,69 @@ const STEPS = [
     ),
     title: 'Canjea sus recompensas',
     description: 'Cuando acumula suficientes puntos, el cliente canjea la recompensa directamente en el negocio. Simple y sin complicaciones.',
-    color: '#7C3AED',
-    bg: 'rgba(124,58,237,0.1)',
+    gradient: 'linear-gradient(135deg, #38BDF8, #34D399)',
   },
 ];
 
 export function HowItWorksSection() {
   return (
-    <section className="py-24 px-5 relative overflow-hidden" data-aos="fade-up">
-      {/* Background accent */}
-      <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[140px] opacity-5"
-        style={{ background: 'radial-gradient(circle, #EBA626 0%, transparent 70%)' }} />
+    <section className="py-24 px-5 relative overflow-hidden">
+      <OrganicBlob color="#8B5CF6" size={480} opacity={0.14} radius="50%" blur={120} duration={19} className="top-0 right-1/4" />
 
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-16">
-          <p className="text-amber-400/70 text-[11px] font-bold uppercase tracking-widest mb-3">Proceso</p>
-          <h2 className="text-white text-[clamp(28px,5vw,42px)] font-extrabold leading-tight">
+      <div className="max-w-5xl mx-auto relative">
+        <Reveal3D className="text-center mb-16">
+          <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#8B5CF6' }}>Proceso</p>
+          <h2 className="font-display text-slate-900 text-[clamp(32px,5.5vw,48px)] font-extrabold leading-tight" style={{ letterSpacing: '-0.03em' }}>
             Así de simple
           </h2>
-          <p className="text-white/40 text-[15px] mt-3">Tres pasos para transformar visitas en clientes fieles</p>
-        </div>
+          <p className="text-slate-500 text-[15px] mt-3">Tres pasos para transformar visitas en clientes fieles</p>
+        </Reveal3D>
 
-        {/* Steps */}
+        {/* Connected flow */}
         <div className="relative">
-          {/* Connecting line (desktop) */}
-          <div className="hidden md:block absolute top-16 left-[16.6%] right-[16.6%] h-px"
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0.08) 80%, transparent)' }} />
+          {/* Connecting gradient line (desktop) with a traveling pulse */}
+          <div className="hidden md:block absolute top-9 left-[16.6%] right-[16.6%] h-[3px] rounded-full overflow-hidden"
+            style={{ background: 'linear-gradient(90deg, #EBA626, #8B5CF6, #34D399)' }}>
+            <div className="absolute top-0 h-full w-10 bg-white/80 rounded-full" style={{ animation: 'travelDot 3.5s ease-in-out infinite' }} />
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <StaggerGroup className="grid grid-cols-1 md:grid-cols-3 gap-8" stagger={0.15}>
             {STEPS.map((step, i) => (
-              <div
+              <StaggerItem
                 key={i}
                 className="relative flex flex-col items-center text-center"
-                data-aos="fade-up"
-                data-aos-delay={i * 120}
+                y={64}
+                rotate={18}
               >
-                {/* Number badge */}
-                <div className="relative mb-5">
+                {/* Node */}
+                <div className="relative mb-5 z-10">
                   <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center mb-0 relative z-10"
-                    style={{ background: step.bg, color: step.color, border: `1px solid ${step.color}30` }}
+                    className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-white shadow-lg"
+                    style={{ background: step.gradient, boxShadow: '0 16px 32px -12px rgba(91,45,160,0.35)' }}
                   >
                     {step.icon}
                   </div>
                   <div
-                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full border-2 border-[#0D0A05] flex items-center justify-center text-[10px] font-black"
-                    style={{ background: step.color, color: '#fff' }}
+                    className="absolute -top-2 -right-2 w-7 h-7 rounded-full border-2 border-[#FAFAFA] bg-white flex items-center justify-center text-[10px] font-black text-slate-700 shadow-sm"
                   >
                     {i + 1}
                   </div>
                 </div>
 
-                <h3 className="text-white text-[16px] font-bold mb-2 leading-tight">{step.title}</h3>
-                <p className="text-white/40 text-[13px] leading-relaxed max-w-[240px]">{step.description}</p>
+                <h3 className="text-slate-900 text-[16px] font-bold mb-2 leading-tight">{step.title}</h3>
+                <p className="text-slate-500 text-[13px] leading-relaxed max-w-[240px]">{step.description}</p>
 
                 {/* Connector arrow (mobile) */}
                 {i < STEPS.length - 1 && (
-                  <div className="md:hidden mt-5 text-white/20">
+                  <div className="md:hidden mt-5 text-slate-300">
                     <svg className="w-5 h-5 mx-auto rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
                   </div>
                 )}
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerGroup>
         </div>
       </div>
     </section>

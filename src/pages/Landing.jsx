@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { APP_URL } from '../utils/appUrl';
 import authService from '../services/authService';
 import SEO from '../components/SEO';
-import AOS from 'aos';
-import 'aos/dist/aos.css';
 
 import { LandingNav } from '../components/landing/LandingNav';
 import { HeroSection } from '../components/landing/HeroSection';
@@ -47,6 +45,17 @@ const CSS_KEYFRAMES = `
     0%, 100% { transform: translateY(0); opacity: 1; }
     50% { transform: translateY(8px); opacity: 0.4; }
   }
+  @keyframes blobFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(3%, -4%) scale(1.06); }
+    66% { transform: translate(-3%, 3%) scale(0.95); }
+  }
+  @keyframes travelDot {
+    0% { left: -15%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { left: 105%; opacity: 0; }
+  }
 `;
 
 function Landing() {
@@ -67,14 +76,11 @@ function Landing() {
     if (token) {
       const userType = localStorage.getItem('userType');
       navigate(userType === 'business' ? '/business/dashboard' : '/client/dashboard');
-      return;
     }
-
-    AOS.init({ duration: 900, once: true, offset: 80 });
   }, [navigate]);
 
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ background: '#0D0A05' }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ background: '#FAFAFA' }}>
       <SEO
         title="RewardsHub - Plataforma de Recompensas y Fidelización para Negocios"
         description="Conecta con tus clientes y fideliza con RewardsHub. Sistema de puntos y recompensas diseñado para pequeños y grandes negocios. Más de 500 negocios y 10K clientes conectados."

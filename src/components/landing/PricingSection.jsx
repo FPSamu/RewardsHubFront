@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Reveal3D, StaggerGroup, StaggerItem, OrganicBlob } from './motionPrimitives';
 
 const MONTHLY_FEATURES = [
   'Acceso completo a la plataforma',
@@ -28,56 +29,54 @@ function CheckIcon({ color }) {
 
 export function PricingSection() {
   return (
-    <section className="py-24 px-5 relative" data-aos="fade-up">
-      {/* bg glow */}
-      <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] rounded-full blur-[120px] opacity-6"
-        style={{ background: 'radial-gradient(circle, #EBA626 0%, transparent 70%)' }} />
+    <section className="py-24 px-5 relative overflow-hidden">
+      <OrganicBlob color="#FF5FA2" size={600} opacity={0.14} radius="50%" blur={130} duration={20} className="-bottom-52 left-1/2 -translate-x-1/2" />
 
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-14">
-          <p className="text-amber-400/70 text-[11px] font-bold uppercase tracking-widest mb-3">Precios</p>
+      <div className="max-w-5xl mx-auto relative">
+        <Reveal3D className="text-center mb-14">
+          <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#D6368F' }}>Precios</p>
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-5"
-            style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.35)', boxShadow: '0 0 24px rgba(52,211,153,0.15)' }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-emerald-400 text-[12px] font-bold tracking-wide">30 días gratis · $0 hoy</span>
+            style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)' }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-emerald-700 text-[12px] font-bold tracking-wide">30 días gratis · $0 hoy</span>
           </div>
-          <h2 className="text-white text-[clamp(28px,5vw,42px)] font-extrabold leading-tight mb-3">
+          <h2 className="font-display text-slate-900 text-[clamp(32px,5.5vw,48px)] font-extrabold leading-tight mb-3" style={{ letterSpacing: '-0.03em' }}>
             Planes para tu negocio
           </h2>
-          <p className="text-white/40 text-[15px]">Primer mes gratis. Sin contratos ocultos. Cancela cuando quieras.</p>
-        </div>
+          <p className="text-slate-500 text-[15px]">Primer mes gratis. Sin contratos ocultos. Cancela cuando quieras.</p>
+        </Reveal3D>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto">
+        <StaggerGroup className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto" stagger={0.16}>
 
           {/* Monthly */}
-          <div
-            className="relative rounded-3xl border p-8 flex flex-col"
-            style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }}
-            data-aos="fade-up"
-            data-aos-delay="0"
+          <StaggerItem
+            className="relative border border-white bg-white/70 backdrop-blur-xl p-8 flex flex-col shadow-[0_20px_60px_-25px_rgba(91,45,160,0.25)]"
+            style={{ borderRadius: '2.5rem 2.5rem 2.5rem 0.75rem' }}
+            axis="y"
+            rotate={-14}
           >
-            <p className="text-white/50 text-[11px] font-bold uppercase tracking-widest mb-1">Mensual</p>
-            <p className="text-white/35 text-[13px] mb-5">Empieza sin compromiso</p>
+            <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest mb-1">Mensual</p>
+            <p className="text-slate-400 text-[13px] mb-5">Empieza sin compromiso</p>
 
             <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-5"
-              style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)' }}>
+              style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
               <span className="text-[18px] flex-shrink-0">🎁</span>
               <div className="min-w-0">
-                <p className="text-emerald-400 text-[12.5px] font-extrabold leading-tight">Gratis tu primer mes</p>
-                <p className="text-emerald-400/55 text-[11px] leading-tight">$0.00 hoy — cancela cuando quieras</p>
+                <p className="text-emerald-700 text-[12.5px] font-extrabold leading-tight">Gratis tu primer mes</p>
+                <p className="text-emerald-600/70 text-[11px] leading-tight">$0.00 hoy — cancela cuando quieras</p>
               </div>
             </div>
 
             <div className="flex items-baseline gap-1.5 mb-1">
-              <span className="text-white text-[44px] font-extrabold leading-none">$399</span>
-              <span className="text-white/35 text-[14px]">.00 / mes</span>
+              <span className="font-display text-slate-900 text-[44px] font-extrabold leading-none tabular-nums">$399</span>
+              <span className="text-slate-400 text-[14px]">.00 / mes</span>
             </div>
-            <p className="text-white/25 text-[11px] mb-7">A partir del segundo mes</p>
+            <p className="text-slate-400 text-[11px] mb-7">A partir del segundo mes</p>
 
             <ul className="space-y-3 mb-8 flex-1">
               {MONTHLY_FEATURES.map((f, i) => (
-                <li key={i} className="flex items-center gap-2.5 text-[13px] text-white/60">
-                  <CheckIcon color="#9ca3af" />
+                <li key={i} className="flex items-center gap-2.5 text-[13px] text-slate-600">
+                  <CheckIcon color="#94a3b8" />
                   {f}
                 </li>
               ))}
@@ -85,53 +84,49 @@ export function PricingSection() {
 
             <Link
               to="/signup"
-              className="w-full py-3 rounded-full border border-white/20 text-white text-[14px] font-bold text-center hover:bg-white/8 transition-all"
+              className="w-full py-3 rounded-full border border-slate-200 text-slate-700 text-[14px] font-bold text-center hover:bg-slate-50 transition-all"
             >
               Empezar mes gratis
             </Link>
-          </div>
+          </StaggerItem>
 
           {/* Annual — highlighted */}
-          <div
-            className="relative rounded-3xl border p-8 flex flex-col"
-            style={{ background: 'rgba(235,166,38,0.06)', borderColor: 'rgba(235,166,38,0.3)' }}
-            data-aos="fade-up"
-            data-aos-delay="100"
+          <StaggerItem
+            className="relative border border-white p-8 flex flex-col shadow-[0_24px_70px_-20px_rgba(91,45,160,0.35)]"
+            style={{ borderRadius: '2.5rem 2.5rem 0.75rem 2.5rem', background: 'linear-gradient(165deg, rgba(255,95,162,0.1), rgba(139,92,246,0.1))' }}
+            axis="y"
+            rotate={14}
           >
             {/* Best value badge */}
             <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
               <span className="px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-white"
-                style={{ background: 'linear-gradient(135deg, #EBA626, #FFD876)' }}>
+                style={{ background: 'linear-gradient(135deg, #FF5FA2, #8B5CF6)' }}>
                 Mejor valor
               </span>
             </div>
 
-            {/* Corner glow */}
-            <div className="pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl opacity-20"
-              style={{ background: '#EBA626' }} />
-
-            <p className="text-amber-400 text-[11px] font-bold uppercase tracking-widest mb-1">Anual</p>
-            <p className="text-white/35 text-[13px] mb-5">El más popular entre negocios</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: '#9333EA' }}>Anual</p>
+            <p className="text-slate-500 text-[13px] mb-5">El más popular entre negocios</p>
 
             <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-5"
-              style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.35)' }}>
+              style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)' }}>
               <span className="text-[18px] flex-shrink-0">🎁</span>
               <div className="min-w-0">
-                <p className="text-emerald-400 text-[12.5px] font-extrabold leading-tight">Gratis tu primer mes</p>
-                <p className="text-emerald-400/55 text-[11px] leading-tight">$0.00 hoy — cancela cuando quieras</p>
+                <p className="text-emerald-700 text-[12.5px] font-extrabold leading-tight">Gratis tu primer mes</p>
+                <p className="text-emerald-600/70 text-[11px] leading-tight">$0.00 hoy — cancela cuando quieras</p>
               </div>
             </div>
 
             <div className="flex items-baseline gap-1.5 mb-1">
-              <span className="text-white text-[44px] font-extrabold leading-none">$299</span>
-              <span className="text-white/35 text-[14px]">.99 / mes</span>
+              <span className="font-display text-slate-900 text-[44px] font-extrabold leading-none tabular-nums">$299</span>
+              <span className="text-slate-500 text-[14px]">.99 / mes</span>
             </div>
-            <p className="text-amber-400/60 text-[11px] mb-7">A partir del segundo mes · ≈ $3,599.88 / año</p>
+            <p className="text-[11px] mb-7" style={{ color: '#9333EA' }}>A partir del segundo mes · ≈ $3,599.88 / año</p>
 
             <ul className="space-y-3 mb-8 flex-1">
               {ANNUAL_EXTRAS.map((f, i) => (
-                <li key={i} className="flex items-center gap-2.5 text-[13px] text-white/70">
-                  <CheckIcon color="#EBA626" />
+                <li key={i} className="flex items-center gap-2.5 text-[13px] text-slate-700">
+                  <CheckIcon color="#8B5CF6" />
                   {f}
                 </li>
               ))}
@@ -140,18 +135,18 @@ export function PricingSection() {
             <Link
               to="/signup"
               className="w-full py-3 rounded-full text-white text-[14px] font-bold text-center transition-all hover:opacity-90"
-              style={{ background: 'linear-gradient(135deg, #EBA626, #d99520)' }}
+              style={{ background: 'linear-gradient(135deg, #FF5FA2, #8B5CF6)' }}
             >
               Empezar mes gratis
             </Link>
-          </div>
-        </div>
+          </StaggerItem>
+        </StaggerGroup>
 
         {/* Free client note */}
         <div className="mt-10 text-center">
-          <p className="text-white/30 text-[13px]">
+          <p className="text-slate-400 text-[13px]">
             ¿Solo quieres acumular puntos?{' '}
-            <Link to="/signup" className="text-amber-400/80 hover:text-amber-400 font-semibold transition-colors">
+            <Link to="/signup" className="font-semibold transition-colors" style={{ color: '#9333EA' }}>
               La cuenta de cliente es completamente gratis →
             </Link>
           </p>
