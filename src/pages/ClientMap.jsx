@@ -5,6 +5,7 @@ import L from 'leaflet';
 import businessService from '../services/businessService';
 import userPointsService from '../services/userPointsService';
 import rewardService from '../services/rewardService';
+import { TILE_URL, TILE_ATTRIBUTION } from '../utils/mapTiles';
 import { BusinessAvatar } from '../components/client/shared/BusinessAvatar';
 import { BusinessRewardsModal } from '../components/client/home/modals/BusinessRewardsModal';
 
@@ -484,10 +485,7 @@ export default function ClientMap() {
             zoomControl={false}
             className="z-0"
           >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-            />
+            <TileLayer attribution={TILE_ATTRIBUTION} url={TILE_URL} />
 
             <FlyTo target={flyTarget} />
 
