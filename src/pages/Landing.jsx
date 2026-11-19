@@ -4,15 +4,15 @@ import { APP_URL } from '../utils/appUrl';
 import authService from '../services/authService';
 import SEO from '../components/SEO';
 
-import { LandingNav } from '../components/landing/LandingNav';
-import { HeroSection } from '../components/landing/HeroSection';
-import { StatsBar } from '../components/landing/StatsBar';
-import { AudienceSection } from '../components/landing/AudienceSection';
-import { HowItWorksSection } from '../components/landing/HowItWorksSection';
-import { FeaturesSection } from '../components/landing/FeaturesSection';
-import { PricingSection } from '../components/landing/PricingSection';
-import { CtaSection } from '../components/landing/CtaSection';
-import { LandingFooter } from '../components/landing/LandingFooter';
+import { HeroSection } from '../components/home/HeroSection';
+import { Marquee } from '../components/home/Marquee';
+import { StepsSection } from '../components/home/StepsSection';
+import { FunctionsSection } from '../components/home/FunctionsSection';
+import { BenefitsSection } from '../components/home/BenefitsSection';
+import { ClientsSection } from '../components/home/ClientsSection';
+import { PricingSection } from '../components/home/PricingSection';
+import { FaqSection } from '../components/home/FaqSection';
+import { CtaFooterSection } from '../components/home/CtaFooterSection';
 
 const CSS_KEYFRAMES = `
   @keyframes heroFloat1 {
@@ -117,15 +117,15 @@ function Landing() {
         }}
       />
 
-      <LandingNav />
       <HeroSection />
-      <StatsBar />
-      <AudienceSection />
-      <HowItWorksSection />
-      <FeaturesSection />
+      <Marquee />
+      <StepsSection />
+      <FunctionsSection />
+      <BenefitsSection />
+      <ClientsSection />
       <PricingSection />
-      <CtaSection />
-      <LandingFooter />
+      <FaqSection />
+      <CtaFooterSection />
     </div>
   );
 }

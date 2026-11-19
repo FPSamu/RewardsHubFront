@@ -4,6 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Tokens de la landing (Figma "RewardsHub – Landing Page")
+        rh: {
+          brand: { 100: "#FDF3DC", 200: "#FFD48A", 400: "#FFB733", 600: "#EBA626", 800: "#A8650A" },
+          ink: { 950: "#13110A", 900: "#1E1A0F", 800: "#262013", 700: "#3A3220", 500: "#6B5B2E" },
+          paper: { 50: "#FAFAF6", 100: "#F5EFE0", 200: "#EDE3C8" },
+          "on-dark": "#F5EFE0",
+          "on-dark-muted": "#B8AE98",
+          "on-light": "#13110A",
+          "on-light-muted": "#6B5B2E",
+        },
         brand: {
           primary: "#EBA626",
           hover: "#C47D10",
@@ -70,6 +80,11 @@ export default {
         lg:  "0 16px 40px rgba(20, 16, 5, 0.14), 0 8px 16px rgba(20, 16, 5, 0.07)",
       },
       fontFamily: {
+        "rh-display": ["'Bricolage Grotesque'", "system-ui", "sans-serif"],
+        "rh-sans": ["Geist", "system-ui", "-apple-system", "sans-serif"],
+        "rh-serif": ["'Instrument Serif'", "Georgia", "serif"],
+        "rh-mono": ["'JetBrains Mono'", "Menlo", "monospace"],
+        "rh-logo": ["Poppins", "system-ui", "sans-serif"],
         sans: [
           "Plus Jakarta Sans",
           "system-ui",
