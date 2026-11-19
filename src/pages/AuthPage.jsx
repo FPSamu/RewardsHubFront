@@ -28,7 +28,10 @@ function AuthPage() {
   const [displayedMode, setDisplayedMode] = useState(initialMode);
   const [formVisible,   setFormVisible]   = useState(true);
 
-  const [accountType, setAccountType] = useState('client'); // 'client' | 'business'
+  // La landing manda ?tipo=negocio|cliente para preseleccionar el tipo de cuenta
+  const [accountType, setAccountType] = useState(
+    searchParams.get('tipo') === 'negocio' ? 'business' : 'client'
+  ); // 'client' | 'business'
   const [loginData,   setLoginData]   = useState(EMPTY_LOGIN);
   const [signupData,  setSignupData]  = useState(EMPTY_SIGNUP);
   const [rememberMe,  setRememberMe]  = useState(false);
