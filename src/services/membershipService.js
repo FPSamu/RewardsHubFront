@@ -1,4 +1,5 @@
 import api from './api';
+import idempotentPost from './idempotentPost';
 
 // ── Plan management (business) ──────────────────────────────────────────────
 export const getMyPlans = () =>
@@ -17,11 +18,11 @@ export const deletePlan = (id) =>
 export const getClientMembership = (userId) =>
     api.get(`/memberships/client/${userId}`).then(r => r.data);
 
-export const activateMembership = (userId, planId) =>
-    api.post('/memberships/activate', { userId, planId }).then(r => r.data);
+export const activateMembership = (userId, planId, idempotencyKey) =>
+    idempotentPost('/memberships/activate', { userId, planId }, idempotencyKey).then(r => r.data);
 
-export const redeemDailyBenefit = (userId, membershipId) =>
-    api.post('/memberships/redeem', { userId, membershipId }).then(r => r.data);
+export const redeemDailyBenefit = (userId, membershipId, idempotencyKey) =>
+    idempotentPost('/memberships/redeem', { userId, membershipId }, idempotencyKey).then(r => r.data);
 
 // ── Client ──────────────────────────────────────────────────────────────────
 export const getMyMemberships = () =>

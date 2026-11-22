@@ -1,4 +1,5 @@
 import api from "./api";
+import idempotentPost from "./idempotentPost";
 import { getDeviceTimezone } from "../utils/timezone";
 
 export const userPointsService = {
@@ -33,12 +34,12 @@ export const userPointsService = {
   },
 
   // Add points/stamps to a user (business action)
-  addPoints: async (data) => {
+  addPoints: async (data, idempotencyKey) => {
     try {
-      const response = await api.post("/user-points/add", {
+      const response = await idempotentPost("/user-points/add", {
         ...data,
         timezone: getDeviceTimezone(),
-      });
+      }, idempotencyKey);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -56,12 +57,12 @@ export const userPointsService = {
   },
 
   // Subtract points/stamps from a user (business action - for redeeming rewards)
-  subtractPoints: async (data) => {
+  subtractPoints: async (data, idempotencyKey) => {
     try {
-      const response = await api.post("/user-points/subtract", {
+      const response = await idempotentPost("/user-points/subtract", {
         ...data,
         timezone: getDeviceTimezone(),
-      });
+      }, idempotencyKey);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

@@ -7,6 +7,7 @@ import systemService from '../services/systemService';
 import rewardService from '../services/rewardService';
 import deliveryService from '../services/deliveryService';
 import * as membershipService from '../services/membershipService';
+import useIdempotencyKey from '../hooks/useIdempotencyKey';
 
 const BusinessScan = () => {
     const navigate = useNavigate();
@@ -35,6 +36,15 @@ const BusinessScan = () => {
     const [membershipMessage, setMembershipMessage] = useState('');
     const [selectedPlanId, setSelectedPlanId] = useState('');
     const [redeemingMembershipId, setRedeemingMembershipId] = useState(null);
+
+    // Idempotency-Key: una por acción (sumar, canjear, activar, canjear beneficio)
+    const addPointsKey = useIdempotencyKey();
+    const subtractPointsKey = useIdempotencyKey();
+    const activateMembershipKey = useIdempotencyKey();
+    const redeemMembershipKey = useIdempotencyKey();
+    // Sumar/restar en curso: bloquea dobles clics y escaneos repetidos
+    const pointsBusyRef = useRef(false);
+    const [pointsBusy, setPointsBusy] = useState(false);
 
     const scannerRef = useRef(null);
     const qrReaderRef = useRef(null);
@@ -202,6 +212,9 @@ const BusinessScan = () => {
     };
 
     const processTransaction = useCallback(async (userId) => {
+        if (pointsBusyRef.current) return;
+        pointsBusyRef.current = true;
+        setPointsBusy(true);
         setStep('processing');
         try {
             const requestData = {
@@ -250,7 +263,7 @@ const BusinessScan = () => {
             console.log('Processing transaction with data:', requestData);
 
             // Call API to add points/stamps to user
-            await userPointsService.addPoints(requestData);
+            await userPointsService.addPoints(requestData, addPointsKey.keyFor(requestData));
 
             setStep('success');
             setError(null);
@@ -258,8 +271,12 @@ const BusinessScan = () => {
             console.error('Error processing transaction:', err);
             setError(err.message || 'Error al procesar la transacción');
             setStep('error');
+        } finally {
+            addPointsKey.settle();
+            pointsBusyRef.current = false;
+            setPointsBusy(false);
         }
-    }, [rewardType, purchaseAmount, stampQuantity, selectedStampSystem, productIdentifier, rewardSystems, business, selectedLocation]);
+    }, [rewardType, purchaseAmount, stampQuantity, selectedStampSystem, productIdentifier, rewardSystems, business, selectedLocation, addPointsKey]);
 
     useEffect(() => {
         const onScanSuccess = async (decodedText) => {
@@ -426,6 +443,9 @@ const BusinessScan = () => {
 
     const handleConfirmRedeem = async () => {
         if (!redeemingReward || !scannedUserId) return;
+        if (pointsBusyRef.current) return;
+        pointsBusyRef.current = true;
+        setPointsBusy(true);
 
         setStep('processing');
         setShowRedeemModal(false);
@@ -464,7 +484,7 @@ const BusinessScan = () => {
             console.log('Redeeming reward with data:', requestData);
 
             // Call API to subtract points/stamps
-            await userPointsService.subtractPoints(requestData);
+            await userPointsService.subtractPoints(requestData, subtractPointsKey.keyFor(requestData));
 
             setShowRedeemModal(false);
             setStep('success');
@@ -475,6 +495,10 @@ const BusinessScan = () => {
             setError(err.message || 'Error al canjear la recompensa');
             setStep('error');
             setRedeemingReward(null);
+        } finally {
+            subtractPointsKey.settle();
+            pointsBusyRef.current = false;
+            setPointsBusy(false);
         }
     };
 
@@ -488,7 +512,8 @@ const BusinessScan = () => {
         setMembershipAction('activating');
         setMembershipMessage('');
         try {
-            const result = await membershipService.activateMembership(scannedUserId, selectedPlanId);
+            const key = activateMembershipKey.keyFor({ userId: scannedUserId, planId: selectedPlanId });
+            const result = await membershipService.activateMembership(scannedUserId, selectedPlanId, key);
             setClientMemberships(prev => [...(prev ?? []), result.membership]);
             setMembershipAction('activated');
             setMembershipMessage(result.message);
@@ -496,6 +521,8 @@ const BusinessScan = () => {
         } catch (err) {
             setMembershipAction(null);
             setMembershipMessage(err.response?.data?.message || 'Error al activar la membresía');
+        } finally {
+            activateMembershipKey.settle();
         }
     };
 
@@ -504,7 +531,8 @@ const BusinessScan = () => {
         setRedeemingMembershipId(membershipId);
         setMembershipMessage('');
         try {
-            const result = await membershipService.redeemDailyBenefit(scannedUserId, membershipId);
+            const key = redeemMembershipKey.keyFor({ userId: scannedUserId, membershipId });
+            const result = await membershipService.redeemDailyBenefit(scannedUserId, membershipId, key);
             setClientMemberships(prev => prev.map(m =>
                 m._id === membershipId ? { ...m, redeemedToday: true } : m
             ));
@@ -521,6 +549,7 @@ const BusinessScan = () => {
                 setMembershipMessage(msg);
             }
         } finally {
+            redeemMembershipKey.settle();
             setRedeemingMembershipId(null);
         }
     };
@@ -1028,7 +1057,8 @@ const BusinessScan = () => {
                             <>
                                 <button
                                     onClick={handleContinueTransaction}
-                                    className="flex-1 py-3 rounded-pill bg-brand-primary text-brand-onColor hover:opacity-90 text-[14px] font-bold transition-all shadow-card"
+                                    disabled={pointsBusy}
+                                    className="flex-1 py-3 rounded-pill bg-brand-primary text-brand-onColor hover:opacity-90 text-[14px] font-bold transition-all shadow-card disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Continuar con transacción
                                 </button>
@@ -1418,7 +1448,8 @@ const BusinessScan = () => {
                             </button>
                             <button
                                 onClick={handleConfirmRedeem}
-                                className="flex-1 py-3 rounded-pill bg-accent-success text-white hover:opacity-90 font-bold text-[14px] transition-all"
+                                disabled={pointsBusy}
+                                className="flex-1 py-3 rounded-pill bg-accent-success text-white hover:opacity-90 font-bold text-[14px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Confirmar canjeo
                             </button>

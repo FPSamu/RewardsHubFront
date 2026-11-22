@@ -54,11 +54,42 @@ const clearAndRedirect = () => {
   window.location.href = '/login';
 };
 
+// ─── Retry-After: segundos o fecha HTTP → milisegundos (null si no viene) ────
+
+export const parseRetryAfterMs = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const date = Date.parse(value);
+  return Number.isNaN(date) ? null : Math.max(0, date - Date.now());
+};
+
+// "Demasiados intentos, espera N segundos". Con esperas largas (el login bloquea
+// hasta 15 min) se muestran minutos para que el número sea legible.
+const tooManyRequestsMessage = (retryAfter) => {
+  const ms = parseRetryAfterMs(retryAfter);
+  if (ms === null) return 'Demasiados intentos, espera unos minutos e inténtalo de nuevo.';
+  const seconds = Math.max(1, Math.ceil(ms / 1000));
+  if (seconds < 120) {
+    return `Demasiados intentos, espera ${seconds} ${seconds === 1 ? 'segundo' : 'segundos'} e inténtalo de nuevo.`;
+  }
+  return `Demasiados intentos, espera ${Math.ceil(seconds / 60)} minutos e inténtalo de nuevo.`;
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
+
+    // ── 429: límite de intentos. No se reintenta; se cambia el mensaje por uno
+    // amigable para que las pantallas que muestran err.message lo enseñen. ───
+    if (status === 429) {
+      const message = tooManyRequestsMessage(error.response.headers?.['retry-after']);
+      error.message = message;
+      error.response.data = { message };
+      return Promise.reject(error);
+    }
 
     // ── 401 handling with token refresh ──────────────────────────────────────
     const isNoRefresh = NO_REFRESH_URLS.some((u) => originalRequest.url?.includes(u));

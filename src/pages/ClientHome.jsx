@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import authService from '../services/authService';
+import useIdempotencyKey from '../hooks/useIdempotencyKey';
 import userPointsService from '../services/userPointsService';
 import businessService from '../services/businessService';
 import deliveryService from '../services/deliveryService';
@@ -39,6 +40,8 @@ const ClientHome = () => {
   const [redeemStatus, setRedeemStatus]       = useState('idle');
   const [redeemResult, setRedeemResult]       = useState(null);
   const [redeemError, setRedeemError]         = useState('');
+  const claimKey = useIdempotencyKey();
+  const claimBusyRef = useRef(false);
 
   // Listen for profile updates
   useEffect(() => {
@@ -160,18 +163,24 @@ const ClientHome = () => {
 
   const handleRedeemSubmit = async (e) => {
     e.preventDefault();
-    if (!redeemCode.trim()) return;
+    if (!redeemCode.trim() || claimBusyRef.current) return;
+    claimBusyRef.current = true;
     setRedeemStatus('loading');
     setRedeemError('');
+    const code = redeemCode.trim();
     try {
-      const data = await deliveryService.claimCode(redeemCode.trim());
+      const data = await deliveryService.claimCode(code, claimKey.keyFor({ code }));
+      claimKey.settle();
       setRedeemResult(data);
       setRedeemStatus('success');
       setRedeemCode('');
       await fetchData();
     } catch (err) {
+      claimKey.settle();
       setRedeemStatus('error');
       setRedeemError(err.message || 'Código inválido o expirado');
+    } finally {
+      claimBusyRef.current = false;
     }
   };
 

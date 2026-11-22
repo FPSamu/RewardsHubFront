@@ -1,4 +1,5 @@
 import api from "./api";
+import idempotentPost from "./idempotentPost";
 import { getDeviceTimezone } from "../utils/timezone";
 
 const deliveryService = {
@@ -11,12 +12,12 @@ const deliveryService = {
     }
   },
 
-  claimCode: async (code) => {
+  claimCode: async (code, idempotencyKey) => {
     try {
-      const response = await api.post("/delivery/claim", {
+      const response = await idempotentPost("/delivery/claim", {
         code,
         timezone: getDeviceTimezone(),
-      });
+      }, idempotencyKey);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
