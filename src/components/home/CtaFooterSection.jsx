@@ -160,7 +160,7 @@ export function CtaFooterSection() {
               </em>
             </motion.h2>
             <motion.div {...enter(0.08)} className="flex flex-col gap-3 md:flex-row">
-              <RhButton to={SIGNUP_CLIENT} arrow className="w-full md:w-auto">
+              <RhButton to={SIGNUP_BUSINESS} arrow className="w-full md:w-auto">
                 Prueba 1 mes gratis
               </RhButton>
               <RhButton to={SIGNUP_CLIENT} variant="secondaryDark" className="w-full md:w-auto">

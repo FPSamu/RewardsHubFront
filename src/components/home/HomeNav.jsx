@@ -51,7 +51,7 @@ export function HomeNav() {
           <RhButton to="/login" variant="secondaryDark" compact className="hidden md:inline-flex">
             Soy cliente
           </RhButton>
-          <RhButton to={SIGNUP_BUSINESS} className="hidden md:inline-flex">
+          <RhButton to={SIGNUP_CLIENT} className="hidden md:inline-flex">
             Empieza gratis
           </RhButton>
           <button

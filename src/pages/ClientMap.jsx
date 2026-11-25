@@ -170,7 +170,7 @@ function BusinessBottomCard({ biz, userPointsMap, rewardsMap, onClose, onShowRew
             <div className="flex-1 min-w-0">
               <p className="text-[15px] font-bold text-neutral-900 truncate leading-tight">{biz.name}</p>
               <p className="text-[12px] text-neutral-400 mt-0.5 truncate">
-                {biz.distance} de distancia
+                {biz.branchName ? `${biz.branchName} · ` : ''}{biz.distance} de distancia
               </p>
             </div>
             <button
@@ -271,7 +271,9 @@ function BusinessRow({ biz, userPointsMap, rewardsMap, onSelect }) {
 
       <div className="flex-1 min-w-0">
         <p className="text-[14px] font-semibold text-neutral-900 truncate leading-tight">{biz.name}</p>
-        <p className="text-[11px] text-neutral-400 mt-0.5">{biz.distance}</p>
+        <p className="text-[11px] text-neutral-400 mt-0.5 truncate">
+          {biz.branchName ? `${biz.branchName} · ` : ''}{biz.distance}
+        </p>
         <div className="flex flex-wrap gap-1 mt-1.5">
           {rewards.length > 0 && (
             <span className="text-[10px] font-bold bg-accent-successBg text-accent-success px-2 py-0.5 rounded-full">
@@ -368,43 +370,58 @@ export default function ClientMap() {
         const rawList = nearbyData?.businesses ?? [];
         setNearbyRaw(rawList);
 
-        // Deduplicate by id, keep closest
-        const deduped = new Map();
+        // El backend devuelve una entrada por sucursal: todas comparten el `id`
+        // del negocio y se distinguen por `branchId`. Deduplicar por `id`
+        // escondia todas las sucursales menos la mas cercana, asi que la
+        // identidad de cada fila es el branchId.
+        const branches = [];
+        const seenBranches = new Set();
         rawList.forEach((b) => {
-          const prev = deduped.get(b.id);
-          if (!prev || (b.distance ?? Infinity) < (prev.distance ?? Infinity)) {
-            deduped.set(b.id, b);
-          }
+          const branchId = b.branchId ?? b.location?._id ?? b.id;
+          if (seenBranches.has(branchId)) return;
+          seenBranches.add(branchId);
+          branches.push({ ...b, branchId });
         });
-        const uniqueList = Array.from(deduped.values());
 
-        // Enrich with status + rewards
+        // Los puntos y las recompensas son del negocio, no de la sucursal: una
+        // sola peticion por negocio aunque tenga varias sucursales cerca.
+        const businessIds = [...new Set(branches.map((b) => b.id))];
+
         const rMap = {};
         await Promise.all(
-          uniqueList.map(async (b) => {
+          businessIds.map(async (id) => {
             try {
-              const userPts = ptsMap[b.id];
-              if (!userPts) { rMap[b.id] = []; return; }
-              const allRewards = await rewardService.getBusinessRewards(b.id);
-              rMap[b.id] = (allRewards ?? []).filter((r) => {
+              const userPts = ptsMap[id];
+              if (!userPts) { rMap[id] = []; return; }
+              const allRewards = await rewardService.getBusinessRewards(id);
+              rMap[id] = (allRewards ?? []).filter((r) => {
                 if (!r.isActive) return false;
                 if (r.pointsRequired != null) return userPts.points >= r.pointsRequired;
                 if (r.stampsRequired != null) return userPts.stamps >= r.stampsRequired;
                 return false;
               });
             } catch {
-              rMap[b.id] = [];
+              rMap[id] = [];
             }
           })
         );
         setRewardsMap(rMap);
 
-        const enriched = uniqueList.map((b) => {
+        // Un negocio con varias sucursales cerca aparece repetido, asi que esas
+        // filas llevan ademas el nombre de su sucursal para poder distinguirlas.
+        const branchCount = {};
+        branches.forEach((b) => { branchCount[b.id] = (branchCount[b.id] ?? 0) + 1; });
+
+        const enriched = branches.map((b) => {
           const userPts = ptsMap[b.id];
           const hasVisited = userPts && (userPts.points > 0 || userPts.stamps > 0);
           return {
             id:        b.id,
+            branchId:  b.branchId,
             name:      b.username ?? b.name ?? 'Negocio',
+            branchName: branchCount[b.id] > 1
+              ? (b.branchName ?? b.location?.name ?? null)
+              : null,
             logoUrl:   b.logoUrl ?? null,
             location:  b.location,
             distance:  b.distance != null ? `${b.distance.toFixed(1)} km` : '— km',
@@ -456,11 +473,15 @@ export default function ClientMap() {
     return true;
   }).sort((a, b) => a.distanceRaw - b.distanceRaw);
 
+  // CERCANOS cuenta sucursales, que es lo que se ve en el mapa y en la lista.
+  // Los demas cuentan negocios distintos: las recompensas y los puntos son del
+  // negocio, asi que contarlos por sucursal inflaria los numeros.
+  const countBusinesses = (list) => new Set(list.map((b) => b.id)).size;
   const counts = {
     all:         businesses.length,
-    rewards:     businesses.filter(b => b.hasRewards).length,
-    visited:     businesses.filter(b => b.status === 'visited').length,
-    not_visited: businesses.filter(b => b.status === 'not_visited').length,
+    rewards:     countBusinesses(businesses.filter(b => b.hasRewards)),
+    visited:     countBusinesses(businesses.filter(b => b.status === 'visited')),
+    not_visited: countBusinesses(businesses.filter(b => b.status === 'not_visited')),
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -498,7 +519,7 @@ export default function ClientMap() {
               const pinType = biz.hasRewards ? 'reward' : biz.status === 'visited' ? 'visited' : 'default';
               return (
                 <Marker
-                  key={biz.id}
+                  key={biz.branchId}
                   position={[biz.location.latitude, biz.location.longitude]}
                   icon={createPin(pinType, biz.logoUrl, biz.name)}
                   eventHandlers={{ click: () => handleSelect(biz) }}
@@ -600,7 +621,7 @@ export default function ClientMap() {
             <div className="divide-y divide-neutral-50 px-5">
               {filtered.map((biz) => (
                 <BusinessRow
-                  key={biz.id}
+                  key={biz.branchId}
                   biz={biz}
                   userPointsMap={userPointsMap}
                   rewardsMap={rewardsMap}
