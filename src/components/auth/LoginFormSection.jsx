@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BrandLogo } from '../ui/BrandLogo';
 import { FormInput } from '../ui/FormInput';
@@ -16,6 +15,36 @@ const EmailIcon = () => (
   </svg>
 );
 
+const StoreIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M3 9l1.5-5h15L21 9" />
+    <path d="M4 9v11h16V9" />
+    <path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />
+    <path d="M10 20v-5h4v5" />
+  </svg>
+);
+
+const ArrowIcon = ({ back = false }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    {back ? <path d="M19 12H5M11 6l-6 6 6 6" /> : <path d="M5 12h14M13 6l6 6-6 6" />}
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M20 6L9 17l-5-5" />
+  </svg>
+);
+
+// Palabra gigante de fondo del modo cajero: se desvanece hacia abajo como las de la landing
+const FADE = 'linear-gradient(to bottom, #000 0%, transparent 85%)';
+
+const LINK = 'font-semibold text-[#A8650A] hover:text-[#7A4A06] transition-colors duration-150';
+
+/**
+ * Login único para clientes y negocios (la API devuelve el rol y AuthPage redirige).
+ * Los cajeros entran por un acceso discreto que cambia el formulario a "modo cajero".
+ */
 export function LoginFormSection({
   formData,
   onChange,
@@ -27,142 +56,155 @@ export function LoginFormSection({
   loading,
   error,
   onSwitchToSignup,
+  loginMode = 'default',
+  onLoginModeChange,
   isMobile = false,
 }) {
-  const [mode, setMode] = useState('owner'); // 'owner' | 'cashier'
-  const isCashier = mode === 'cashier';
-
-  const handleModeChange = (newMode) => {
-    if (newMode !== mode) setMode(newMode);
-  };
+  const isCashier = loginMode === 'cashier';
+  const idSuffix = isMobile ? '-mobile' : '';
 
   return (
-    <div className={`w-full ${isMobile ? 'max-w-[400px]' : 'max-w-[380px] px-10'}`}>
+    <div className={`relative w-full ${isMobile ? 'max-w-[400px]' : 'max-w-[380px] px-10'}`}>
+      {isCashier && (
+        <p
+          aria-hidden
+          // pt: con leading 0.78 la parte alta de las letras sale de la caja y la máscara la cortaría
+          style={{ WebkitMaskImage: FADE, maskImage: FADE, top: isMobile ? 'calc(52px - 3.6vw)' : 'calc(-4rem - 1.5vw)' }}
+          className={`pointer-events-none absolute left-1/2 -translate-x-1/2 select-none whitespace-nowrap pt-[0.14em] font-rh-display font-extrabold leading-[0.78] tracking-[-0.05em] text-[rgba(19,17,10,0.075)] ${
+            isMobile ? 'text-[26vw]' : 'text-[11vw]'
+          }`}
+        >
+          CAJERO
+        </p>
+      )}
+
       {/* Mobile logo */}
       {isMobile && (
-        <div className="mb-8">
+        <div className="relative mb-8">
           <BrandLogo size="md" theme="dark" />
         </div>
       )}
 
-      <div className="mb-6">
-        <h2 className="text-[26px] leading-tight font-extrabold text-[#13110A] tracking-tight mb-1">
-          {isCashier ? 'Acceso de Cajero' : 'Bienvenido de vuelta'}
-        </h2>
-        <p className="text-[13px] text-[#947F4E] font-medium">
-          {isCashier
-            ? 'Ingresa con el correo y contraseña de sucursal'
-            : 'Ingresa tus credenciales para continuar'}
-        </p>
-      </div>
-
-      {/* Mode toggle */}
-      <div className="flex rounded-xl border border-[#EDE3C8] bg-[#FAFAF6] p-1 mb-5">
-        <button
-          type="button"
-          onClick={() => handleModeChange('owner')}
-          className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 ${
-            !isCashier
-              ? 'bg-white text-[#13110A] shadow-sm'
-              : 'text-[#947F4E] hover:text-[#13110A]'
-          }`}
-        >
-          Propietario
-        </button>
-        <button
-          type="button"
-          onClick={() => handleModeChange('cashier')}
-          className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 ${
-            isCashier
-              ? 'bg-white text-[#13110A] shadow-sm'
-              : 'text-[#947F4E] hover:text-[#13110A]'
-          }`}
-        >
-          Cajero
-        </button>
-      </div>
-
-      <form onSubmit={isCashier ? onCashierSubmit : onSubmit} className="space-y-5">
-        {error && <AlertMessage>{error}</AlertMessage>}
-
-        <FormInput
-          id={`login-email${isMobile ? '-mobile' : ''}`}
-          name="email"
-          type="email"
-          label="Correo electrónico"
-          value={formData.email}
-          onChange={onChange}
-          placeholder="correo@ejemplo.com"
-          required
-          autoComplete="email"
-          icon={<EmailIcon />}
-        />
-
-        <PasswordInput
-          id={`login-password${isMobile ? '-mobile' : ''}`}
-          name="password"
-          label={isCashier ? 'Contraseña de sucursal' : 'Contraseña'}
-          value={formData.password}
-          onChange={onChange}
-          required
-          autoComplete="current-password"
-          labelRight={
-            !isCashier ? (
-              <Link
-                to="/forgot-password"
-                className="text-[12px] font-semibold text-[#EBA626] hover:text-[#C47D10] transition-colors duration-150"
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
-            ) : null
-          }
-        />
-
-        {!isCashier && (
-          <Checkbox
-            checked={rememberMe}
-            onChange={setRememberMe}
-            label="Recordarme"
-          />
-        )}
-
-        <SubmitButton loading={loading} loadingText="Iniciando sesión...">
-          {isCashier ? 'Acceder como Cajero' : 'Iniciar Sesión'}
-        </SubmitButton>
-
-        {!isCashier && (
-          <>
-            <AuthDivider />
-            <SocialButton provider="google" onClick={onGoogleClick} disabled={loading} />
-          </>
-        )}
-
-        {!isCashier && (
-          <p className="text-center text-[13px] font-medium text-[#947F4E]">
-            ¿No tienes una cuenta?{' '}
-            <button
-              type="button"
-              onClick={onSwitchToSignup}
-              className="font-semibold text-[#EBA626] hover:text-[#C47D10] transition-colors duration-150"
-            >
-              Regístrate aquí
-            </button>
-          </p>
-        )}
-
+      {/* key: al cambiar de modo el contenido se vuelve a montar con la animación de entrada */}
+      <div key={loginMode} className="relative auth-hero-appear">
         {isCashier && (
-          <p className="text-center text-[12px] text-[#947F4E]">
-            ¿Eres el propietario?{' '}
-            <button
-              type="button"
-              onClick={() => handleModeChange('owner')}
-              className="font-semibold text-[#EBA626] hover:text-[#C47D10] transition-colors duration-150"
-            >
-              Accede aquí
-            </button>
-          </p>
+          <button
+            type="button"
+            onClick={() => onLoginModeChange?.('default')}
+            className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#6B5B2E] hover:text-[#13110A] transition-colors duration-150"
+          >
+            <ArrowIcon back />
+            Volver
+          </button>
         )}
-      </form>
+
+        <div className="mb-6">
+          <h2 className="text-[26px] leading-tight font-extrabold text-[#13110A] tracking-tight mb-1">
+            {isCashier ? 'Acceso de Cajero' : 'Bienvenido de vuelta'}
+          </h2>
+          <p className="text-[13px] text-[#947F4E] font-medium">
+            {isCashier
+              ? 'Ingresa con el correo y la contraseña de tu sucursal.'
+              : 'Ingresa a tu cuenta para continuar.'}
+          </p>
+        </div>
+
+        <form onSubmit={isCashier ? onCashierSubmit : onSubmit} className="space-y-5">
+          {error && <AlertMessage>{error}</AlertMessage>}
+
+          <FormInput
+            id={`login-email${idSuffix}`}
+            name="email"
+            type="email"
+            label={isCashier ? 'Correo de sucursal' : 'Correo electrónico'}
+            value={formData.email}
+            onChange={onChange}
+            placeholder={isCashier ? 'sucursal@negocio.com' : 'correo@ejemplo.com'}
+            required
+            autoComplete={isCashier ? 'username' : 'email'}
+            icon={<EmailIcon />}
+          />
+
+          <PasswordInput
+            id={`login-password${idSuffix}`}
+            name="password"
+            label={isCashier ? 'Contraseña de sucursal' : 'Contraseña'}
+            value={formData.password}
+            onChange={onChange}
+            required
+            autoComplete="current-password"
+            labelRight={
+              !isCashier ? (
+                <Link
+                  to="/forgot-password"
+                  className="text-[12px] font-semibold text-[#EBA626] hover:text-[#C47D10] transition-colors duration-150"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              ) : null
+            }
+          />
+
+          {!isCashier && (
+            <Checkbox
+              checked={rememberMe}
+              onChange={setRememberMe}
+              label="Recordarme"
+            />
+          )}
+
+          <SubmitButton loading={loading} loadingText="Iniciando sesión...">
+            {isCashier ? 'Acceder como cajero' : 'Iniciar sesión'}
+          </SubmitButton>
+
+          {isCashier ? (
+            <>
+              <div className="flex items-start gap-2.5 rounded-xl bg-[#FDF3DC]/70 px-3.5 py-3 text-[12px] font-medium leading-snug text-[#6B5B2E]">
+                <span className="mt-px shrink-0 text-[#A8650A]">
+                  <CheckIcon />
+                </span>
+                Este dispositivo recordará el modo cajero. La próxima vez abrirá directo aquí.
+              </div>
+              <p className="text-center text-[13px] font-medium text-[#947F4E]">
+                ¿Eres dueño o cliente?{' '}
+                <button type="button" onClick={() => onLoginModeChange?.('default')} className={LINK}>
+                  Entra aquí
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <AuthDivider />
+              <SocialButton provider="google" onClick={onGoogleClick} disabled={loading} />
+
+              <p className="text-center text-[13px] font-medium text-[#947F4E]">
+                ¿No tienes cuenta?{' '}
+                <button type="button" onClick={onSwitchToSignup} className={LINK}>
+                  Regístrate
+                </button>
+              </p>
+
+              {/* Acceso discreto para cajeros */}
+              <button
+                type="button"
+                onClick={() => onLoginModeChange?.('cashier')}
+                className="group flex w-full items-center gap-3 rounded-xl border border-dashed border-[#D9C99C] bg-[#FAFAF6] px-3.5 py-3 text-left transition-colors duration-150 hover:border-[#EBA626] hover:bg-[#FDF3DC]/60 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-[#FAE5AD]"
+              >
+                <span className="shrink-0 text-[#A8650A]">
+                  <StoreIcon />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-semibold text-[#13110A]">¿Eres cajero?</span>
+                  <span className="block text-[12px] font-medium text-[#6B5B2E]">Entra con la contraseña de sucursal</span>
+                </span>
+                <span className="shrink-0 text-[#A8650A] transition-transform duration-150 group-hover:translate-x-0.5">
+                  <ArrowIcon />
+                </span>
+              </button>
+            </>
+          )}
+        </form>
+      </div>
     </div>
   );
 }

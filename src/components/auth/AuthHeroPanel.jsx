@@ -6,6 +6,23 @@ const StarIcon = () => (
   </svg>
 );
 
+const SmallCheckIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EBA626" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6L9 17l-5-5" />
+  </svg>
+);
+
+const StoreIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EBA626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l1.5-5h15L21 9" />
+    <path d="M4 9v11h16V9" />
+    <path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />
+    <path d="M10 20v-5h4v5" />
+  </svg>
+);
+
+const FEATURE_ICONS = { star: StarIcon, check: SmallCheckIcon, store: StoreIcon };
+
 const CheckIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="20 6 9 17 4 12" />
@@ -16,18 +33,31 @@ const AVATAR_COLORS = ['#EBA626', '#C47D10', '#FAE5AD', '#6B3A00'];
 
 const CONTENT = {
   login: {
-    badge: 'Programa de fidelización',
     title: (
       <>
-        Gestiona tus<br />
-        <span className="text-[#EBA626]">recompensas</span><br />
+        Todas tus<br />
+        <span className="text-[#EBA626]">recompensas</span>,<br />
         en un solo lugar
       </>
     ),
-    description: 'Conecta con tus clientes, administra puntos y construye lealtad duradera con herramientas diseñadas para crecer.',
-    featureTitle: 'Más de 2 mil negocios confían en RewardsHub',
-    featureDescription: 'Automatiza tu programa de puntos y fideliza clientes desde el primer día.',
-    avatarLabel: '+2k negocios activos',
+    description: 'Junta puntos en tus lugares favoritos o haz que tus clientes vuelvan una y otra vez.',
+    featureTitle: 'Un solo QR, todas tus recompensas',
+    featureDescription: 'Los clientes juntan puntos en cada visita y los canjean en sus lugares favoritos.',
+    icon: 'check',
+    bullets: null,
+  },
+  login_cashier: {
+    title: (
+      <>
+        Escanea,<br />
+        <span className="text-[#EBA626]">suma puntos</span><br />
+        y sigue atendiendo
+      </>
+    ),
+    description: 'Escanea el QR de tus clientes y registra cada compra en segundos.',
+    featureTitle: 'Todo listo para atender',
+    featureDescription: 'Suma puntos y canjea recompensas sin salir del mostrador.',
+    icon: 'store',
     bullets: null,
   },
   signup_client: {
@@ -62,9 +92,11 @@ const CONTENT = {
   },
 };
 
-export function AuthHeroPanel({ mode = 'login', accountType = 'client' }) {
-  const contentKey = mode === 'login' ? 'login' : `signup_${accountType}`;
+export function AuthHeroPanel({ mode = 'login', accountType = 'client', loginMode = 'default' }) {
+  const contentKey =
+    mode === 'login' ? (loginMode === 'cashier' ? 'login_cashier' : 'login') : `signup_${accountType}`;
   const content = CONTENT[contentKey];
+  const FeatureIcon = FEATURE_ICONS[content.icon] || StarIcon;
 
   return (
     <div className="w-full h-full flex flex-col justify-between p-12 bg-[#0D0B07] relative overflow-hidden">
@@ -94,15 +126,17 @@ export function AuthHeroPanel({ mode = 'login', accountType = 'client' }) {
 
       {/* Center: animated headline — key forces remount → CSS animation */}
       <div key={contentKey} className="relative z-10 flex-1 flex flex-col justify-center py-10 auth-hero-appear">
-        <div
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6 w-fit"
-          style={{ background: 'rgba(235,166,38,0.15)', border: '1px solid rgba(235,166,38,0.3)' }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#EBA626]" />
-          <span className="text-[#EBA626] text-[11px] font-semibold tracking-wide uppercase">
-            {content.badge}
-          </span>
-        </div>
+        {content.badge && (
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6 w-fit"
+            style={{ background: 'rgba(235,166,38,0.15)', border: '1px solid rgba(235,166,38,0.3)' }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#EBA626]" />
+            <span className="text-[#EBA626] text-[11px] font-semibold tracking-wide uppercase">
+              {content.badge}
+            </span>
+          </div>
+        )}
 
         <h1 className="text-white text-[40px] leading-[1.15] font-extrabold tracking-tight mb-4">
           {content.title}
@@ -136,27 +170,29 @@ export function AuthHeroPanel({ mode = 'login', accountType = 'client' }) {
       >
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(235,166,38,0.18)' }}>
-            <StarIcon />
+            <FeatureIcon />
           </div>
           <div>
             <p className="text-white text-[13px] font-semibold mb-1">{content.featureTitle}</p>
             <p className="text-[#7A6A45] text-[12px] leading-snug">{content.featureDescription}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 mt-4">
-          <div className="flex -space-x-2">
-            {AVATAR_COLORS.map((color, i) => (
-              <div
-                key={i}
-                className="w-7 h-7 rounded-full border-2 border-[#0D0B07] flex items-center justify-center text-[10px] font-bold text-[#0D0B07]"
-                style={{ background: color }}
-              >
-                {['A', 'B', 'C', 'D'][i]}
-              </div>
-            ))}
+        {content.avatarLabel && (
+          <div className="flex items-center gap-2 mt-4">
+            <div className="flex -space-x-2">
+              {AVATAR_COLORS.map((color, i) => (
+                <div
+                  key={i}
+                  className="w-7 h-7 rounded-full border-2 border-[#0D0B07] flex items-center justify-center text-[10px] font-bold text-[#0D0B07]"
+                  style={{ background: color }}
+                >
+                  {['A', 'B', 'C', 'D'][i]}
+                </div>
+              ))}
+            </div>
+            <span className="text-[#7A6A45] text-[12px] font-medium">{content.avatarLabel}</span>
           </div>
-          <span className="text-[#7A6A45] text-[12px] font-medium">{content.avatarLabel}</span>
-        </div>
+        )}
       </div>
     </div>
   );

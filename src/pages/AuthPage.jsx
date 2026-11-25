@@ -14,10 +14,30 @@ const EMPTY_SIGNUP = { name: '', email: '', password: '', confirmPassword: '' };
 const dashboardPath = (apiRole) =>
   apiRole === 'business' ? '/business/dashboard' : '/client/dashboard';
 
+// El dispositivo recuerda el modo cajero (p. ej. la tablet de la sucursal)
+const LOGIN_MODE_KEY = 'rh.loginMode';
+
+const readSavedLoginMode = () => {
+  try {
+    return localStorage.getItem(LOGIN_MODE_KEY) === 'cashier' ? 'cashier' : 'default';
+  } catch {
+    return 'default';
+  }
+};
+
+const saveLoginMode = (value) => {
+  try {
+    if (value === 'cashier') localStorage.setItem(LOGIN_MODE_KEY, 'cashier');
+    else localStorage.removeItem(LOGIN_MODE_KEY);
+  } catch {
+    // Sin almacenamiento (modo privado): solo no se recuerda
+  }
+};
+
 function AuthPage() {
   const location = useLocation();
   const navigate  = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const justSubscribed = searchParams.get('subscribed') === 'true';
 
   const initialMode = location.pathname === '/signup' ? 'signup' : 'login';
@@ -32,6 +52,10 @@ function AuthPage() {
   const [accountType, setAccountType] = useState(
     searchParams.get('tipo') === 'negocio' ? 'business' : 'client'
   ); // 'client' | 'business'
+  // Login normal o modo cajero: ?modo=cajero (enlace directo) o lo que recuerde el dispositivo
+  const [loginMode, setLoginMode] = useState(() =>
+    searchParams.get('modo') === 'cajero' ? 'cashier' : readSavedLoginMode()
+  ); // 'default' | 'cashier'
   const [loginData,   setLoginData]   = useState(EMPTY_LOGIN);
   const [signupData,  setSignupData]  = useState(EMPTY_SIGNUP);
   const [rememberMe,  setRememberMe]  = useState(false);
@@ -52,6 +76,19 @@ function AuthPage() {
       setFormVisible(true);
     }, 350);
   }, [mode, navigate]);
+
+  const changeLoginMode = useCallback((newMode) => {
+    setLoginMode(newMode);
+    setLoginError('');
+    // "Volver" hace que el dispositivo olvide el modo cajero
+    if (newMode === 'default') saveLoginMode('default');
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (newMode === 'cashier') next.set('modo', 'cajero');
+      else next.delete('modo');
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
 
   // ── Post-auth redirect ────────────────────────────────────────────────────
 
@@ -105,6 +142,7 @@ function AuthPage() {
     setLoginError('');
     try {
       const data = await authService.cashierLogin(loginData.email, loginData.password, rememberMe);
+      saveLoginMode('cashier');
       handleAuthSuccess(data);
     } catch (err) {
       const msg = err?.message || err?.error || 'Correo o contraseña de sucursal incorrectos.';
@@ -187,6 +225,8 @@ function AuthPage() {
     loading,
     error:            loginError,
     onSwitchToSignup: () => switchMode('signup'),
+    loginMode,
+    onLoginModeChange: changeLoginMode,
   };
 
   const signupProps = {
@@ -235,7 +275,7 @@ function AuthPage() {
 
       <AnimatedAuthLayout
         mode={mode}
-        hero={<AuthHeroPanel mode={mode} accountType={accountType} />}
+        hero={<AuthHeroPanel mode={mode} accountType={accountType} loginMode={loginMode} />}
         form={
           <>
             <div className="hidden lg:flex w-full justify-center">{form(false)}</div>
